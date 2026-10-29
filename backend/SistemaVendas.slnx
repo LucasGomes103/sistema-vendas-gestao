@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SistemaVendas.Api/SistemaVendas.Api.csproj" />
+    <Project Path="src/SistemaVendas.Application/SistemaVendas.Application.csproj" />
+    <Project Path="src/SistemaVendas.Domain/SistemaVendas.Domain.csproj" />
+    <Project Path="src/SistemaVendas.Infrastructure/SistemaVendas.Infrastructure.csproj" />
+    <Project Path="src/SistemaVendas.Workers/SistemaVendas.Workers.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SistemaVendas.Api.Tests/SistemaVendas.Api.Tests.csproj" />
+    <Project Path="tests/SistemaVendas.Domain.Tests/SistemaVendas.Domain.Tests.csproj" />
+  </Folder>
+</Solution>

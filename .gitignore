@@ -1,0 +1,15 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+TestResults/
+
+# Segredos e ambiente local
+.env
+*.env.local
+appsettings.*.local.json
+
+# Sistema
+.DS_Store
+Thumbs.db
