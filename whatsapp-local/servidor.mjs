@@ -19,6 +19,20 @@ if (!SEGREDO) {
   process.exit(1);
 }
 
+// Trava de segurança: por padrão a ponte só lê e responde os números desta lista (ex.: 5511987654321,5511912345678).
+// Para atender qualquer pessoa (número dedicado só à loja), defina ATENDER_TODOS=sim.
+const ATENDER_TODOS = (process.env.ATENDER_TODOS ?? '').toLowerCase() === 'sim';
+const PERMITIDOS = new Set(
+  (process.env.NUMEROS_PERMITIDOS ?? '')
+    .split(',')
+    .map((n) => n.replace(/\D/g, ''))
+    .filter(Boolean),
+);
+
+function permitido(identificador) {
+  return ATENDER_TODOS || PERMITIDOS.has(identificador);
+}
+
 const logger = pino({ level: 'warn' });
 let sock = null;
 let qrAtual = null;
@@ -57,6 +71,9 @@ async function avisarApi(mensagem) {
     timestamp: Number(mensagem.messageTimestamp ?? Math.floor(Date.now() / 1000)),
   };
   if (!corpo.texto) return;
+
+  // Fora da lista: a mensagem fica só no celular, o sistema nem chega a ver.
+  if (!permitido(corpo.de)) return;
 
   try {
     const r = await fetch(`${API_URL}/api/v1/webhooks/local`, {
@@ -194,6 +211,7 @@ http
         let dados = '';
         for await (const parte of req) dados += parte;
         const { para, texto } = JSON.parse(dados);
+        if (!permitido(para)) return responder(res, 403, { erro: 'número fora da lista de permitidos' });
         const enviada = await sock.sendMessage(paraJid(para), { text: texto });
         return responder(res, 200, { id: enviada?.key?.id });
       }
@@ -203,6 +221,11 @@ http
       responder(res, 500, { erro: e.message });
     }
   })
-  .listen(PORTA, '127.0.0.1', () => console.log(`Ponte WhatsApp local em http://localhost:${PORTA} (QR em /qr)`));
+  .listen(PORTA, '127.0.0.1', () => {
+    console.log(`Ponte WhatsApp local em http://localhost:${PORTA} (QR em /qr)`);
+    if (ATENDER_TODOS) console.warn('ATENÇÃO: atendendo TODOS os contatos deste número.');
+    else if (PERMITIDOS.size === 0) console.warn('Nenhum número permitido: o sistema não vai ler nem responder ninguém (NUMEROS_PERMITIDOS).');
+    else console.log(`Só atende: ${[...PERMITIDOS].join(', ')}`);
+  });
 
 conectar();
