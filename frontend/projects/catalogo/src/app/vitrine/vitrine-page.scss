@@ -83,8 +83,9 @@ main {
 
 .grade {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 12px;
+  // Duas colunas no celular, mesmo nos aparelhos mais estreitos.
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;

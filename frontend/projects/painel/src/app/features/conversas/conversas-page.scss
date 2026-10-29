@@ -69,6 +69,8 @@
 
 .resumo {
   display: grid;
+  // minmax(0, 1fr): sem isso a coluna cresce com o texto e empurra a hora para fora da tela.
+  grid-template-columns: minmax(0, 1fr);
   flex: 1;
   gap: 2px;
   min-width: 0;
@@ -79,18 +81,35 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+    min-width: 0;
+  }
+
+  strong {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
   }
 
   time {
+    flex-shrink: 0;
     color: var(--mat-sys-on-surface-variant);
     font: var(--mat-sys-body-small);
   }
 
   .previa {
     display: flex;
+    flex: 1;
     align-items: center;
     gap: 4px;
+    min-width: 0;
     overflow: hidden;
+
+    .texto {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     color: var(--mat-sys-on-surface-variant);
     font: var(--mat-sys-body-medium);
     white-space: nowrap;
@@ -115,6 +134,7 @@
 }
 
 .badge {
+  flex-shrink: 0;
   display: grid;
   place-items: center;
   min-width: 22px;
@@ -397,5 +417,30 @@ footer {
 
   .chat > header .sv-selo {
     display: none;
+  }
+
+  // Chat aberto ocupa a tela inteira (o shell esconde topo e barra inferior).
+  .layout.com-chat {
+    height: 100dvh;
+    margin: 0;
+  }
+
+  .atendimento {
+    gap: 8px;
+    padding: 8px 12px;
+    font: var(--mat-sys-body-small);
+
+    button {
+      flex-shrink: 0;
+    }
+  }
+
+  .simulador.embutido {
+    padding: 6px 8px;
+
+    > mat-icon,
+    .rotulo-longo {
+      display: none;
+    }
   }
 }

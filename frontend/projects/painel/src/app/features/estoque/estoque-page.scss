@@ -5,21 +5,6 @@
   margin-bottom: 20px;
 }
 
-@media (max-width: 839px) {
-  .kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .kpi {
-    padding: 10px 12px;
-
-    strong {
-      font: var(--mat-sys-headline-small);
-      font-weight: 600;
-    }
-  }
-}
 
 .kpi {
   display: grid;
@@ -173,4 +158,35 @@ a.tanque {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+@media (max-width: 839px) {
+  .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .kpi {
+    gap: 2px;
+    padding: 8px 12px;
+
+    .rotulo {
+      font: var(--mat-sys-label-medium);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+
+      mat-icon {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        font-size: 16px;
+      }
+    }
+
+    strong {
+      font: var(--mat-sys-title-large);
+      font-weight: 600;
+    }
+  }
 }

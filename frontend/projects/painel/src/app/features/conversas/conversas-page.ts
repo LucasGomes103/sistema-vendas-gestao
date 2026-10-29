@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, afterRenderEffect, computed, inject, input, signal, viewChild } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { HttpClient, httpResource } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
@@ -43,7 +43,20 @@ export class ConversasPage {
   protected readonly simNome = signal('Cliente teste');
   protected readonly simTexto = signal('');
 
+  private readonly caixaMensagens = viewChild<ElementRef<HTMLElement>>('caixaMensagens');
+  private ultimaQuantidade = 0;
+
   constructor() {
+    // Mensagem nova: desce até o fim da conversa, como no WhatsApp.
+    afterRenderEffect(() => {
+      const quantidade = this.mensagens.value()?.length ?? 0;
+      const caixa = this.caixaMensagens()?.nativeElement;
+      if (caixa && quantidade !== this.ultimaQuantidade) {
+        this.ultimaQuantidade = quantidade;
+        caixa.scrollTop = caixa.scrollHeight;
+      }
+    });
+
     atualizarACada(4000, () => {
       this.conversas.reload();
       if (this.id()) this.mensagens.reload();

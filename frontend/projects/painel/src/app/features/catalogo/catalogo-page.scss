@@ -127,3 +127,48 @@
   justify-content: space-between;
   min-height: 40px;
 }
+
+// Celular: cards em linha (foto pequena à esquerda), para caber várias espécies na tela.
+@media (max-width: 839px) {
+  .busca {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .grade {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .especie {
+    flex-direction: row;
+  }
+
+  .foto {
+    width: 88px;
+    height: auto;
+    flex-shrink: 0;
+
+    mat-icon {
+      width: 32px;
+      height: 32px;
+      font-size: 32px;
+    }
+  }
+
+  .corpo {
+    flex: 1;
+    min-width: 0;
+    gap: 4px;
+    padding: 10px 6px 6px 12px;
+  }
+
+  .detalhes .preco {
+    font: var(--mat-sys-title-medium);
+    font-weight: 700;
+  }
+
+  .rodape {
+    min-height: 36px;
+  }
+}

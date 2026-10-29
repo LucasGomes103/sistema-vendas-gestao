@@ -185,4 +185,16 @@ main {
     background: var(--mat-sys-surface-container);
     border-top: 1px solid var(--mat-sys-outline-variant);
   }
+
+  // Chat aberto: sem topo e sem barra inferior.
+  :host(.tela-cheia) {
+    .topo-celular,
+    .barra-inferior {
+      display: none;
+    }
+
+    main {
+      padding: 0;
+    }
+  }
 }

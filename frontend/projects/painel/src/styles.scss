@@ -144,3 +144,32 @@ h3 {
   --mat-button-filled-container-shape: var(--sv-raio-botao);
   --mat-button-outlined-container-shape: var(--sv-raio-botao);
 }
+
+// Filtros em chips numa linha só, com rolagem lateral no celular.
+.chips-rolagem {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.chips-rolagem .mdc-evolution-chip-set__chips {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+// Celular: cabeçalho de página enxuto para sobrar espaço para o conteúdo.
+@media (max-width: 839px) {
+  .sv-cabecalho-pagina {
+    margin-bottom: 12px;
+
+    h1 {
+      font: var(--mat-sys-title-large);
+      font-weight: 600;
+    }
+
+    p {
+      display: none;
+    }
+  }
+}

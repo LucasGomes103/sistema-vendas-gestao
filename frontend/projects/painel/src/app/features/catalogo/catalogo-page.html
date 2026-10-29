@@ -13,13 +13,13 @@
     <mat-icon>search</mat-icon>
     <input
       type="search"
-      placeholder="Buscar por nome popular ou científico"
+      placeholder="Buscar espécie"
       [value]="busca()"
       (input)="busca.set($any($event.target).value)"
     />
   </label>
 
-  <mat-chip-listbox aria-label="Filtro" [value]="filtro()" (change)="filtro.set($event.value ?? 'todas')">
+  <mat-chip-listbox class="chips-rolagem" aria-label="Filtro" [value]="filtro()" (change)="filtro.set($event.value ?? 'todas')">
     <mat-chip-option value="todas">Todas ({{ contagem().todas }})</mat-chip-option>
     <mat-chip-option value="disponiveis">Disponíveis ({{ contagem().disponiveis }})</mat-chip-option>
     <mat-chip-option value="esgotadas">Sem estoque ({{ contagem().esgotadas }})</mat-chip-option>

@@ -15,21 +15,21 @@
     <strong>{{ resumo().tanques }}</strong>
   </div>
   <div class="sv-card kpi destaque">
-    <span class="rotulo"><mat-icon>set_meal</mat-icon> Disponíveis para venda</span>
+    <span class="rotulo"><mat-icon>set_meal</mat-icon> Disponíveis</span>
     <strong>{{ resumo().disponiveis }}</strong>
   </div>
   <div class="sv-card kpi">
-    <span class="rotulo"><mat-icon>shield</mat-icon> Em quarentena</span>
+    <span class="rotulo"><mat-icon>shield</mat-icon> Quarentena</span>
     <strong>{{ resumo().quarentena }}</strong>
   </div>
   <div class="sv-card kpi" [class.atencao]="resumo().baixas > 0">
-    <span class="rotulo"><mat-icon>heart_minus</mat-icon> Baixas em 7 dias</span>
+    <span class="rotulo"><mat-icon>heart_minus</mat-icon> Baixas (7 dias)</span>
     <strong>{{ resumo().baixas }}</strong>
   </div>
 </section>
 
 <mat-chip-listbox
-  class="filtros"
+  class="filtros chips-rolagem"
   aria-label="Filtro de tanques"
   hideSingleSelectionIndicator
   [value]="filtro()"

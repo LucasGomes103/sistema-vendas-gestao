@@ -58,7 +58,7 @@
                   } @else if (c.ultimoAutor === 'Vendedor') {
                     <mat-icon>done_all</mat-icon>
                   }
-                  {{ c.ultimaMensagem }}
+                  <span class="texto">{{ c.ultimaMensagem }}</span>
                 </span>
                 @if (c.naoLidas > 0) {
                   <span class="badge">{{ c.naoLidas }}</span>
@@ -119,7 +119,7 @@
         }
       </div>
 
-      <div class="mensagens">
+      <div class="mensagens" #caixaMensagens>
         @for (m of mensagens.value() ?? []; track m.id) {
           <div class="bolha" [class.saida]="m.direcao === 'Saida'" [class.robo]="m.autor === 'Robo'">
             @if (m.autor === 'Robo') {
@@ -169,7 +169,7 @@
             (input)="simTexto.set($any($event.target).value)"
             (keydown.enter)="simular()"
           />
-          <button mat-button (click)="simular()">Enviar como cliente</button>
+          <button mat-button (click)="simular()"><mat-icon>send</mat-icon><span class="rotulo-longo">Enviar como cliente</span></button>
         </div>
       }
     } @else {
