@@ -1,0 +1,44 @@
+# Render Blueprint: API (.NET) no plano grátis. Os segredos (sync: false) são digitados no painel do Render.
+services:
+  - type: web
+    name: sistema-vendas-api
+    runtime: docker
+    plan: free
+    # Mesma região do banco no Supabase (East US - North Virginia), para as consultas serem rápidas.
+    region: virginia
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: PORT
+        value: "8080"
+      - key: Banco__MigrarAoIniciar
+        value: "true"
+      # Connection string do Supabase (pooler, modo sessão), no formato do Npgsql:
+      # Host=...pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.xxxx;Password=...;SSL Mode=Require
+      - key: ConnectionStrings__Banco
+        sync: false
+      # Endereço público do Netlify (ex.: https://ecsfish.netlify.app): usado no link do catálogo que o robô envia
+      - key: Vitrine__UrlBase
+        sync: false
+      - key: IA__Gemini__ApiKey
+        sync: false
+      - key: WhatsApp__Provedor
+        value: Local
+      - key: WhatsApp__Local__Segredo
+        sync: false
+      - key: WhatsApp__Local__LojaSlug
+        sync: false
+      # Só usados na primeira subida, para criar a loja e o seu usuário (depois pode apagar a senha)
+      - key: PrimeiraLoja__Nome
+        sync: false
+      - key: PrimeiraLoja__Slug
+        sync: false
+      - key: PrimeiraLoja__DonoNome
+        sync: false
+      - key: PrimeiraLoja__DonoEmail
+        sync: false
+      - key: PrimeiraLoja__DonoSenha
+        sync: false

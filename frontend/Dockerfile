@@ -6,7 +6,7 @@ RUN npm ci --no-audit --no-fund
 COPY . .
 # Servidor pequeno: limita a memória do build (com swap ligado).
 ENV NODE_OPTIONS=--max-old-space-size=900
-RUN npx ng build painel --base-href /painel/ && npx ng build catalogo
+RUN npx ng build painel -c publicado && npx ng build catalogo
 
 # Caddy com o painel embutido.
 FROM caddy:2-alpine AS caddy

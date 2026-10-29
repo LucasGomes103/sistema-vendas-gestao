@@ -54,6 +54,22 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "publicado": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "750kB",
+                  "maximumError": "1.2MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "8kB",
+                  "maximumError": "16kB"
+                }
+              ],
+              "outputHashing": "all",
+              "baseHref": "/painel/"
             }
           },
           "defaultConfiguration": "production"
@@ -134,6 +150,25 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "estatico": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all",
+              "outputMode": "static",
+              "ssr": false,
+              "prerender": false,
+              "server": false
             }
           },
           "defaultConfiguration": "production"
