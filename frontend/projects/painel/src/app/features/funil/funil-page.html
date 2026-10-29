@@ -1,0 +1,65 @@
+<header class="sv-cabecalho-pagina">
+  <div>
+    <h1>Funil de atendimento</h1>
+    <p>Os cards andam sozinhos pelas regras de tempo. Arraste quando precisar mover à mão.</p>
+  </div>
+  <div class="contadores">
+    @if (resumo().quentes > 0) {
+      <span class="sv-selo alerta"><mat-icon>local_fire_department</mat-icon>{{ resumo().quentes }} quente(s)</span>
+    }
+    <span class="sv-selo info"><mat-icon>schedule_send</mat-icon>{{ resumo().followup }} em follow-up</span>
+  </div>
+</header>
+
+@if (cards.isLoading() && !cards.hasValue()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+<div class="quadro" cdkDropListGroup>
+  @for (col of colunas; track col.etapa) {
+    @let lista = porEtapa().get(col.etapa) ?? [];
+    <section class="coluna" [class]="col.destaque ?? ''">
+      <header>
+        <mat-icon>{{ col.icone }}</mat-icon>
+        <h2>{{ col.titulo }}</h2>
+        <span class="qtd">{{ lista.length }}</span>
+      </header>
+
+      <div class="cards" cdkDropList [cdkDropListData]="col.etapa" (cdkDropListDropped)="soltar($event)">
+        @for (card of lista; track card.id) {
+          <article class="card" cdkDrag [cdkDragData]="card" (click)="abrir(card)" [class.quente]="card.etapa === 'Quente'">
+            <div class="topo">
+              <strong>{{ card.cliente }}</strong>
+              @if (card.naoLidas > 0) {
+                <span class="badge">{{ card.naoLidas }}</span>
+              }
+            </div>
+            @if (card.motivoVendedor && card.etapa === 'Quente') {
+              <p class="motivo">{{ card.motivoVendedor }}</p>
+            } @else if (card.ultimaMensagem) {
+              <p class="previa">{{ card.ultimaMensagem }}</p>
+            }
+            <div class="rodape">
+              @if (card.etapa === 'Quente' && semDono(card)) {
+                <span class="tag alerta" matTooltip="Tempo esperando um vendedor"><mat-icon>warning</mat-icon>Sem dono {{ semDono(card) }}</span>
+              } @else if (regra(card); as r) {
+                <span class="tag" matTooltip="Próxima regra automática"><mat-icon>timer</mat-icon>{{ r }}</span>
+              } @else if (card.motivoPerda) {
+                <span class="tag">{{ motivos[card.motivoPerda] }}</span>
+              }
+              <span class="espaco"></span>
+              @if (card.simulada) {
+                <mat-icon class="mini" matTooltip="Conversa do simulador">science</mat-icon>
+              }
+              <mat-icon class="mini" [matTooltip]="card.roboPausado ? 'Vendedor atendendo' : 'Robô atendendo'">
+                {{ card.roboPausado ? 'support_agent' : 'smart_toy' }}
+              </mat-icon>
+            </div>
+          </article>
+        } @empty {
+          <p class="vazia">Nenhum card</p>
+        }
+      </div>
+    </section>
+  }
+</div>

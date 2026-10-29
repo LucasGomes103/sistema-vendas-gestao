@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using SistemaVendas.Application.Atendimento;
 using SistemaVendas.Application.Comum;
 using SistemaVendas.Domain.Atendimento;
+using SistemaVendas.Domain.Funil;
 using SistemaVendas.Infrastructure.Dados;
 
 namespace SistemaVendas.Workers;
@@ -110,9 +111,15 @@ public class RoboWorker(IServiceScopeFactory scopes, EstadoWorkers estado, ILogg
         conversa.UltimaMensagemEm = agora;
         conversa.AguardandoRobo = false;
 
+        var funil = sp.GetRequiredService<ServicoFunil>();
+        var cfg = await funil.ConfigAsync(conversa.LojaId, ct);
+        funil.Registrar(conversa, MotorFunil.AoResponderLoja(conversa, cfg, agora), OrigemEvento.Ia);
+
         if (resposta.ChamarVendedor)
         {
-            conversa.ChamarVendedor(resposta.MotivoVendedor ?? "Cliente quer falar com uma pessoa", agora);
+            var motivo = resposta.MotivoVendedor ?? "Cliente quer falar com uma pessoa";
+            conversa.ChamarVendedor(motivo, agora);
+            funil.Registrar(conversa, MotorFunil.AoChamarVendedor(conversa, motivo), OrigemEvento.Ia);
             logger.LogInformation("Conversa {Id} marcada como quente: {Motivo}", conversa.Id, conversa.MotivoVendedor);
         }
 

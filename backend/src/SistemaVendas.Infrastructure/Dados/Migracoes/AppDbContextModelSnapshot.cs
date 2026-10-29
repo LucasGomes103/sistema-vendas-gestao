@@ -109,9 +109,22 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("criado_em");
 
+                    b.Property<string>("Etapa")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("etapa");
+
+                    b.Property<int>("FollowupsEnviados")
+                        .HasColumnType("integer")
+                        .HasColumnName("followups_enviados");
+
                     b.Property<Guid>("LojaId")
                         .HasColumnType("uuid")
                         .HasColumnName("loja_id");
+
+                    b.Property<int?>("MotivoPerda")
+                        .HasColumnType("integer")
+                        .HasColumnName("motivo_perda");
 
                     b.Property<string>("MotivoVendedor")
                         .HasColumnType("text")
@@ -120,6 +133,14 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.Property<int>("NaoLidas")
                         .HasColumnType("integer")
                         .HasColumnName("nao_lidas");
+
+                    b.Property<int?>("ProximaAcao")
+                        .HasColumnType("integer")
+                        .HasColumnName("proxima_acao");
+
+                    b.Property<DateTimeOffset?>("ProximaAcaoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("proxima_acao_em");
 
                     b.Property<bool>("RoboPausado")
                         .HasColumnType("boolean")
@@ -137,14 +158,26 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("ultima_msg_cliente_em");
 
+                    b.Property<decimal?>("ValorEstimado")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("valor_estimado");
+
                     b.HasKey("Id")
                         .HasName("pk_conversa");
 
                     b.HasIndex("ClienteId")
                         .HasDatabaseName("ix_conversa_cliente_id");
 
+                    b.HasIndex("ProximaAcaoEm")
+                        .HasDatabaseName("ix_conversa_proxima_acao_em")
+                        .HasFilter("robo_pausado = false AND proxima_acao_em IS NOT NULL");
+
                     b.HasIndex("LojaId", "UltimaMensagemEm")
                         .HasDatabaseName("ix_conversa_loja_id_ultima_mensagem_em");
+
+                    b.HasIndex("LojaId", "Etapa", "UltimaMensagemEm")
+                        .HasDatabaseName("ix_conversa_loja_id_etapa_ultima_mensagem_em");
 
                     b.ToTable("conversa", (string)null);
                 });
@@ -585,6 +618,120 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.ToTable("tanque", (string)null);
                 });
 
+            modelBuilder.Entity("SistemaVendas.Domain.Funil.CardEvento", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ConversaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("conversa_id");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<int?>("DeEtapa")
+                        .HasColumnType("integer")
+                        .HasColumnName("de_etapa");
+
+                    b.Property<string>("Detalhe")
+                        .HasColumnType("text")
+                        .HasColumnName("detalhe");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_id");
+
+                    b.Property<string>("Origem")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("origem");
+
+                    b.Property<string>("ParaEtapa")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("para_etapa");
+
+                    b.Property<Guid?>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_card_evento");
+
+                    b.HasIndex("ConversaId")
+                        .HasDatabaseName("ix_card_evento_conversa_id");
+
+                    b.HasIndex("LojaId", "CriadoEm")
+                        .HasDatabaseName("ix_card_evento_loja_id_criado_em");
+
+                    b.ToTable("card_evento", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Funil.ConfigFunil", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<int>("DiasFollowup2")
+                        .HasColumnType("integer")
+                        .HasColumnName("dias_followup2");
+
+                    b.Property<int>("HorasAteFollowup")
+                        .HasColumnType("integer")
+                        .HasColumnName("horas_ate_followup");
+
+                    b.Property<int>("HorasAtePerdido")
+                        .HasColumnType("integer")
+                        .HasColumnName("horas_ate_perdido");
+
+                    b.Property<int>("HorasFollowup1")
+                        .HasColumnType("integer")
+                        .HasColumnName("horas_followup1");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_id");
+
+                    b.Property<string>("TextoChamarVendedor")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("texto_chamar_vendedor");
+
+                    b.Property<string>("TextoFollowup1")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("texto_followup1");
+
+                    b.Property<string>("TextoFollowup2")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("texto_followup2");
+
+                    b.Property<string>("TextoFrete")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("texto_frete");
+
+                    b.HasKey("Id")
+                        .HasName("pk_config_funil");
+
+                    b.HasIndex("LojaId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_config_funil_loja_id");
+
+                    b.ToTable("config_funil", (string)null);
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Lojas.Loja", b =>
                 {
                     b.Property<Guid>("Id")
@@ -833,6 +980,33 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_tanque_loja_loja_id");
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Funil.CardEvento", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Atendimento.Conversa", null)
+                        .WithMany()
+                        .HasForeignKey("ConversaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_card_evento_conversa_conversa_id");
+
+                    b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_card_evento_loja_loja_id");
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Funil.ConfigFunil", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_config_funil_loja_loja_id");
                 });
 
             modelBuilder.Entity("SistemaVendas.Domain.Lojas.Usuario", b =>

@@ -27,6 +27,9 @@ public class AtendenteTests
             Task.FromResult(_especies.First(e => e.Id == especieId).Disponivel);
 
         public Task<string?> LinkCatalogoAsync(CancellationToken ct) => Task.FromResult<string?>("https://loja.test/demo");
+
+        public Task<TextosProntos> TextosAsync(CancellationToken ct) =>
+            Task.FromResult(new TextosProntos("Me envie seu CEP para o frete.", "Vou chamar um atendente."));
     }
 
     private static Task<RespostaAtendente> Perguntar(params string[] doCliente) =>

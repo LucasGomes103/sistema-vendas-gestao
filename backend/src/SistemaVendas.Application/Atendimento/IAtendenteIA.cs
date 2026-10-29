@@ -16,7 +16,12 @@ public interface IFerramentasAtendimento
 
     /// <summary>Link da vitrine pública da loja, onde o cliente vê o que está disponível e monta o pedido.</summary>
     Task<string?> LinkCatalogoAsync(CancellationToken ct);
+
+    /// <summary>Respostas prontas configuradas pela loja.</summary>
+    Task<TextosProntos> TextosAsync(CancellationToken ct);
 }
+
+public record TextosProntos(string Frete, string ChamarVendedor);
 
 /// <summary>Mensagem montada pela vitrine quando o cliente toca em "Enviar pedido pelo WhatsApp".</summary>
 public static class PedidoCatalogo

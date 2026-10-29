@@ -17,8 +17,14 @@ public class VitrineOptions
 }
 
 /// <summary>Ferramentas da IA sobre o catálogo e o estoque da loja atual.</summary>
-public class FerramentasAtendimento(AppDbContext db, ILojaAtual lojaAtual, IOptions<VitrineOptions> vitrine) : IFerramentasAtendimento
+public class FerramentasAtendimento(AppDbContext db, ILojaAtual lojaAtual, IOptions<VitrineOptions> vitrine, ServicoFunil funil) : IFerramentasAtendimento
 {
+    public async Task<TextosProntos> TextosAsync(CancellationToken ct)
+    {
+        var cfg = await funil.ConfigAsync(lojaAtual.LojaId!.Value, ct);
+        return new TextosProntos(cfg.TextoFrete, cfg.TextoChamarVendedor);
+    }
+
     public async Task<string?> LinkCatalogoAsync(CancellationToken ct)
     {
         var slug = await db.Lojas.Where(l => l.Id == lojaAtual.LojaId).Select(l => l.Slug).FirstOrDefaultAsync(ct);

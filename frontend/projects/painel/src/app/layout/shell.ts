@@ -42,6 +42,7 @@ export class Shell {
   protected readonly telaCheia = computed(() => /^\/conversas\/[^/]+/.test(this.url()));
 
   protected readonly menu: ItemMenu[] = [
+    { rota: '/funil', rotulo: 'Funil', icone: 'view_kanban' },
     { rota: '/conversas', rotulo: 'Conversas', icone: 'chat' },
     { rota: '/estoque', rotulo: 'Estoque', icone: 'water' },
     { rota: '/catalogo', rotulo: 'Catálogo', icone: 'set_meal' },
@@ -49,7 +50,6 @@ export class Shell {
 
   /** Itens que ainda vão entrar na fase 1, mostrados desabilitados para dar a visão do todo. */
   protected readonly emBreve: ItemMenu[] = [
-    { rota: '', rotulo: 'Funil', icone: 'view_kanban' },
     { rota: '', rotulo: 'Pedidos', icone: 'receipt_long' },
     { rota: '', rotulo: 'Métricas', icone: 'monitoring' },
   ];

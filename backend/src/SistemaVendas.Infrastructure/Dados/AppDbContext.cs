@@ -4,6 +4,7 @@ using SistemaVendas.Domain.Atendimento;
 using SistemaVendas.Domain.Catalogo;
 using SistemaVendas.Domain.Comum;
 using SistemaVendas.Domain.Estoque;
+using SistemaVendas.Domain.Funil;
 using SistemaVendas.Domain.Lojas;
 
 namespace SistemaVendas.Infrastructure.Dados;
@@ -22,6 +23,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
     public DbSet<Conversa> Conversas => Set<Conversa>();
     public DbSet<Mensagem> Mensagens => Set<Mensagem>();
     public DbSet<WebhookRecebido> WebhooksRecebidos => Set<WebhookRecebido>();
+    public DbSet<CardEvento> CardEventos => Set<CardEvento>();
+    public DbSet<ConfigFunil> ConfigsFunil => Set<ConfigFunil>();
 
     // Lido pelo filtro global a cada consulta.
     private Guid? LojaId => lojaAtual.LojaId;
@@ -86,6 +89,24 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
             e.ToTable("conversa");
             e.HasOne<Cliente>().WithMany().HasForeignKey(x => x.ClienteId);
             e.HasIndex(x => new { x.LojaId, x.UltimaMensagemEm });
+            e.Property(x => x.ValorEstimado).HasPrecision(10, 2);
+            // Fila do motor de regras: só cards com ação pendente e robô ativo.
+            e.HasIndex(x => x.ProximaAcaoEm).HasFilter("robo_pausado = false AND proxima_acao_em IS NOT NULL");
+            // Quadro kanban por loja e etapa.
+            e.HasIndex(x => new { x.LojaId, x.Etapa, x.UltimaMensagemEm });
+        });
+
+        modelBuilder.Entity<CardEvento>(e =>
+        {
+            e.ToTable("card_evento");
+            e.HasOne<Conversa>().WithMany().HasForeignKey(x => x.ConversaId);
+            e.HasIndex(x => new { x.LojaId, x.CriadoEm });
+        });
+
+        modelBuilder.Entity<ConfigFunil>(e =>
+        {
+            e.ToTable("config_funil");
+            e.HasIndex(x => x.LojaId).IsUnique();
         });
 
         modelBuilder.Entity<Mensagem>(e =>
@@ -132,6 +153,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
         modelBuilder.Entity<Cliente>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<Conversa>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<Mensagem>().HasQueryFilter(x => x.LojaId == LojaId);
+        modelBuilder.Entity<CardEvento>().HasQueryFilter(x => x.LojaId == LojaId);
+        modelBuilder.Entity<ConfigFunil>().HasQueryFilter(x => x.LojaId == LojaId);
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

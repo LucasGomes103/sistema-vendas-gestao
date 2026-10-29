@@ -89,6 +89,7 @@ v1.MapCatalogoPublicoEndpoints();
 v1.MapEspecieEndpoints();
 v1.MapEstoqueEndpoints();
 v1.MapConversaEndpoints();
+v1.MapFunilEndpoints();
 v1.MapWebhookEndpoints();
 if (app.Environment.IsDevelopment())
     v1.MapSimuladorEndpoints();

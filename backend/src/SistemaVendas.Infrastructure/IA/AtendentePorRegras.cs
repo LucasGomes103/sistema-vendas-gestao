@@ -41,10 +41,14 @@ public class AtendentePorRegras : IAtendenteIA
 
         var sinal = SinaisQuente.FirstOrDefault(s => $" {texto} ".Contains($" {s}"));
         if (sinal is not null)
+        {
+            var textos = await ferramentas.TextosAsync(ct);
+            var frete = sinal is "frete" or "entrega" or "cep";
             return new RespostaAtendente(
-                "Perfeito! Vou chamar um atendente para finalizar com você. Ele já responde por aqui.",
+                frete ? textos.Frete : textos.ChamarVendedor,
                 ChamarVendedor: true,
-                MotivoVendedor: $"Cliente falou em \"{sinal}\"");
+                MotivoVendedor: frete ? "Cliente quer saber o frete" : $"Cliente falou em \"{sinal}\"");
+        }
 
         var especies = await ferramentas.BuscarEspecieAsync(ultima, ct);
         if (especies.Count > 0)

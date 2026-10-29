@@ -50,10 +50,11 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
             conteudos.Add(Parte(fala.DoCliente ? "user" : "model", new JsonObject { ["text"] = fala.Texto }));
 
         string? motivoVendedor = null;
+        var textos = await ferramentas.TextosAsync(ct);
 
         for (var rodada = 0; rodada < MaximoRodadas; rodada++)
         {
-            var resposta = await ChamarAsync(nomeLoja, conteudos, ct);
+            var resposta = await ChamarAsync(nomeLoja, textos, conteudos, ct);
             var conteudo = resposta["candidates"]?[0]?["content"] as JsonObject
                 ?? throw new InvalidOperationException("Gemini não devolveu conteúdo.");
             var partes = conteudo["parts"]?.AsArray() ?? [];
@@ -121,12 +122,12 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
         return new RespostaAtendente("Vou chamar um atendente para te ajudar, um instante.", true, motivoVendedor ?? "IA não concluiu a resposta");
     }
 
-    private async Task<JsonObject> ChamarAsync(string nomeLoja, JsonArray conteudos, CancellationToken ct)
+    private async Task<JsonObject> ChamarAsync(string nomeLoja, TextosProntos textos, JsonArray conteudos, CancellationToken ct)
     {
         var o = opcoes.Value;
         var corpo = new JsonObject
         {
-            ["systemInstruction"] = new JsonObject { ["parts"] = new JsonArray(new JsonObject { ["text"] = InstrucaoSistema(nomeLoja) }) },
+            ["systemInstruction"] = new JsonObject { ["parts"] = new JsonArray(new JsonObject { ["text"] = InstrucaoSistema(nomeLoja, textos) }) },
             ["contents"] = conteudos.DeepClone(),
             ["tools"] = JsonNode.Parse(Ferramentas),
             ["generationConfig"] = new JsonObject { ["temperature"] = 0.3, ["maxOutputTokens"] = 400 }
@@ -150,7 +151,7 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
     private static JsonObject Parte(string papel, JsonObject parte) =>
         new() { ["role"] = papel, ["parts"] = new JsonArray(parte) };
 
-    private static string InstrucaoSistema(string nomeLoja) => $"""
+    private static string InstrucaoSistema(string nomeLoja, TextosProntos textos) => $"""
         Você é o atendente virtual da {nomeLoja}, uma loja de peixes ornamentais, conversando pelo WhatsApp.
         Regras:
         - Responda em português do Brasil, curto e simpático (no máximo 3 frases), como num WhatsApp.
@@ -162,8 +163,9 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
         - Mensagem que contém "{PedidoCatalogo.Marcador}" é um pedido montado na vitrine: confira cada item com
           buscar_especie, responda com um resumo curto (itens e total), peça o CEP para o frete e use chamar_vendedor
           com o motivo "Pedido pelo catálogo".
-        - Frete e entrega: peça o CEP do cliente. Quando ele mandar o CEP, diga que um atendente vai calcular o frete
-          e use chamar_vendedor com o CEP no motivo. Nunca invente valor de frete ou prazo.
+        - Frete e entrega: responda com este texto da loja: "{textos.Frete}" e use chamar_vendedor
+          (com o CEP no motivo, se o cliente já tiver mandado). Nunca invente valor de frete ou prazo.
+        - Ao chamar o vendedor, use este texto da loja: "{textos.ChamarVendedor}".
         - Use chamar_vendedor quando o cliente quiser reservar, comprar ou pagar, pedir para falar com uma pessoa,
           reclamar, ou quando você não souber responder.
         - Não peça nem repita CPF, endereço ou outros dados pessoais.

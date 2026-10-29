@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SistemaVendas.Application.Comum;
 using SistemaVendas.Domain.Atendimento;
+using SistemaVendas.Domain.Funil;
 using SistemaVendas.Infrastructure.Dados;
 
 namespace SistemaVendas.Infrastructure.WhatsApp;
@@ -17,7 +18,7 @@ public record StatusRecebido(string Wamid, string Status, string? Erro);
 /// Lê o webhook da WhatsApp Cloud API e grava cliente, conversa e mensagem.
 /// Idempotente: o wamid é único, então um reenvio da Meta não duplica nada.
 /// </summary>
-public class ProcessadorWebhook(AppDbContext db, ILojaAtual lojaAtual, ILogger<ProcessadorWebhook> logger)
+public class ProcessadorWebhook(AppDbContext db, ILojaAtual lojaAtual, ServicoFunil funil, ILogger<ProcessadorWebhook> logger)
 {
     public static (List<MensagemRecebida> Mensagens, List<StatusRecebido> Status) Ler(string payload)
     {
@@ -118,9 +119,11 @@ public class ProcessadorWebhook(AppDbContext db, ILojaAtual lojaAtual, ILogger<P
         {
             conversa = new Conversa { LojaId = loja.Id, ClienteId = cliente.Id, Simulada = simulada };
             db.Conversas.Add(conversa);
+            funil.Registrar(conversa, new MudancaEtapa(null, EtapaCard.Novo, "Primeira mensagem"), OrigemEvento.Webhook);
         }
 
         conversa.ReceberDoCliente(m.Em);
+        funil.Registrar(conversa, MotorFunil.AoReceberDoCliente(conversa), OrigemEvento.Webhook);
 
         db.Mensagens.Add(new Mensagem
         {

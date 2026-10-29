@@ -1,4 +1,5 @@
 using SistemaVendas.Domain.Comum;
+using SistemaVendas.Domain.Funil;
 
 namespace SistemaVendas.Domain.Atendimento;
 
@@ -74,6 +75,14 @@ public class Conversa : EntidadeDaLoja
     public bool ChamouVendedor { get; set; }
     public string? MotivoVendedor { get; set; }
     public DateTimeOffset? ChamouVendedorEm { get; set; }
+
+    // Funil: cada conversa é um card do kanban.
+    public EtapaCard Etapa { get; set; } = EtapaCard.Novo;
+    public int FollowupsEnviados { get; set; }
+    public AcaoFunil? ProximaAcao { get; set; }
+    public DateTimeOffset? ProximaAcaoEm { get; set; }
+    public MotivoPerda? MotivoPerda { get; set; }
+    public decimal? ValorEstimado { get; set; }
 
     public static readonly TimeSpan Janela = TimeSpan.FromHours(24);
 

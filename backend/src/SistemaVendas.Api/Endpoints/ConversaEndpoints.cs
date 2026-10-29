@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SistemaVendas.Application.Atendimento;
 using SistemaVendas.Application.Comum;
 using SistemaVendas.Domain.Atendimento;
+using SistemaVendas.Domain.Funil;
 using SistemaVendas.Infrastructure.Dados;
 using SistemaVendas.Infrastructure.WhatsApp;
 
@@ -90,7 +91,7 @@ public static class ConversaEndpoints
         });
 
         // Envio pelo vendedor: vai para o outbox; texto livre só dentro da janela de 24 h.
-        grupo.MapPost("/{id:guid}/mensagens", async (Guid id, EnviarEntrada entrada, AppDbContext db, ClaimsPrincipal user, CancellationToken ct) =>
+        grupo.MapPost("/{id:guid}/mensagens", async (Guid id, EnviarEntrada entrada, AppDbContext db, ServicoFunil funil, ClaimsPrincipal user, CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(entrada.Texto))
                 return Results.Problem("Escreva a mensagem.", statusCode: StatusCodes.Status422UnprocessableEntity);
@@ -118,6 +119,8 @@ public static class ConversaEndpoints
             db.Mensagens.Add(mensagem);
             conversa.UltimaMensagemEm = agora;
             conversa.Assumir(); // vendedor respondeu: o robô para de falar nesta conversa
+            var cfg = await funil.ConfigAsync(conversa.LojaId, ct);
+            funil.Registrar(conversa, MotorFunil.AoResponderLoja(conversa, cfg, agora), OrigemEvento.Usuario);
             await db.SaveChangesAsync(ct);
 
             return Results.Ok(new MensagemSaida(mensagem.Id, mensagem.Direcao.ToString(), mensagem.Autor.ToString(),
@@ -150,8 +153,20 @@ public static class ConversaEndpoints
         grupo.MapPost("/{id:guid}/assumir", (Guid id, AppDbContext db, CancellationToken ct) =>
             AlterarAsync(db, id, c => c.Assumir(), ct));
 
-        grupo.MapPost("/{id:guid}/devolver", (Guid id, AppDbContext db, CancellationToken ct) =>
-            AlterarAsync(db, id, c => c.DevolverAoRobo(), ct));
+        grupo.MapPost("/{id:guid}/devolver", async (Guid id, AppDbContext db, ServicoFunil funil, CancellationToken ct) =>
+        {
+            var conversa = await db.Conversas.FirstOrDefaultAsync(c => c.Id == id, ct);
+            if (conversa is null)
+                return Results.NotFound();
+
+            conversa.DevolverAoRobo();
+            var mudanca = conversa.Etapa == EtapaCard.Quente ? MotorFunil.Mover(conversa, EtapaCard.RoboAtendendo, null) : null;
+            var cfg = await funil.ConfigAsync(conversa.LojaId, ct);
+            MotorFunil.AoResponderLoja(conversa, cfg, DateTimeOffset.UtcNow);
+            funil.Registrar(conversa, mudanca, OrigemEvento.Usuario);
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        });
 
         grupo.MapGet("/status-whatsapp", async (IWhatsAppCliente whatsApp, IAtendenteIA atendente, Microsoft.Extensions.Options.IOptions<WhatsAppOptions> opcoesWa, AppDbContext db, ILojaAtual lojaAtual, IHostEnvironment env, CancellationToken ct) =>
         {

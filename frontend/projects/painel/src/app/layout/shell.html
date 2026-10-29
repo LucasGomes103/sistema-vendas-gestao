@@ -46,6 +46,12 @@
     <span>{{ auth.usuario()?.email }}</span>
     <span class="sv-selo info">{{ auth.usuario()?.papel }} · {{ auth.usuario()?.loja }}</span>
   </div>
+  @if (auth.ehDono()) {
+    <a mat-menu-item routerLink="/config">
+      <mat-icon>settings</mat-icon>
+      <span>Configuração</span>
+    </a>
+  }
   <button mat-menu-item (click)="auth.sair()">
     <mat-icon>logout</mat-icon>
     <span>Sair</span>

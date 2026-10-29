@@ -25,6 +25,16 @@ export const routes: Routes = [
         loadComponent: () => import('./features/estoque/estoque-page').then((m) => m.EstoquePage),
       },
       {
+        path: 'funil',
+        title: 'Funil',
+        loadComponent: () => import('./features/funil/funil-page').then((m) => m.FunilPage),
+      },
+      {
+        path: 'config',
+        title: 'Configuração',
+        loadComponent: () => import('./features/config/config-page').then((m) => m.ConfigPage),
+      },
+      {
         path: 'conversas',
         title: 'Conversas',
         loadComponent: () => import('./features/conversas/conversas-page').then((m) => m.ConversasPage),

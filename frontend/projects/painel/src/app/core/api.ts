@@ -115,6 +115,48 @@ export interface Mensagem {
   criadoEm: string;
 }
 
+export type EtapaCard =
+  | 'Novo'
+  | 'RoboAtendendo'
+  | 'FollowUp'
+  | 'Quente'
+  | 'AguardandoPagamento'
+  | 'ConferirPagamento'
+  | 'Pago'
+  | 'Entregue'
+  | 'Perdido';
+
+export type MotivoPerda = 'SemResposta' | 'NaoPagou' | 'AchouCaro' | 'SemEstoque' | 'RegiaoSemEntrega' | 'Desistiu';
+
+export interface CardFunil {
+  id: string;
+  cliente: string;
+  etapa: EtapaCard;
+  ultimaMensagem: string | null;
+  ultimaMensagemEm: string | null;
+  simulada: boolean;
+  roboPausado: boolean;
+  chamouVendedor: boolean;
+  motivoVendedor: string | null;
+  chamouVendedorEm: string | null;
+  followupsEnviados: number;
+  proximaAcao: 'MoverParaFollowup' | 'EnviarFollowup1' | 'EnviarFollowup2' | 'MarcarPerdido' | null;
+  proximaAcaoEm: string | null;
+  motivoPerda: MotivoPerda | null;
+  naoLidas: number;
+}
+
+export interface ConfigFunil {
+  horasAteFollowup: number;
+  horasFollowup1: number;
+  diasFollowup2: number;
+  horasAtePerdido: number;
+  textoFollowup1: string;
+  textoFollowup2: string;
+  textoFrete: string;
+  textoChamarVendedor: string;
+}
+
 /** Mensagem do ProblemDetails da API (regras de negócio voltam como 422). */
 export function mensagemDeErro(erro: unknown, padrao = 'Não foi possível concluir. Tente de novo.'): string {
   const corpo = (erro as { error?: { detail?: string } } | null)?.error;
