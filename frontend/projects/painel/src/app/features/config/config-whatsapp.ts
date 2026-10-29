@@ -42,24 +42,37 @@ import { API, ConfigWhatsApp, mensagemDeErro } from '../../core/api';
         }
       </div>
 
-      <mat-form-field appearance="outline" class="numeros">
-        <mat-label>Números permitidos</mat-label>
-        <mat-chip-grid #grade aria-label="Números permitidos">
+      <div class="adicionar">
+        <mat-form-field appearance="outline" class="numeros">
+          <mat-label>Número permitido (com DDD)</mat-label>
+          <input
+            matInput
+            inputmode="tel"
+            placeholder="11 91234-5678"
+            [ngModel]="novoNumero()"
+            (ngModelChange)="novoNumero.set($event)"
+            (keydown.enter)="$event.preventDefault(); adicionar()"
+          />
+          <mat-hint>Os celulares de onde você vai mandar mensagens de teste.</mat-hint>
+        </mat-form-field>
+        <button mat-stroked-button type="button" [disabled]="!novoNumero().trim()" (click)="adicionar()">
+          <mat-icon>add</mat-icon> Adicionar
+        </button>
+      </div>
+
+      @if (numeros().length) {
+        <mat-chip-set aria-label="Números permitidos" class="lista">
           @for (n of numeros(); track n) {
-            <mat-chip-row (removed)="remover(n)">
+            <mat-chip (removed)="remover(n)">
+              <mat-icon matChipAvatar>phone_iphone</mat-icon>
               {{ formatar(n) }}
               <button matChipRemove [attr.aria-label]="'Remover ' + n"><mat-icon>cancel</mat-icon></button>
-            </mat-chip-row>
+            </mat-chip>
           }
-          <input
-            placeholder="Digite com DDD e tecle Enter"
-            inputmode="tel"
-            [matChipInputFor]="grade"
-            (matChipInputTokenEnd)="adicionar($event.value); $event.chipInput.clear()"
-          />
-        </mat-chip-grid>
-        <mat-hint>Ex.: 11 91234-5678. Coloque os celulares de onde você vai testar.</mat-hint>
-      </mat-form-field>
+        </mat-chip-set>
+      } @else if (!atenderTodos()) {
+        <p class="nenhum">Nenhum número liberado: o robô não responde ninguém.</p>
+      }
 
       <mat-form-field appearance="outline">
         <mat-label>WhatsApp da loja (botão da vitrine)</mat-label>
@@ -68,7 +81,7 @@ import { API, ConfigWhatsApp, mensagemDeErro } from '../../core/api';
       </mat-form-field>
 
       <div class="acoes">
-        <button mat-flat-button [disabled]="!alterado() || salvando()" (click)="salvar()">
+        <button mat-flat-button [disabled]="(!alterado() && !novoNumero().trim()) || salvando()" (click)="salvar()">
           <mat-icon>save</mat-icon> Salvar WhatsApp
         </button>
       </div>
@@ -112,8 +125,29 @@ import { API, ConfigWhatsApp, mensagemDeErro } from '../../core/api';
       }
     }
 
+    .adicionar {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+
+      button {
+        height: 56px;
+      }
+    }
+
     .numeros {
-      width: 100%;
+      flex: 1;
+    }
+
+    .lista {
+      display: block;
+      margin: 4px 0 16px;
+    }
+
+    .nenhum {
+      margin: 4px 0 16px;
+      color: var(--mat-sys-on-surface-variant);
+      font: var(--mat-sys-body-small);
     }
 
     .acoes {
@@ -132,6 +166,7 @@ export class ConfigWhatsAppComponent {
   protected readonly atenderTodos = signal(false);
   protected readonly numeros = signal<string[]>([]);
   protected readonly whatsAppNumero = signal('');
+  protected readonly novoNumero = signal('');
   protected readonly alterado = signal(false);
   protected readonly salvando = signal(false);
 
@@ -146,17 +181,19 @@ export class ConfigWhatsAppComponent {
     });
   }
 
-  protected adicionar(valor: string): void {
-    let n = (valor ?? '').replace(/\D/g, '');
+  /** Adiciona o número digitado; devolve false se estiver incompleto. */
+  protected adicionar(): boolean {
+    let n = this.novoNumero().replace(/\D/g, '');
+    if (!n) return true;
     if (n.length < 10) {
-      if (n) this.snack.open('Número incompleto: use DDD + número.', 'OK', { duration: 4000 });
-      return;
+      this.snack.open('Número incompleto: use DDD + número.', 'OK', { duration: 4000 });
+      return false;
     }
     if (n.length <= 11) n = '55' + n;
-    if (!this.numeros().includes(n)) {
-      this.numeros.update((l) => [...l, n]);
-      this.alterado.set(true);
-    }
+    if (!this.numeros().includes(n)) this.numeros.update((l) => [...l, n]);
+    this.novoNumero.set('');
+    this.alterado.set(true);
+    return true;
   }
 
   protected remover(n: string): void {
@@ -170,6 +207,8 @@ export class ConfigWhatsAppComponent {
   }
 
   protected async salvar(): Promise<void> {
+    // Número digitado e não adicionado ainda também entra.
+    if (!this.adicionar()) return;
     if (this.atenderTodos() && !confirm('Atender TODOS os contatos? Só confirme se o número conectado for exclusivo da loja.')) return;
 
     this.salvando.set(true);
