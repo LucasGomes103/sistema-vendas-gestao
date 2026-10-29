@@ -1,14 +1,30 @@
 using System.Globalization;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using SistemaVendas.Application.Atendimento;
+using SistemaVendas.Application.Comum;
 using SistemaVendas.Infrastructure.Dados;
 
 namespace SistemaVendas.Infrastructure.IA;
 
-/// <summary>Ferramentas da IA sobre o catálogo e o estoque da loja atual.</summary>
-public class FerramentasAtendimento(AppDbContext db) : IFerramentasAtendimento
+public class VitrineOptions
 {
+    public const string Secao = "Vitrine";
+
+    /// <summary>Endereço público da vitrine; o link de cada loja é {UrlBase}/{slug}.</summary>
+    public string UrlBase { get; set; } = "http://localhost:4300";
+}
+
+/// <summary>Ferramentas da IA sobre o catálogo e o estoque da loja atual.</summary>
+public class FerramentasAtendimento(AppDbContext db, ILojaAtual lojaAtual, IOptions<VitrineOptions> vitrine) : IFerramentasAtendimento
+{
+    public async Task<string?> LinkCatalogoAsync(CancellationToken ct)
+    {
+        var slug = await db.Lojas.Where(l => l.Id == lojaAtual.LojaId).Select(l => l.Slug).FirstOrDefaultAsync(ct);
+        return slug is null ? null : $"{vitrine.Value.UrlBase.TrimEnd('/')}/{slug}";
+    }
+
     public async Task<IReadOnlyList<EspecieEncontrada>> BuscarEspecieAsync(string texto, CancellationToken ct)
     {
         var termos = Normalizar(texto).Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(t => t.Length >= 3).ToArray();

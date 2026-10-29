@@ -14,11 +14,18 @@ interface ItemCatalogo {
 
 interface Catalogo {
   loja: string;
+  /** WhatsApp da loja (só dígitos, com DDI). Sem ele, a vitrine não mostra o carrinho. */
+  whatsApp: string | null;
   itens: ItemCatalogo[];
 }
 
 /** Abaixo disso a vitrine avisa "últimas unidades". */
 const POUCAS_UNIDADES = 5;
+
+/** Mesmo texto que o robô reconhece como pedido montado na vitrine (PedidoCatalogo.Marcador no backend). */
+const MARCADOR_PEDIDO = 'Pedido pelo catálogo';
+
+const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
 @Component({
   selector: 'app-vitrine-page',
@@ -35,6 +42,9 @@ export class VitrinePage {
   protected readonly busca = signal('');
   protected readonly poucas = POUCAS_UNIDADES;
 
+  /** Carrinho: id da espécie -> quantidade. */
+  private readonly carrinho = signal<Record<string, number>>({});
+
   protected readonly sigla = computed(() =>
     (this.catalogo.value()?.loja ?? '')
       .split(' ')
@@ -50,6 +60,36 @@ export class VitrinePage {
       (i) => !termo || normalizar(`${i.nomePopular} ${i.nomeCientifico ?? ''}`).includes(termo),
     );
   });
+
+  private readonly escolhidos = computed(() => {
+    const qtds = this.carrinho();
+    return (this.catalogo.value()?.itens ?? [])
+      .filter((i) => (qtds[i.id] ?? 0) > 0)
+      .map((i) => ({ item: i, qtd: qtds[i.id] }));
+  });
+
+  protected readonly totalItens = computed(() => this.escolhidos().reduce((s, e) => s + e.qtd, 0));
+  protected readonly total = computed(() => this.escolhidos().reduce((s, e) => s + e.qtd * e.item.preco, 0));
+
+  protected quantidade(id: string): number {
+    return this.carrinho()[id] ?? 0;
+  }
+
+  protected alterar(item: ItemCatalogo, delta: number): void {
+    this.carrinho.update((c) => {
+      const nova = Math.min(item.disponivel, Math.max(0, (c[item.id] ?? 0) + delta));
+      return { ...c, [item.id]: nova };
+    });
+  }
+
+  /** Abre o WhatsApp da loja com o pedido já escrito; o robô reconhece e chama o vendedor. */
+  protected linkPedido(numero: string): string {
+    const linhas = this.escolhidos().map(
+      (e) => `• ${e.qtd}x ${e.item.nomePopular} (${BRL.format(e.item.preco)} cada) = ${BRL.format(e.qtd * e.item.preco)}`,
+    );
+    const texto = [`🛒 *${MARCADOR_PEDIDO}*`, '', ...linhas, '', `*Total: ${BRL.format(this.total())}* + frete`].join('\n');
+    return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
+  }
 }
 
 function normalizar(texto: string): string {

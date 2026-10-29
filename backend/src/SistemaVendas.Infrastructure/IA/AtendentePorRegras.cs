@@ -15,12 +15,29 @@ public class AtendentePorRegras : IAtendenteIA
     private static readonly string[] SinaisQuente =
         ["reservar", "reserva", "comprar", "quero levar", "pix", "pagar", "frete", "entrega", "cep", "atendente", "pessoa", "humano", "vendedor"];
 
+    private static readonly string[] PalavrasCatalogo = ["catalogo", "lista", "o que tem", "oque tem", "o que voces tem", "disponiveis", "fotos"];
+
     public string Nome => "Regras (sem IA)";
 
     public async Task<RespostaAtendente> ResponderAsync(string nomeLoja, IReadOnlyList<FalaConversa> historico, IFerramentasAtendimento ferramentas, CancellationToken ct)
     {
         var ultima = historico.LastOrDefault(f => f.DoCliente)?.Texto ?? "";
         var texto = FerramentasAtendimento.Normalizar(ultima);
+
+        if (PedidoCatalogo.EhPedido(ultima))
+            return new RespostaAtendente(
+                "Recebi seu pedido! Para calcular o frete, me envie o seu CEP. Um atendente já confere tudo e confirma com você.",
+                ChamarVendedor: true,
+                MotivoVendedor: "Pedido pelo catálogo");
+
+        if (PalavrasCatalogo.Any(p => $" {texto} ".Contains($" {p}")))
+        {
+            var link = await ferramentas.LinkCatalogoAsync(ct);
+            if (link is not null)
+                return new RespostaAtendente(
+                    $"Aqui está o nosso catálogo com o que temos disponível agora: {link}\nÉ só escolher as quantidades e tocar em \"Enviar pedido pelo WhatsApp\".",
+                    ChamarVendedor: false, MotivoVendedor: null);
+        }
 
         var sinal = SinaisQuente.FirstOrDefault(s => $" {texto} ".Contains($" {s}"));
         if (sinal is not null)

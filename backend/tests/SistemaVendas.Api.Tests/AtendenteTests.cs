@@ -25,6 +25,8 @@ public class AtendenteTests
 
         public Task<int> ConsultarEstoqueAsync(Guid especieId, CancellationToken ct) =>
             Task.FromResult(_especies.First(e => e.Id == especieId).Disponivel);
+
+        public Task<string?> LinkCatalogoAsync(CancellationToken ct) => Task.FromResult<string?>("https://loja.test/demo");
     }
 
     private static Task<RespostaAtendente> Perguntar(params string[] doCliente) =>
@@ -57,6 +59,22 @@ public class AtendenteTests
         var r = await Perguntar(texto);
         Assert.True(r.ChamarVendedor);
         Assert.NotNull(r.MotivoVendedor);
+    }
+
+    [Fact]
+    public async Task Pedido_de_catalogo_recebe_o_link_da_vitrine()
+    {
+        var r = await Perguntar("Vocês tem catálogo?");
+        Assert.Contains("https://loja.test/demo", r.Texto);
+        Assert.False(r.ChamarVendedor);
+    }
+
+    [Fact]
+    public async Task Pedido_montado_na_vitrine_chama_o_vendedor_e_pede_CEP()
+    {
+        var r = await Perguntar("🛒 Pedido pelo catálogo\n2x Ramirezi (casal)\nTotal: R$ 120,00");
+        Assert.True(r.ChamarVendedor);
+        Assert.Contains("CEP", r.Texto);
     }
 
     [Fact]

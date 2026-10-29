@@ -31,7 +31,7 @@ public static class CatalogoEndpoints
                 .ToListAsync(ct);
 
             var itens = especies.Select(e => new ItemCatalogoPublico(e.Id, e.NomePopular, e.NomeCientifico, e.TamanhoCm, e.Preco, disponivel[e.Id], e.FotoUrl));
-            return Results.Ok(new { loja = loja.Nome, itens });
+            return Results.Ok(new { loja = loja.Nome, whatsApp = loja.WhatsAppNumero, itens });
         })
         .WithTags("Catálogo público");
     }

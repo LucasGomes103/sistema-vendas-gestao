@@ -99,6 +99,10 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
                             : new JsonObject { ["erro"] = "especie_id inválido; use buscar_especie antes" };
                         break;
 
+                    case "link_catalogo":
+                        resultado = new JsonObject { ["link"] = await ferramentas.LinkCatalogoAsync(ct) };
+                        break;
+
                     case "chamar_vendedor":
                         motivoVendedor = args["motivo"]?.GetValue<string>() ?? "Cliente quer falar com uma pessoa";
                         resultado = new JsonObject { ["ok"] = true, ["instrucao"] = "Avise o cliente que um atendente vai responder em instantes." };
@@ -153,8 +157,15 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
         - Preço e disponibilidade SÓ podem vir das ferramentas. Nunca invente espécie, preço ou quantidade.
         - Quando o cliente citar um peixe, use buscar_especie. Se não houver estoque, diga que no momento não tem.
         - Peixe em quarentena não aparece no estoque e não pode ser oferecido.
-        - Use chamar_vendedor quando o cliente quiser reservar, comprar, pagar, saber frete ou entrega,
-          pedir para falar com uma pessoa, reclamar, ou quando você não souber responder.
+        - Se pedirem catálogo, lista, fotos ou "o que vocês têm", use link_catalogo e envie o link completo,
+          explicando que lá dá para escolher as quantidades e enviar o pedido pelo WhatsApp.
+        - Mensagem que contém "{PedidoCatalogo.Marcador}" é um pedido montado na vitrine: confira cada item com
+          buscar_especie, responda com um resumo curto (itens e total), peça o CEP para o frete e use chamar_vendedor
+          com o motivo "Pedido pelo catálogo".
+        - Frete e entrega: peça o CEP do cliente. Quando ele mandar o CEP, diga que um atendente vai calcular o frete
+          e use chamar_vendedor com o CEP no motivo. Nunca invente valor de frete ou prazo.
+        - Use chamar_vendedor quando o cliente quiser reservar, comprar ou pagar, pedir para falar com uma pessoa,
+          reclamar, ou quando você não souber responder.
         - Não peça nem repita CPF, endereço ou outros dados pessoais.
         """;
 
@@ -170,6 +181,11 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
               "name": "consultar_estoque",
               "description": "Quantidade disponível agora de uma espécie, já descontando reservas e quarentena.",
               "parameters": { "type": "object", "properties": { "especie_id": { "type": "string" } }, "required": ["especie_id"] }
+            },
+            {
+              "name": "link_catalogo",
+              "description": "Link da vitrine da loja, com fotos, preços e o que está disponível. O cliente monta o pedido lá.",
+              "parameters": { "type": "object", "properties": {} }
             },
             {
               "name": "chamar_vendedor",

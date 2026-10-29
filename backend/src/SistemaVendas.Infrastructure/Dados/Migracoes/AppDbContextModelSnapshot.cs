@@ -625,6 +625,10 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasColumnType("character varying(60)")
                         .HasColumnName("slug");
 
+                    b.Property<string>("WhatsAppNumero")
+                        .HasColumnType("text")
+                        .HasColumnName("whats_app_numero");
+
                     b.HasKey("Id")
                         .HasName("pk_loja");
 

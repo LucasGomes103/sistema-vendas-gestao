@@ -13,6 +13,18 @@ public interface IFerramentasAtendimento
 {
     Task<IReadOnlyList<EspecieEncontrada>> BuscarEspecieAsync(string texto, CancellationToken ct);
     Task<int> ConsultarEstoqueAsync(Guid especieId, CancellationToken ct);
+
+    /// <summary>Link da vitrine pública da loja, onde o cliente vê o que está disponível e monta o pedido.</summary>
+    Task<string?> LinkCatalogoAsync(CancellationToken ct);
+}
+
+/// <summary>Mensagem montada pela vitrine quando o cliente toca em "Enviar pedido pelo WhatsApp".</summary>
+public static class PedidoCatalogo
+{
+    /// <summary>A vitrine começa a mensagem com este texto; o robô reconhece e trata como pedido.</summary>
+    public const string Marcador = "Pedido pelo catálogo";
+
+    public static bool EhPedido(string texto) => texto.Contains(Marcador, StringComparison.OrdinalIgnoreCase);
 }
 
 public record RespostaAtendente(string Texto, bool ChamarVendedor, string? MotivoVendedor);

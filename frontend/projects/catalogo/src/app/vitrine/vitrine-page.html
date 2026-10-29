@@ -44,6 +44,18 @@
             @if (item.tamanhoCm) {
               <span class="tamanho">{{ item.tamanhoCm }} cm</span>
             }
+            @if (c.whatsApp) {
+              @let qtd = quantidade(item.id);
+              <div class="quantidade" [class.ativa]="qtd > 0">
+                <button type="button" aria-label="Menos" [disabled]="qtd === 0" (click)="alterar(item, -1)">
+                  <span class="ms">remove</span>
+                </button>
+                <span aria-live="polite">{{ qtd }}</span>
+                <button type="button" aria-label="Mais" [disabled]="qtd >= item.disponivel" (click)="alterar(item, 1)">
+                  <span class="ms">add</span>
+                </button>
+              </div>
+            }
           </div>
         </li>
       } @empty {
@@ -54,6 +66,24 @@
       }
     </ul>
   </main>
+
+  @if (c.whatsApp) {
+    <footer class="carrinho" [class.vazio]="totalItens() === 0">
+      @if (totalItens() > 0) {
+        <div class="resumo">
+          <strong>{{ totalItens() }} {{ totalItens() === 1 ? 'peixe' : 'peixes' }}</strong>
+          <span>{{ total() | currency: 'BRL' }} + frete</span>
+        </div>
+        <a class="enviar" [href]="linkPedido(c.whatsApp)" target="_blank" rel="noopener">
+          <span class="ms">send</span> Enviar pedido pelo WhatsApp
+        </a>
+      } @else {
+        <a class="enviar secundario" [href]="'https://wa.me/' + c.whatsApp" target="_blank" rel="noopener">
+          <span class="ms">chat</span> Falar com a loja
+        </a>
+      }
+    </footer>
+  }
 } @else if (catalogo.error()) {
   <div class="estado">
     <span class="ms">storefront</span>

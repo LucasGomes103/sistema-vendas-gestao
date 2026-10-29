@@ -34,6 +34,8 @@ public record SimularEntrada(string Telefone, string? Nome, string Texto);
 
 public record NumeroWhatsAppEntrada(string? PhoneNumberId);
 
+public record WhatsAppLojaEntrada(string? Numero);
+
 public static class ConversaEndpoints
 {
     public static void MapConversaEndpoints(this IEndpointRouteBuilder app)
@@ -167,6 +169,20 @@ public static class ConversaEndpoints
 
             var loja = await db.Lojas.FirstAsync(l => l.Id == lojaAtual.LojaId, ct);
             loja.PhoneNumberId = id;
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        })
+        .RequireAuthorization(AuthEndpoints.PoliticaDono);
+
+        // Número que o cliente vê (botão "pedir pelo WhatsApp" da vitrine).
+        grupo.MapPut("/whatsapp-loja", async (WhatsAppLojaEntrada entrada, AppDbContext db, ILojaAtual lojaAtual, CancellationToken ct) =>
+        {
+            var numero = new string((entrada.Numero ?? "").Where(char.IsDigit).ToArray());
+            if (numero.Length is < 12 or > 15)
+                return Results.Problem("Informe o número com DDI e DDD, ex.: 5511987654321.", statusCode: StatusCodes.Status422UnprocessableEntity);
+
+            var loja = await db.Lojas.FirstAsync(l => l.Id == lojaAtual.LojaId, ct);
+            loja.WhatsAppNumero = numero;
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
         })

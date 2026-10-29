@@ -33,6 +33,7 @@ public static class DependencyInjection
         // Atendente: Gemini quando há chave; sem ela, respostas por regras (também usadas se o Gemini falhar).
         var gemini = config.GetSection(GeminiOptions.Secao);
         services.Configure<GeminiOptions>(gemini);
+        services.Configure<VitrineOptions>(config.GetSection(VitrineOptions.Secao));
         services.AddSingleton<AtendentePorRegras>();
         services.AddScoped<IFerramentasAtendimento, FerramentasAtendimento>();
         if (string.IsNullOrWhiteSpace(gemini[nameof(GeminiOptions.ApiKey)]))
