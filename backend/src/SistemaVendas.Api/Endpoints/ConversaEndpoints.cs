@@ -128,11 +128,11 @@ public static class ConversaEndpoints
         grupo.MapPost("/{id:guid}/devolver", (Guid id, AppDbContext db, CancellationToken ct) =>
             AlterarAsync(db, id, c => c.DevolverAoRobo(), ct));
 
-        grupo.MapGet("/status-whatsapp", async (IWhatsAppCliente whatsApp, IAtendenteIA atendente, AppDbContext db, ILojaAtual lojaAtual, IHostEnvironment env, CancellationToken ct) =>
+        grupo.MapGet("/status-whatsapp", async (IWhatsAppCliente whatsApp, IAtendenteIA atendente, Microsoft.Extensions.Options.IOptions<WhatsAppOptions> opcoesWa, AppDbContext db, ILojaAtual lojaAtual, IHostEnvironment env, CancellationToken ct) =>
         {
             var phoneNumberId = await db.Lojas.Where(l => l.Id == lojaAtual.LojaId).Select(l => l.PhoneNumberId).FirstOrDefaultAsync(ct);
             // Em desenvolvimento o simulador fica disponível mesmo com o número real ligado.
-            return Results.Ok(new { simulado = whatsApp.Simulado, simuladorDisponivel = env.IsDevelopment(), phoneNumberId, atendente = atendente.Nome });
+            return Results.Ok(new { simulado = whatsApp.Simulado, simuladorDisponivel = env.IsDevelopment(), phoneNumberId, atendente = atendente.Nome, provedor = opcoesWa.Value.UsaPonteLocal ? "Local" : "Meta" });
         });
 
         // Número do WhatsApp da loja (phone_number_id da Meta). Não é segredo; o token fica fora do banco.
@@ -224,6 +224,8 @@ public static class ConversaEndpoints
 
     private static string FormatarTelefone(string telefone)
     {
+        if (telefone.StartsWith("lid:"))
+            return "Contato do WhatsApp";
         var local = telefone.StartsWith("55") && telefone.Length > 11 ? telefone[2..] : telefone;
         return local.Length == 11 ? $"({local[..2]}) {local[2..7]}-{local[7..]}" : telefone;
     }

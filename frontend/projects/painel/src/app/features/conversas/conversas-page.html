@@ -7,6 +7,10 @@
         <span class="sv-selo alerta" matTooltip="Sem token da Meta configurado. Envios são simulados.">
           <mat-icon>science</mat-icon>Simulado
         </span>
+      } @else if (whatsApp.value()?.provedor === 'Local') {
+        <span class="sv-selo alerta" matTooltip="Conexão não oficial por QR code, só para testes. Use número reserva.">
+          <mat-icon>qr_code</mat-icon>WhatsApp local (teste)
+        </span>
       } @else if (whatsApp.value()) {
         <span class="sv-selo ok" matTooltip="Ligado ao número da Meta"><mat-icon>check_circle</mat-icon>WhatsApp ligado</span>
       }
@@ -85,7 +89,7 @@
         <span class="avatar">{{ iniciais(c.cliente) }}</span>
         <div class="quem">
           <strong>{{ c.cliente }}</strong>
-          <span>+{{ c.telefone }}</span>
+          <span>{{ c.telefone.startsWith('lid:') ? 'Contato do WhatsApp' : '+' + c.telefone }}</span>
         </div>
         @if (c.dentroDaJanela) {
           <span class="sv-selo ok" matTooltip="Dentro de 24 h da última mensagem do cliente: resposta livre e grátis.">

@@ -1,0 +1,4 @@
+node_modules/
+# Credenciais da sessão do WhatsApp: nunca vão para o repositório.
+sessao/
+.env

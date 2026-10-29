@@ -18,6 +18,27 @@ public class WhatsAppOptions
     /// <summary>Prefixo do phone_number_id usado pelo simulador do painel.</summary>
     public const string PrefixoSimulador = "sim-";
 
+    /// <summary>Prefixo do phone_number_id das mensagens que chegam pela ponte local (não oficial).</summary>
+    public const string PrefixoLocal = "local-";
+
+    /// <summary>"Meta" (Cloud API oficial) ou "Local" (ponte por QR code, só para testes e demonstrações).</summary>
+    public string Provedor { get; set; } = "Meta";
+
+    public LocalOptions Local { get; set; } = new();
+
+    public bool UsaPonteLocal => string.Equals(Provedor, "Local", StringComparison.OrdinalIgnoreCase);
+
+    public class LocalOptions
+    {
+        public string Url { get; set; } = "http://localhost:5050";
+
+        /// <summary>Segredo compartilhado entre a API e a ponte local.</summary>
+        public string? Segredo { get; set; }
+
+        /// <summary>Loja que atende pelo número conectado na ponte.</summary>
+        public string LojaSlug { get; set; } = "demo";
+    }
+
     /// <summary>Token de acesso do app na Meta. Vazio = envio simulado.</summary>
     public string? AccessToken { get; set; }
 
@@ -58,6 +79,9 @@ public class WhatsAppCloudCliente(HttpClient http, IOptions<WhatsAppOptions> opc
 
     public async Task<string> EnviarTextoAsync(string phoneNumberId, string para, string texto, CancellationToken ct)
     {
+        if (string.IsNullOrEmpty(phoneNumberId))
+            throw new InvalidOperationException("A loja ainda não tem número do WhatsApp configurado.");
+
         var o = opcoes.Value;
         using var req = new HttpRequestMessage(HttpMethod.Post, $"https://graph.facebook.com/{o.ApiVersion}/{phoneNumberId}/messages")
         {
@@ -78,6 +102,33 @@ public class WhatsAppCloudCliente(HttpClient http, IOptions<WhatsAppOptions> opc
 
         using var json = JsonDocument.Parse(corpo);
         return json.RootElement.GetProperty("messages")[0].GetProperty("id").GetString()!;
+    }
+}
+
+/// <summary>
+/// Envio pela ponte local (QR code, não oficial). Só para testes e demonstrações, com número reserva:
+/// o WhatsApp pode banir números que usam conexões não oficiais.
+/// </summary>
+public class WhatsAppLocalCliente(HttpClient http, IOptions<WhatsAppOptions> opcoes) : IWhatsAppCliente
+{
+    public bool Simulado => false;
+
+    public async Task<string> EnviarTextoAsync(string phoneNumberId, string para, string texto, CancellationToken ct)
+    {
+        var local = opcoes.Value.Local;
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"{local.Url.TrimEnd('/')}/enviar")
+        {
+            Content = JsonContent.Create(new { para, texto })
+        };
+        req.Headers.Add("x-segredo", local.Segredo);
+
+        using var resp = await http.SendAsync(req, ct);
+        var corpo = await resp.Content.ReadAsStringAsync(ct);
+        if (!resp.IsSuccessStatusCode)
+            throw new HttpRequestException($"Ponte local respondeu {(int)resp.StatusCode}: {corpo}");
+
+        using var json = JsonDocument.Parse(corpo);
+        return "local." + json.RootElement.GetProperty("id").GetString();
     }
 }
 

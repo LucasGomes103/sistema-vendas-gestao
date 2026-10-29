@@ -1,10 +1,15 @@
+using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Options;
 using SistemaVendas.Domain.Atendimento;
 using SistemaVendas.Infrastructure.Dados;
 using SistemaVendas.Infrastructure.WhatsApp;
 
 namespace SistemaVendas.Api.Endpoints;
+
+/// <summary>Mensagem recebida pela ponte local.</summary>
+public record MensagemLocal(string De, string? Nome, string Id, string Texto, long Timestamp);
 
 public static class WebhookEndpoints
 {
@@ -38,6 +43,45 @@ public static class WebhookEndpoints
                 return Results.Unauthorized();
 
             db.WebhooksRecebidos.Add(new WebhookRecebido { Origem = "whatsapp", Payload = Encoding.UTF8.GetString(corpo) });
+            await db.SaveChangesAsync(ct);
+            return Results.Ok();
+        });
+
+        // Ponte local (QR code, não oficial): converte para o formato da Meta e entra na mesma fila.
+        grupo.MapPost("/local", async (MensagemLocal m, HttpRequest req, IOptions<WhatsAppOptions> opcoes, AppDbContext db, CancellationToken ct) =>
+        {
+            var local = opcoes.Value.Local;
+            if (!opcoes.Value.UsaPonteLocal || string.IsNullOrEmpty(local.Segredo))
+                return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+            if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(req.Headers["x-segredo"].ToString()), Encoding.UTF8.GetBytes(local.Segredo)))
+                return Results.Unauthorized();
+
+            var payload = JsonSerializer.Serialize(new
+            {
+                entry = new[]
+                {
+                    new
+                    {
+                        changes = new[]
+                        {
+                            new
+                            {
+                                value = new
+                                {
+                                    metadata = new { phone_number_id = WhatsAppOptions.PrefixoLocal + local.LojaSlug },
+                                    contacts = new[] { new { profile = new { name = m.Nome }, wa_id = m.De } },
+                                    messages = new[]
+                                    {
+                                        new { from = m.De, id = "local." + m.Id, timestamp = m.Timestamp.ToString(), type = "text", text = new { body = m.Texto } }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            db.WebhooksRecebidos.Add(new WebhookRecebido { Origem = "local", Payload = payload });
             await db.SaveChangesAsync(ct);
             return Results.Ok();
         });

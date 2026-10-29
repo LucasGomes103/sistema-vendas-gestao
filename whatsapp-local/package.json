@@ -1,0 +1,15 @@
+{
+  "name": "whatsapp-local",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ponte NÃO OFICIAL com o WhatsApp (QR code) para testes e demonstrações. Use número reserva.",
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env servidor.mjs"
+  },
+  "dependencies": {
+    "baileys": "7.0.0-rc14",
+    "pino": "^9.0.0",
+    "qrcode": "1.5.4"
+  }
+}

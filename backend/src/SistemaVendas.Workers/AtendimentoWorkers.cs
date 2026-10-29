@@ -120,9 +120,7 @@ public class MensagemWorker(
                 }
                 else
                 {
-                    if (string.IsNullOrEmpty(p.PhoneNumberId))
-                        throw new InvalidOperationException("A loja ainda não tem número do WhatsApp configurado.");
-                    p.Mensagem.Wamid = await whatsApp.EnviarTextoAsync(p.PhoneNumberId, p.Telefone, p.Mensagem.Conteudo, ct);
+                    p.Mensagem.Wamid = await whatsApp.EnviarTextoAsync(p.PhoneNumberId ?? "", p.Telefone, p.Mensagem.Conteudo, ct);
                 }
                 p.Mensagem.Status = StatusMensagem.Enviada;
                 p.Mensagem.Erro = null;

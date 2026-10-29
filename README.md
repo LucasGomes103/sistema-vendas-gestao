@@ -133,6 +133,26 @@ dotnet user-secrets set "WhatsApp:VerifyToken" "<texto qualquer, o mesmo cadastr
 O webhook da Meta aponta para `https://<seu-domínio>/api/v1/webhooks/whatsapp`. Em desenvolvimento, use um túnel
 gratuito (Cloudflare Tunnel ou ngrok) para expor a API local.
 
+### Modo local por QR code (não oficial, só para testes e demonstrações)
+
+A pasta `whatsapp-local` tem uma ponte gratuita que conecta um número lendo um QR code, como o WhatsApp Web.
+**Use um número reserva, nunca o da loja**: conexões não oficiais violam os termos do WhatsApp e o número pode ser
+banido. Para atender clientes de verdade, use a Cloud API da Meta (acima); a troca é só de configuração.
+
+```bash
+# 1. Segredo compartilhado entre API e ponte (o mesmo valor nos dois lugares)
+cd backend/src/SistemaVendas.Api
+dotnet user-secrets set "WhatsApp:Provedor" "Local"
+dotnet user-secrets set "WhatsApp:Local:Segredo" "<um texto aleatório>"
+
+# 2. Ponte: crie whatsapp-local/.env com WHATSAPP_LOCAL_SEGREDO=<o mesmo texto>
+cd whatsapp-local
+npm install
+npm start          # abra http://localhost:5050/qr e leia com o celular do número reserva
+```
+
+Para voltar à Meta: `dotnet user-secrets remove "WhatsApp:Provedor"`.
+
 ## Robô de atendimento (IA)
 
 Com a chave do Gemini (camada gratuita), o robô responde usando só dados das ferramentas do backend

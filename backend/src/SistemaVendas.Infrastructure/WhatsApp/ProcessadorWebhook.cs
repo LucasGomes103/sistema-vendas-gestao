@@ -84,10 +84,12 @@ public class ProcessadorWebhook(AppDbContext db, ILojaAtual lojaAtual, ILogger<P
 
     private async Task ReceberAsync(MensagemRecebida m, CancellationToken ct)
     {
-        // O simulador do painel usa "sim-{slug}" no lugar do número real da loja.
+        // Simulador ("sim-{slug}") e ponte local ("local-{slug}") identificam a loja pelo slug.
         var simulada = m.PhoneNumberId.StartsWith(WhatsAppOptions.PrefixoSimulador);
-        var slug = simulada ? m.PhoneNumberId[WhatsAppOptions.PrefixoSimulador.Length..] : null;
-        var loja = await db.Lojas.FirstOrDefaultAsync(l => simulada ? l.Slug == slug : l.PhoneNumberId == m.PhoneNumberId, ct)
+        var prefixo = simulada ? WhatsAppOptions.PrefixoSimulador
+            : m.PhoneNumberId.StartsWith(WhatsAppOptions.PrefixoLocal) ? WhatsAppOptions.PrefixoLocal : null;
+        var slug = prefixo is null ? null : m.PhoneNumberId[prefixo.Length..];
+        var loja = await db.Lojas.FirstOrDefaultAsync(l => slug != null ? l.Slug == slug : l.PhoneNumberId == m.PhoneNumberId, ct)
             ?? throw new InvalidOperationException($"Nenhuma loja com o número {m.PhoneNumberId}.");
         lojaAtual.Definir(loja.Id);
 
