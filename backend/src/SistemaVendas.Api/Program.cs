@@ -1,6 +1,8 @@
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using SistemaVendas.Api.Comum;
@@ -54,7 +56,33 @@ builder.Services.AddRateLimiter(o =>
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 600, Window = TimeSpan.FromMinutes(1) }));
 });
 
+// Atrás do Caddy (HTTPS termina nele): confiar no X-Forwarded-Proto para o cookie sair como Secure.
+builder.Services.Configure<ForwardedHeadersOptions>(o =>
+{
+    o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    o.KnownIPNetworks.Clear();
+    o.KnownProxies.Clear();
+});
+
+// Chaves dos cookies num volume: reiniciar o contêiner não desloga ninguém.
+if (builder.Configuration["ChavesProtecao:Pasta"] is { Length: > 0 } pastaChaves)
+    builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(pastaChaves));
+
 var app = builder.Build();
+
+app.UseForwardedHeaders();
+
+if (app.Configuration.GetValue<bool>("Banco:MigrarAoIniciar"))
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.MigrateAsync();
+
+    if (app.Environment.IsDevelopment())
+        await SeedDesenvolvimento.ExecutarAsync(db);
+    else
+        await PrimeiraLoja.CriarSeNecessarioAsync(db, app.Configuration, app.Logger);
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -64,14 +92,6 @@ if (app.Environment.IsDevelopment())
         o.SwaggerEndpoint("/openapi/v1.json", "Sistema de Vendas v1");
         o.DocumentTitle = "Sistema de Vendas · API";
     });
-
-    if (app.Configuration.GetValue<bool>("Banco:MigrarAoIniciar"))
-    {
-        using var scope = app.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await db.Database.MigrateAsync();
-        await SeedDesenvolvimento.ExecutarAsync(db);
-    }
 }
 
 app.UseSerilogRequestLogging();

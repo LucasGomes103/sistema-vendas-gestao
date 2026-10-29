@@ -11,6 +11,9 @@ import pino from 'pino';
 import QRCode from 'qrcode';
 
 const PORTA = Number(process.env.PORTA ?? 5050);
+// No servidor (Docker) a ponte escuta na rede interna; no PC, só na própria máquina.
+const HOST = process.env.HOST ?? '127.0.0.1';
+const PASTA_SESSAO = process.env.PASTA_SESSAO ?? 'sessao';
 const API_URL = process.env.API_URL ?? 'http://localhost:5007';
 const SEGREDO = process.env.WHATSAPP_LOCAL_SEGREDO;
 
@@ -111,7 +114,7 @@ async function avisarApi(mensagem) {
 }
 
 async function conectar() {
-  const { state, saveCreds } = await useMultiFileAuthState('sessao');
+  const { state, saveCreds } = await useMultiFileAuthState(PASTA_SESSAO);
   const { version, isLatest } = await fetchLatestBaileysVersion();
   console.log(`Versão do WhatsApp Web: ${version.join('.')}${isLatest ? '' : ' (não foi possível buscar a mais recente)'}`);
 
@@ -165,7 +168,7 @@ async function conectar() {
 }
 
 function redirecionar(res) {
-  res.writeHead(303, { location: '/qr' });
+  res.writeHead(303, { location: 'qr' });
   res.end();
 }
 
@@ -181,7 +184,7 @@ async function paginaConexao() {
     conteudo = `<img src="${await QRCode.toDataURL(qrAtual, { width: 300 })}" alt="QR code">
       <p>No celular: <b>WhatsApp &gt; Aparelhos conectados &gt; Conectar um aparelho</b> e aponte para o QR.</p>
       <hr style="margin:24px 0"><p>QR não funcionou? Conecte com código:</p>
-      <form method="post" action="/codigo">
+      <form method="post" action="codigo">
         <input name="numero" placeholder="Número reserva: 5511987654321" style="padding:8px;width:260px">
         <button style="padding:8px 14px">Gerar código</button>
       </form>`;
@@ -244,6 +247,6 @@ http
       responder(res, 500, { erro: e.message });
     }
   })
-  .listen(PORTA, '127.0.0.1', () => console.log(`Ponte WhatsApp local em http://localhost:${PORTA} (QR em /qr)`));
+  .listen(PORTA, HOST, () => console.log(`Ponte WhatsApp local em http://localhost:${PORTA} (QR em /qr)`));
 
 conectar();

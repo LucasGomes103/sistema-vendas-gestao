@@ -13,3 +13,7 @@ appsettings.*.local.json
 # Sistema
 .DS_Store
 Thumbs.db
+
+# Produção: segredos e backups ficam só no servidor
+infra/producao/.env
+infra/producao/backups/

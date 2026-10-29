@@ -1,0 +1,137 @@
+# Produção num servidor pequeno (Google Cloud e2-micro, 1 GB + swap).
+# Uso: docker compose --env-file .env up -d --build   (o instalar.sh cria o .env)
+name: sistema-vendas
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sistema_vendas
+      POSTGRES_USER: sistema
+      POSTGRES_PASSWORD: ${POSTGRES_SENHA:?defina POSTGRES_SENHA}
+    # Ajustado para pouca memória.
+    command: >
+      postgres -c shared_buffers=64MB -c effective_cache_size=192MB -c work_mem=2MB
+               -c maintenance_work_mem=32MB -c max_connections=30
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sistema -d sistema_vendas"]
+      interval: 10s
+      retries: 10
+    mem_limit: 200m
+
+  api:
+    build: ../../backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Banco: Host=postgres;Database=sistema_vendas;Username=sistema;Password=${POSTGRES_SENHA}
+      Banco__MigrarAoIniciar: "true"
+      ChavesProtecao__Pasta: /chaves
+      Vitrine__UrlBase: https://${DOMINIO}
+      IA__Gemini__ApiKey: ${GEMINI_CHAVE:-}
+      WhatsApp__Provedor: ${WHATSAPP_PROVEDOR:-Local}
+      WhatsApp__Local__Url: http://whatsapp:5050
+      WhatsApp__Local__Segredo: ${PONTE_SEGREDO:?defina PONTE_SEGREDO}
+      WhatsApp__Local__LojaSlug: ${LOJA_SLUG:?defina LOJA_SLUG}
+      PrimeiraLoja__Nome: ${LOJA_NOME:-}
+      PrimeiraLoja__Slug: ${LOJA_SLUG}
+      PrimeiraLoja__DonoNome: ${DONO_NOME:-}
+      PrimeiraLoja__DonoEmail: ${DONO_EMAIL:-}
+      PrimeiraLoja__DonoSenha: ${DONO_SENHA:-}
+    volumes:
+      - chaves:/chaves
+    mem_limit: 350m
+
+  catalogo:
+    build:
+      context: ../../frontend
+      target: catalogo
+    restart: unless-stopped
+    mem_limit: 160m
+
+  caddy:
+    build:
+      context: ../../frontend
+      target: caddy
+    restart: unless-stopped
+    depends_on: [api, catalogo]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMINIO: ${DOMINIO:?defina DOMINIO}
+      QR_USUARIO: ${QR_USUARIO:-admin}
+      QR_SENHA_HASH: ${QR_SENHA_HASH:?defina QR_SENHA_HASH}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    mem_limit: 80m
+
+  # Ponte não oficial (QR code). Só atende os números liberados em Configuração > WhatsApp.
+  whatsapp:
+    build: ../../whatsapp-local
+    restart: unless-stopped
+    depends_on: [api]
+    environment:
+      HOST: 0.0.0.0
+      API_URL: http://api:8080
+      WHATSAPP_LOCAL_SEGREDO: ${PONTE_SEGREDO}
+      PASTA_SESSAO: /sessao
+    volumes:
+      - sessao_whatsapp:/sessao
+    mem_limit: 180m
+
+  # Backup diário às 3 h, guardando 14 dias. Backup que nunca foi restaurado não conta: teste de vez em quando.
+  backup:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_SENHA}
+      TZ: America/Sao_Paulo
+    volumes:
+      - ./backups:/backups
+    entrypoint: >
+      sh -c 'while true; do
+               agora=$$(date +%H%M);
+               if [ "$$agora" = "0300" ]; then
+                 pg_dump -h postgres -U sistema -d sistema_vendas | gzip > /backups/sistema_vendas_$$(date +%F).sql.gz;
+                 find /backups -name "*.sql.gz" -mtime +14 -delete;
+                 sleep 61;
+               fi;
+               sleep 30;
+             done'
+    mem_limit: 60m
+
+  # Mantém o endereço do DuckDNS apontando para o IP do servidor.
+  duckdns:
+    image: alpine:3.20
+    restart: unless-stopped
+    environment:
+      DUCKDNS_DOMINIO: ${DUCKDNS_DOMINIO:-}
+      DUCKDNS_TOKEN: ${DUCKDNS_TOKEN:-}
+    entrypoint: >
+      sh -c 'apk add --no-cache curl >/dev/null;
+             while true; do
+               if [ -n "$$DUCKDNS_TOKEN" ]; then
+                 curl -s "https://www.duckdns.org/update?domains=$$DUCKDNS_DOMINIO&token=$$DUCKDNS_TOKEN&ip=" >/dev/null;
+               fi;
+               sleep 300;
+             done'
+    mem_limit: 20m
+
+volumes:
+  pgdata:
+  chaves:
+  caddy_data:
+  caddy_config:
+  sessao_whatsapp:

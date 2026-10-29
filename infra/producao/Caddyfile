@@ -1,0 +1,40 @@
+# HTTPS automático (Let's Encrypt) para o domínio do DuckDNS.
+{$DOMINIO} {
+	encode zstd gzip
+
+	# API, webhooks e páginas públicas da API
+	handle /api/* {
+		reverse_proxy api:8080
+	}
+	handle /health {
+		reverse_proxy api:8080
+	}
+	handle /privacidade {
+		reverse_proxy api:8080
+	}
+	handle /termos {
+		reverse_proxy api:8080
+	}
+
+	# Tela de conexão do WhatsApp (QR code), protegida por senha
+	redir /whatsapp /whatsapp/qr
+	handle_path /whatsapp/* {
+		basic_auth {
+			{$QR_USUARIO} {$QR_SENHA_HASH}
+		}
+		reverse_proxy whatsapp:5050
+	}
+
+	# Painel da loja (arquivos estáticos)
+	redir /painel /painel/
+	handle_path /painel/* {
+		root * /srv/painel
+		try_files {path} /index.html
+		file_server
+	}
+
+	# Todo o resto: vitrine pública (https://dominio/{loja})
+	handle {
+		reverse_proxy catalogo:4000
+	}
+}

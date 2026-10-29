@@ -1,0 +1,5 @@
+# Scripts e configurações que rodam no servidor Linux precisam de fim de linha LF.
+*.sh text eol=lf
+Caddyfile text eol=lf
+*.yml text eol=lf
+Dockerfile text eol=lf
