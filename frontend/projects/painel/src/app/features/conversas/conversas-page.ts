@@ -30,14 +30,14 @@ export class ConversasPage {
 
   protected readonly conversas = httpResource<ConversaResumo[]>(() => `${API}/conversas`);
   protected readonly mensagens = httpResource<Mensagem[]>(() => (this.id() ? `${API}/conversas/${this.id()}/mensagens` : undefined));
-  protected readonly whatsApp = httpResource<{ simulado: boolean }>(() => `${API}/conversas/status-whatsapp`);
+  protected readonly whatsApp = httpResource<{ simulado: boolean; simuladorDisponivel: boolean; phoneNumberId: string | null }>(() => `${API}/conversas/status-whatsapp`);
 
   protected readonly aberta = computed(() => this.conversas.value()?.find((c) => c.id === this.id()));
   protected readonly texto = signal('');
   protected readonly enviando = signal(false);
   protected readonly erro = signal<string | null>(null);
 
-  // Simulador de cliente (só quando o WhatsApp ainda não está conectado).
+  // Simulador de cliente (só em desenvolvimento; as respostas dessas conversas nunca saem pela Meta).
   protected readonly simulando = signal(false);
   protected readonly simTelefone = signal('11987654321');
   protected readonly simNome = signal('Cliente teste');

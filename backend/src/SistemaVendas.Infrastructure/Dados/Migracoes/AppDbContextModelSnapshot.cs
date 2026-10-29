@@ -105,6 +105,10 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasColumnType("integer")
                         .HasColumnName("nao_lidas");
 
+                    b.Property<bool>("Simulada")
+                        .HasColumnType("boolean")
+                        .HasColumnName("simulada");
+
                     b.Property<DateTimeOffset?>("UltimaMensagemEm")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("ultima_mensagem_em");

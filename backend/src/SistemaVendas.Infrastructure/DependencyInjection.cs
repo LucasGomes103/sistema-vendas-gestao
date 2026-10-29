@@ -21,8 +21,9 @@ public static class DependencyInjection
         // Sem token da Meta, o envio é simulado: dá para desenvolver tudo sem número conectado.
         var whatsApp = config.GetSection(WhatsAppOptions.Secao);
         services.Configure<WhatsAppOptions>(whatsApp);
+        services.AddSingleton<WhatsAppSimulado>();
         if (string.IsNullOrWhiteSpace(whatsApp[nameof(WhatsAppOptions.AccessToken)]))
-            services.AddSingleton<IWhatsAppCliente, WhatsAppSimulado>();
+            services.AddSingleton<IWhatsAppCliente>(sp => sp.GetRequiredService<WhatsAppSimulado>());
         else
             services.AddHttpClient<IWhatsAppCliente, WhatsAppCloudCliente>(c => c.Timeout = TimeSpan.FromSeconds(20));
 

@@ -67,7 +67,12 @@ public class WebhookWorker(IServiceScopeFactory scopes, EstadoWorkers estado, IL
 /// Outbox: nenhum caso de uso chama o WhatsApp direto. A mensagem é gravada como pendente
 /// e este worker envia, atualiza o status e tenta de novo com espera crescente se falhar.
 /// </summary>
-public class MensagemWorker(IServiceScopeFactory scopes, IWhatsAppCliente whatsApp, EstadoWorkers estado, ILogger<MensagemWorker> logger) : BackgroundService
+public class MensagemWorker(
+    IServiceScopeFactory scopes,
+    IWhatsAppCliente whatsApp,
+    WhatsAppSimulado simulado,
+    EstadoWorkers estado,
+    ILogger<MensagemWorker> logger) : BackgroundService
 {
     private static readonly TimeSpan Intervalo = TimeSpan.FromSeconds(3);
 
@@ -99,19 +104,26 @@ public class MensagemWorker(IServiceScopeFactory scopes, IWhatsAppCliente whatsA
             .Where(m => m.Status == StatusMensagem.Pendente && (m.ProximaTentativaEm == null || m.ProximaTentativaEm <= agora))
             .OrderBy(m => m.CriadoEm)
             .Take(20)
-            .Join(db.Conversas.IgnoreQueryFilters(), m => m.ConversaId, c => c.Id, (m, c) => new { m, c.ClienteId })
-            .Join(db.Clientes.IgnoreQueryFilters(), x => x.ClienteId, c => c.Id, (x, c) => new { x.m, c.Telefone })
-            .Join(db.Lojas, x => x.m.LojaId, l => l.Id, (x, l) => new { Mensagem = x.m, x.Telefone, l.PhoneNumberId })
+            .Join(db.Conversas.IgnoreQueryFilters(), m => m.ConversaId, c => c.Id, (m, c) => new { m, c.ClienteId, c.Simulada })
+            .Join(db.Clientes.IgnoreQueryFilters(), x => x.ClienteId, c => c.Id, (x, c) => new { x.m, x.Simulada, c.Telefone })
+            .Join(db.Lojas, x => x.m.LojaId, l => l.Id, (x, l) => new { Mensagem = x.m, x.Simulada, x.Telefone, l.PhoneNumberId })
             .ToListAsync(ct);
 
         foreach (var p in pendentes)
         {
             try
             {
-                if (string.IsNullOrEmpty(p.PhoneNumberId))
-                    throw new InvalidOperationException("A loja ainda não tem número do WhatsApp configurado.");
-
-                p.Mensagem.Wamid = await whatsApp.EnviarTextoAsync(p.PhoneNumberId, p.Telefone, p.Mensagem.Conteudo, ct);
+                // Conversa do simulador nunca sai pela Meta, mesmo com o número real configurado.
+                if (p.Simulada)
+                {
+                    p.Mensagem.Wamid = await simulado.EnviarTextoAsync("simulador", p.Telefone, p.Mensagem.Conteudo, ct);
+                }
+                else
+                {
+                    if (string.IsNullOrEmpty(p.PhoneNumberId))
+                        throw new InvalidOperationException("A loja ainda não tem número do WhatsApp configurado.");
+                    p.Mensagem.Wamid = await whatsApp.EnviarTextoAsync(p.PhoneNumberId, p.Telefone, p.Mensagem.Conteudo, ct);
+                }
                 p.Mensagem.Status = StatusMensagem.Enviada;
                 p.Mensagem.Erro = null;
                 p.Mensagem.ProximaTentativaEm = null;

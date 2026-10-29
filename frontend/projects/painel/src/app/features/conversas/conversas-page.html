@@ -4,13 +4,15 @@
     <header>
       <h1>Conversas</h1>
       @if (whatsApp.value()?.simulado) {
-        <span class="sv-selo alerta" matTooltip="Sem número da Meta conectado. Mensagens são simuladas.">
-          <mat-icon>science</mat-icon>Simulador
+        <span class="sv-selo alerta" matTooltip="Sem token da Meta configurado. Envios são simulados.">
+          <mat-icon>science</mat-icon>Simulado
         </span>
+      } @else if (whatsApp.value()) {
+        <span class="sv-selo ok" matTooltip="Ligado ao número da Meta"><mat-icon>check_circle</mat-icon>WhatsApp ligado</span>
       }
     </header>
 
-    @if (whatsApp.value()?.simulado) {
+    @if (whatsApp.value()?.simuladorDisponivel) {
       <button class="nova-simulada" (click)="simulando.set(!simulando())">
         <mat-icon>add_comment</mat-icon> Simular cliente chegando
       </button>
@@ -42,7 +44,7 @@
             <span class="avatar">{{ iniciais(c.cliente) }}</span>
             <div class="resumo">
               <div class="topo">
-                <strong>{{ c.cliente }}</strong>
+                <strong>{{ c.cliente }}@if (c.simulada) {<mat-icon class="sim" matTooltip="Conversa do simulador">science</mat-icon>}</strong>
                 <time>{{ c.ultimaMensagemEm | date: 'HH:mm' }}</time>
               </div>
               <div class="base">
@@ -134,7 +136,7 @@
         </button>
       </footer>
 
-      @if (whatsApp.value()?.simulado) {
+      @if (c.simulada) {
         <div class="simulador embutido">
           <mat-icon>science</mat-icon>
           <input

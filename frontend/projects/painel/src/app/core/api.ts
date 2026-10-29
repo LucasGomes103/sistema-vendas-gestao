@@ -98,6 +98,7 @@ export interface ConversaResumo {
   naoLidas: number;
   dentroDaJanela: boolean;
   janelaFechaEm: string | null;
+  simulada: boolean;
 }
 
 export interface Mensagem {

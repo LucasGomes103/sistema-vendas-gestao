@@ -58,6 +58,9 @@ public class Conversa : EntidadeDaLoja
     public DateTimeOffset? UltimaMensagemEm { get; set; }
     public bool Aberta { get; set; } = true;
 
+    /// <summary>Conversa criada pelo simulador do painel: nunca envia nada pela Meta.</summary>
+    public bool Simulada { get; set; }
+
     /// <summary>Mensagens do cliente ainda não vistas no painel.</summary>
     public int NaoLidas { get; set; }
 

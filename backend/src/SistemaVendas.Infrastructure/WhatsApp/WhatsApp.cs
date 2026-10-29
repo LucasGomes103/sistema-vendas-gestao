@@ -13,7 +13,10 @@ public class WhatsAppOptions
 {
     public const string Secao = "WhatsApp";
 
-    public string ApiVersion { get; set; } = "v23.0";
+    public string ApiVersion { get; set; } = "v25.0";
+
+    /// <summary>Prefixo do phone_number_id usado pelo simulador do painel.</summary>
+    public const string PrefixoSimulador = "sim-";
 
     /// <summary>Token de acesso do app na Meta. Vazio = envio simulado.</summary>
     public string? AccessToken { get; set; }

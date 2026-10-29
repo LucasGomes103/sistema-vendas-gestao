@@ -5,6 +5,7 @@ using SistemaVendas.Application.Atendimento;
 using SistemaVendas.Application.Comum;
 using SistemaVendas.Domain.Atendimento;
 using SistemaVendas.Infrastructure.Dados;
+using SistemaVendas.Infrastructure.WhatsApp;
 
 namespace SistemaVendas.Api.Endpoints;
 
@@ -18,13 +19,16 @@ public record ConversaResumo(
     DateTimeOffset? UltimaMensagemEm,
     int NaoLidas,
     bool DentroDaJanela,
-    DateTimeOffset? JanelaFechaEm);
+    DateTimeOffset? JanelaFechaEm,
+    bool Simulada);
 
 public record MensagemSaida(Guid Id, string Direcao, string Autor, string Conteudo, string Status, string? Erro, DateTimeOffset CriadoEm);
 
 public record EnviarEntrada(string Texto);
 
 public record SimularEntrada(string Telefone, string? Nome, string Texto);
+
+public record NumeroWhatsAppEntrada(string? PhoneNumberId);
 
 public static class ConversaEndpoints
 {
@@ -52,7 +56,7 @@ public static class ConversaEndpoints
             return lista.Select(x => new ConversaResumo(
                 x.Conversa.Id, x.Conversa.ClienteId, x.Nome ?? FormatarTelefone(x.Telefone), x.Telefone,
                 x.Ultima?.Conteudo, x.Ultima?.Autor.ToString(), x.Conversa.UltimaMensagemEm, x.Conversa.NaoLidas,
-                x.Conversa.DentroDaJanela(agora), x.Conversa.UltimaMsgClienteEm + Conversa.Janela));
+                x.Conversa.DentroDaJanela(agora), x.Conversa.UltimaMsgClienteEm + Conversa.Janela, x.Conversa.Simulada));
         });
 
         grupo.MapGet("/{id:guid}/mensagens", async (Guid id, AppDbContext db, CancellationToken ct) =>
@@ -111,7 +115,26 @@ public static class ConversaEndpoints
                 mensagem.Conteudo, mensagem.Status.ToString(), null, mensagem.CriadoEm));
         });
 
-        grupo.MapGet("/status-whatsapp", (IWhatsAppCliente whatsApp) => Results.Ok(new { simulado = whatsApp.Simulado }));
+        grupo.MapGet("/status-whatsapp", async (IWhatsAppCliente whatsApp, AppDbContext db, ILojaAtual lojaAtual, IHostEnvironment env, CancellationToken ct) =>
+        {
+            var phoneNumberId = await db.Lojas.Where(l => l.Id == lojaAtual.LojaId).Select(l => l.PhoneNumberId).FirstOrDefaultAsync(ct);
+            // Em desenvolvimento o simulador fica disponível mesmo com o número real ligado.
+            return Results.Ok(new { simulado = whatsApp.Simulado, simuladorDisponivel = env.IsDevelopment(), phoneNumberId });
+        });
+
+        // Número do WhatsApp da loja (phone_number_id da Meta). Não é segredo; o token fica fora do banco.
+        grupo.MapPut("/numero-whatsapp", async (NumeroWhatsAppEntrada entrada, AppDbContext db, ILojaAtual lojaAtual, CancellationToken ct) =>
+        {
+            var id = entrada.PhoneNumberId?.Trim();
+            if (string.IsNullOrEmpty(id) || !id.All(char.IsDigit))
+                return Results.Problem("Informe o Phone Number ID (só números).", statusCode: StatusCodes.Status422UnprocessableEntity);
+
+            var loja = await db.Lojas.FirstAsync(l => l.Id == lojaAtual.LojaId, ct);
+            loja.PhoneNumberId = id;
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        })
+        .RequireAuthorization(AuthEndpoints.PoliticaDono);
     }
 
     /// <summary>
@@ -128,8 +151,9 @@ public static class ConversaEndpoints
             if (!telefone.StartsWith("55"))
                 telefone = "55" + telefone;
 
-            var loja = await db.Lojas.FirstAsync(l => l.Id == lojaAtual.LojaId, ct);
-            loja.PhoneNumberId ??= $"sim-{loja.Slug}";
+            var loja = await db.Lojas.AsNoTracking().FirstAsync(l => l.Id == lojaAtual.LojaId, ct);
+            // Número próprio do simulador: as respostas dessas conversas nunca saem pela Meta.
+            var phoneNumberId = WhatsAppOptions.PrefixoSimulador + loja.Slug;
 
             var payload = JsonSerializer.Serialize(new
             {
@@ -147,7 +171,7 @@ public static class ConversaEndpoints
                                 value = new
                                 {
                                     messaging_product = "whatsapp",
-                                    metadata = new { display_phone_number = "simulador", phone_number_id = loja.PhoneNumberId },
+                                    metadata = new { display_phone_number = "simulador", phone_number_id = phoneNumberId },
                                     contacts = new[] { new { profile = new { name = entrada.Nome ?? "Cliente" }, wa_id = telefone } },
                                     messages = new[]
                                     {

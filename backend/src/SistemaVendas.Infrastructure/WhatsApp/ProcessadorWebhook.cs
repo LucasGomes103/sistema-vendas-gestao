@@ -84,7 +84,10 @@ public class ProcessadorWebhook(AppDbContext db, ILojaAtual lojaAtual, ILogger<P
 
     private async Task ReceberAsync(MensagemRecebida m, CancellationToken ct)
     {
-        var loja = await db.Lojas.FirstOrDefaultAsync(l => l.PhoneNumberId == m.PhoneNumberId, ct)
+        // O simulador do painel usa "sim-{slug}" no lugar do número real da loja.
+        var simulada = m.PhoneNumberId.StartsWith(WhatsAppOptions.PrefixoSimulador);
+        var slug = simulada ? m.PhoneNumberId[WhatsAppOptions.PrefixoSimulador.Length..] : null;
+        var loja = await db.Lojas.FirstOrDefaultAsync(l => simulada ? l.Slug == slug : l.PhoneNumberId == m.PhoneNumberId, ct)
             ?? throw new InvalidOperationException($"Nenhuma loja com o número {m.PhoneNumberId}.");
         lojaAtual.Definir(loja.Id);
 
@@ -108,10 +111,10 @@ public class ProcessadorWebhook(AppDbContext db, ILojaAtual lojaAtual, ILogger<P
             cliente.AceitaMarketingEm = null;
         }
 
-        var conversa = await db.Conversas.FirstOrDefaultAsync(c => c.ClienteId == cliente.Id && c.Aberta, ct);
+        var conversa = await db.Conversas.FirstOrDefaultAsync(c => c.ClienteId == cliente.Id && c.Aberta && c.Simulada == simulada, ct);
         if (conversa is null)
         {
-            conversa = new Conversa { LojaId = loja.Id, ClienteId = cliente.Id };
+            conversa = new Conversa { LojaId = loja.Id, ClienteId = cliente.Id, Simulada = simulada };
             db.Conversas.Add(conversa);
         }
 
