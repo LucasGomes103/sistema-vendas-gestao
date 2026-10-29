@@ -81,6 +81,7 @@ app.UseRateLimiter();
 
 app.MapGet("/", () => Results.Ok(new { servico = "sistema-vendas-gestao", versao = "0.2.0" }));
 app.MapHealthEndpoints();
+app.MapPaginasPublicasEndpoints();
 
 var v1 = app.MapGroup("/api/v1");
 v1.MapAuthEndpoints();
