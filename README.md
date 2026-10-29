@@ -57,8 +57,17 @@ infra/docker-compose.yml            PostgreSQL 18 local
    docker compose -f infra/docker-compose.yml up -d
    ```
 
-   Sem Docker, crie no PostgreSQL o usuário `sistema` (senha `sistema_dev`) e o banco `sistema_vendas`,
-   ou ajuste `ConnectionStrings:Banco` em `backend/src/SistemaVendas.Api/appsettings.Development.json`.
+   Sem Docker, instale o PostgreSQL 18 (`winget install PostgreSQL.PostgreSQL.18`) e crie o usuário e o banco
+   com o superusuário `postgres`:
+
+   ```sql
+   CREATE ROLE sistema LOGIN PASSWORD 'sistema_dev';
+   CREATE DATABASE sistema_vendas OWNER sistema;
+   \c sistema_vendas
+   CREATE EXTENSION IF NOT EXISTS pg_trgm;
+   ```
+
+   Outra conexão? Ajuste `ConnectionStrings:Banco` em `backend/src/SistemaVendas.Api/appsettings.Development.json`.
 
 2. API (aplica as migrações e cria a loja `demo` na primeira vez):
 

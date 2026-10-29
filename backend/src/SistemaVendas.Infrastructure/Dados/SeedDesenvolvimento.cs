@@ -10,12 +10,15 @@ public static class SeedDesenvolvimento
 {
     public const string SlugDemo = "demo";
 
+    /// <summary>Id fixo da loja demo, usado como Loja:IdPadrao em appsettings.Development.json.</summary>
+    public static readonly Guid IdLojaDemo = Guid.Parse("0199f000-0000-7000-8000-000000000001");
+
     public static async Task ExecutarAsync(AppDbContext db, CancellationToken ct = default)
     {
         if (await db.Lojas.AnyAsync(x => x.Slug == SlugDemo, ct))
             return;
 
-        var loja = new Loja { Nome = "Loja Demo", Slug = SlugDemo };
+        var loja = new Loja { Id = IdLojaDemo, Nome = "Loja Demo", Slug = SlugDemo };
         db.Lojas.Add(loja);
 
         var tanque = new Tanque { LojaId = loja.Id, Nome = "Tanque 1", Litros = 120 };
