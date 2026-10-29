@@ -24,6 +24,11 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwaggerUI(o =>
+    {
+        o.SwaggerEndpoint("/openapi/v1.json", "Sistema de Vendas v1");
+        o.DocumentTitle = "Sistema de Vendas · API";
+    });
 
     if (app.Configuration.GetValue<bool>("Banco:MigrarAoIniciar"))
     {

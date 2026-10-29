@@ -77,7 +77,7 @@ infra/docker-compose.yml            PostgreSQL 18 local
    ```
 
    A API sobe em http://localhost:5007. Teste em http://localhost:5007/health e
-   http://localhost:5007/api/v1/public/demo/catalogo. A especificação OpenAPI fica em `/openapi/v1.json`.
+   http://localhost:5007/api/v1/public/demo/catalogo. O Swagger abre em http://localhost:5007/swagger (só em desenvolvimento).
 
 3. Front:
 
