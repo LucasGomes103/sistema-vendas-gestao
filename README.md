@@ -151,6 +151,10 @@ npm install
 npm start          # abra http://localhost:5050/qr e leia com o celular do número reserva
 ```
 
+**Trava de segurança:** por padrão a ponte **não lê nem responde ninguém**. Coloque em `whatsapp-local/.env` os números
+que podem conversar com o robô (`NUMEROS_PERMITIDOS=5511987654321,5511912345678`). Só use `ATENDER_TODOS=sim` num número
+dedicado à loja, nunca num número pessoal.
+
 Para voltar à Meta: `dotnet user-secrets remove "WhatsApp:Provedor"`.
 
 ## Robô de atendimento (IA)
