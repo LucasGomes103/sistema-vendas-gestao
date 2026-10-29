@@ -1,0 +1,53 @@
+<nav class="trilho" aria-label="Menu principal">
+  <div class="marca" [matTooltip]="auth.usuario()?.loja ?? ''" matTooltipPosition="right">{{ siglaLoja() }}</div>
+
+  @for (item of menu; track item.rota) {
+    <a class="destino" [routerLink]="item.rota" routerLinkActive="ativo">
+      <span class="pilula"><mat-icon>{{ item.icone }}</mat-icon></span>
+      <span class="rotulo">{{ item.rotulo }}</span>
+    </a>
+  }
+  @for (item of emBreve; track item.rotulo) {
+    <span class="destino desabilitado" matTooltip="Em breve" matTooltipPosition="right">
+      <span class="pilula"><mat-icon>{{ item.icone }}</mat-icon></span>
+      <span class="rotulo">{{ item.rotulo }}</span>
+    </span>
+  }
+
+  <span class="espaco"></span>
+
+  <button class="avatar" [matMenuTriggerFor]="menuUsuario" aria-label="Conta">{{ iniciais() }}</button>
+</nav>
+
+<div class="conteudo">
+  <header class="topo-celular">
+    <div class="marca pequena">{{ siglaLoja() }}</div>
+    <span class="nome-loja">{{ auth.usuario()?.loja }}</span>
+    <button class="avatar" [matMenuTriggerFor]="menuUsuario" aria-label="Conta">{{ iniciais() }}</button>
+  </header>
+
+  <main>
+    <router-outlet />
+  </main>
+</div>
+
+<nav class="barra-inferior" aria-label="Menu principal">
+  @for (item of menu; track item.rota) {
+    <a class="destino" [routerLink]="item.rota" routerLinkActive="ativo">
+      <span class="pilula"><mat-icon>{{ item.icone }}</mat-icon></span>
+      <span class="rotulo">{{ item.rotulo }}</span>
+    </a>
+  }
+</nav>
+
+<mat-menu #menuUsuario="matMenu" xPosition="after">
+  <div class="cartao-usuario">
+    <strong>{{ auth.usuario()?.nome }}</strong>
+    <span>{{ auth.usuario()?.email }}</span>
+    <span class="sv-selo info">{{ auth.usuario()?.papel }} · {{ auth.usuario()?.loja }}</span>
+  </div>
+  <button mat-menu-item (click)="auth.sair()">
+    <mat-icon>logout</mat-icon>
+    <span>Sair</span>
+  </button>
+</mat-menu>

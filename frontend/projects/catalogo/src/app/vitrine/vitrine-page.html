@@ -1,0 +1,68 @@
+@if (catalogo.value(); as c) {
+  <header class="topo">
+    <div class="loja">
+      <span class="marca">{{ sigla() }}</span>
+      <div>
+        <h1>{{ c.loja }}</h1>
+        <p>Peixes ornamentais · disponível agora</p>
+      </div>
+    </div>
+    <label class="busca">
+      <span class="ms">search</span>
+      <input
+        type="search"
+        placeholder="Buscar peixe"
+        [value]="busca()"
+        (input)="busca.set($any($event.target).value)"
+      />
+    </label>
+  </header>
+
+  <main>
+    <p class="contagem">{{ itens().length }} {{ itens().length === 1 ? 'espécie disponível' : 'espécies disponíveis' }}</p>
+
+    <ul class="grade">
+      @for (item of itens(); track item.id) {
+        <li class="card">
+          <div class="foto">
+            @if (item.fotoUrl) {
+              <img [src]="item.fotoUrl" [alt]="item.nomePopular" loading="lazy" />
+            } @else {
+              <span class="ms">set_meal</span>
+            }
+          </div>
+          <div class="corpo">
+            <strong>{{ item.nomePopular }}</strong>
+            @if (item.nomeCientifico) {
+              <em>{{ item.nomeCientifico }}</em>
+            }
+            <span class="preco">{{ item.preco | currency: 'BRL' }}</span>
+            <span class="estoque" [class.poucas]="item.disponivel <= poucas">
+              <span class="ms">{{ item.disponivel <= poucas ? 'schedule' : 'check_circle' }}</span>
+              {{ item.disponivel <= poucas ? 'Últimas ' + item.disponivel : item.disponivel + ' disponíveis' }}
+            </span>
+            @if (item.tamanhoCm) {
+              <span class="tamanho">{{ item.tamanhoCm }} cm</span>
+            }
+          </div>
+        </li>
+      } @empty {
+        <li class="vazio">
+          <span class="ms">search_off</span>
+          Nenhum peixe encontrado.
+        </li>
+      }
+    </ul>
+  </main>
+} @else if (catalogo.error()) {
+  <div class="estado">
+    <span class="ms">storefront</span>
+    <h1>Loja não encontrada</h1>
+    <p>Confira o link que você recebeu da loja.</p>
+  </div>
+} @else {
+  <div class="estado">
+    <span class="ms girando">progress_activity</span>
+    <p>Carregando o catálogo…</p>
+  </div>
+}

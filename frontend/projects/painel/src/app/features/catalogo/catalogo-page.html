@@ -1,0 +1,76 @@
+<header class="sv-cabecalho-pagina">
+  <div>
+    <h1>Catálogo</h1>
+    <p>Espécies, preços e o que está disponível para venda agora.</p>
+  </div>
+  @if (auth.ehDono()) {
+    <button mat-flat-button (click)="abrir()"><mat-icon>add</mat-icon> Nova espécie</button>
+  }
+</header>
+
+<div class="barra">
+  <label class="busca">
+    <mat-icon>search</mat-icon>
+    <input
+      type="search"
+      placeholder="Buscar por nome popular ou científico"
+      [value]="busca()"
+      (input)="busca.set($any($event.target).value)"
+    />
+  </label>
+
+  <mat-chip-listbox aria-label="Filtro" [value]="filtro()" (change)="filtro.set($event.value ?? 'todas')">
+    <mat-chip-option value="todas">Todas ({{ contagem().todas }})</mat-chip-option>
+    <mat-chip-option value="disponiveis">Disponíveis ({{ contagem().disponiveis }})</mat-chip-option>
+    <mat-chip-option value="esgotadas">Sem estoque ({{ contagem().esgotadas }})</mat-chip-option>
+  </mat-chip-listbox>
+</div>
+
+@if (especies.isLoading() && !especies.hasValue()) {
+  <mat-progress-bar mode="indeterminate" />
+} @else if (especies.error()) {
+  <div class="sv-vazio">
+    <mat-icon>cloud_off</mat-icon>
+    <p>Não foi possível carregar o catálogo.</p>
+    <button mat-stroked-button (click)="especies.reload()">Tentar de novo</button>
+  </div>
+} @else {
+  <div class="grade">
+    @for (e of visiveis(); track e.id) {
+      <article class="sv-card especie" [class.esgotada]="e.disponivel === 0">
+        <div class="foto">
+          <mat-icon>set_meal</mat-icon>
+        </div>
+        <div class="corpo">
+          <div class="nomes">
+            <h3>{{ e.nomePopular }}</h3>
+            @if (e.nomeCientifico) {
+              <em>{{ e.nomeCientifico }}</em>
+            }
+          </div>
+          <div class="detalhes">
+            <span class="preco">{{ e.preco | currency: 'BRL' }}</span>
+            @if (e.tamanhoCm) {
+              <span class="tamanho"><mat-icon>straighten</mat-icon>{{ e.tamanhoCm }} cm</span>
+            }
+          </div>
+          <div class="rodape">
+            @if (e.disponivel > 0) {
+              <span class="sv-selo ok"><mat-icon>check_circle</mat-icon>{{ e.disponivel }} disponíveis</span>
+            } @else {
+              <span class="sv-selo alerta"><mat-icon>warning</mat-icon>Sem estoque</span>
+            }
+            @if (auth.ehDono()) {
+              <button mat-icon-button aria-label="Editar espécie" (click)="abrir(e)"><mat-icon>edit</mat-icon></button>
+            }
+          </div>
+        </div>
+      </article>
+    } @empty {
+      <div class="sv-vazio">
+        <mat-icon>search_off</mat-icon>
+        <p>Nenhuma espécie encontrada.</p>
+      </div>
+    }
+  </div>
+}

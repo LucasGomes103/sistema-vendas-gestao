@@ -1,18 +1,10 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatButtonModule } from '@angular/material/button';
+import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatToolbarModule, MatButtonModule],
+  imports: [RouterOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './app.scss',
-  templateUrl: './app.html',
+  template: '<router-outlet />',
 })
-export class App {
-  protected readonly menu = [
-    { rota: '/catalogo', rotulo: 'Catálogo' },
-    { rota: '/estoque', rotulo: 'Estoque' },
-  ];
-}
+export class App {}

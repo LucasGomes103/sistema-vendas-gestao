@@ -1,1 +1,38 @@
-/* You can add global styles to this file, and also import other style files */
+// Vitrine pública: leve, sem Angular Material, com os mesmos tokens do painel.
+:root {
+  --sv-primaria: #006a6a;
+  --sv-primaria-escura: #004f4f;
+  --sv-primaria-clara: #e6f6f5;
+  --sv-secundaria: #cce8e7;
+  --sv-superficie: #f4fbfa;
+  --sv-texto: #161d1d;
+  --sv-texto-suave: #3f4948;
+  --sv-borda: #d3dbda;
+  --sv-sucesso: #1d6b26;
+  --sv-sucesso-fundo: #e3f4e4;
+  --sv-whatsapp: #1a8f4c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--sv-superficie);
+  color: var(--sv-texto);
+  font-family: 'Roboto Flex', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ms {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 22px;
+  line-height: 1;
+  display: inline-block;
+  white-space: nowrap;
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}

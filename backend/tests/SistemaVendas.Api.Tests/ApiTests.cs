@@ -19,4 +19,20 @@ public class ApiTests(WebApplicationFactory<Program> factory) : IClassFixture<We
         Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
         Assert.Contains("sistema-vendas-gestao", await resposta.Content.ReadAsStringAsync());
     }
+
+    [Theory]
+    [InlineData("/api/v1/especies")]
+    [InlineData("/api/v1/tanques")]
+    [InlineData("/api/v1/auth/eu")]
+    public async Task Rotas_do_painel_exigem_login(string rota)
+    {
+        var client = factory.WithWebHostBuilder(b => b
+                .UseEnvironment("Testing")
+                .UseSetting("ConnectionStrings:Banco", "Host=localhost;Database=nao_usado"))
+            .CreateClient();
+
+        var resposta = await client.GetAsync(rota);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
+    }
 }

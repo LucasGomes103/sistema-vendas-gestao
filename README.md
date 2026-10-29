@@ -38,8 +38,12 @@ infra/docker-compose.yml            PostgreSQL 18 local
 - Modelo multi-loja: toda entidade de negócio tem `loja_id`, com filtro global no EF Core.
 - Catálogo (espécies) e estoque (tanques, fornecedores, lotes, movimentos); o saldo é a soma dos movimentos.
 - Migração inicial e dados de exemplo (loja `demo`) criados ao subir em desenvolvimento.
-- Endpoints: `GET /health`, `GET /api/v1/public/{loja}/catalogo`, `GET/POST/PUT /api/v1/especies`, `GET /api/v1/tanques`.
-- Painel com telas de Catálogo e Estoque; vitrine pública em `/{loja}`.
+- Login por cookie (HttpOnly, SameSite=Strict) com papéis Dono, Vendedor e Entregador; limite de tentativas no login.
+- Endpoints: `GET /health`, `POST /api/v1/auth/login|logout`, `GET /api/v1/auth/eu`, `GET /api/v1/public/{loja}/catalogo`,
+  `GET/POST/PUT /api/v1/especies`, `GET /api/v1/tanques` (saldo por tanque e baixas dos últimos 7 dias).
+- Painel no padrão Material 3 das telas de referência: login, Estoque (resumo, alertas, tanques) e Catálogo
+  (busca, filtros, cadastro e edição de espécies), com menu lateral no desktop e barra inferior no celular.
+- Vitrine pública em `/{loja}`, renderizada no servidor, só com o que está disponível.
 - Regra de horário comercial do funil, com testes.
 
 ## Pré-requisitos
@@ -87,6 +91,10 @@ infra/docker-compose.yml            PostgreSQL 18 local
    npx ng serve painel      # http://localhost:4200
    npx ng serve catalogo    # http://localhost:4300/demo
    ```
+
+   No PowerShell do Windows, se `npx` for bloqueado pela política de scripts, use `npx.cmd`.
+
+   Login de desenvolvimento (criado junto com a loja `demo`): `dono@demo.local` / `Demo@123`.
 
    O `proxy.conf.json` encaminha `/api` para a API local.
 

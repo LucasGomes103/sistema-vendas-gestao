@@ -68,10 +68,12 @@ public class MovimentoEstoque : EntidadeDaLoja
     public string? Observacao { get; set; }
 
     /// <summary>Efeito do movimento no saldo disponível, seguindo a view estoque_disponivel.</summary>
-    public int EfeitoNoSaldo => Tipo switch
+    public int EfeitoNoSaldo => Efeito(Tipo, Quantidade);
+
+    public static int Efeito(TipoMovimento tipo, int quantidade) => tipo switch
     {
-        TipoMovimento.Entrada or TipoMovimento.LiberaReserva or TipoMovimento.Ajuste or TipoMovimento.Transferencia => Quantidade,
-        TipoMovimento.BaixaMorte or TipoMovimento.Reserva or TipoMovimento.Venda => -Quantidade,
+        TipoMovimento.Entrada or TipoMovimento.LiberaReserva or TipoMovimento.Ajuste or TipoMovimento.Transferencia => quantidade,
+        TipoMovimento.BaixaMorte or TipoMovimento.Reserva or TipoMovimento.Venda => -quantidade,
         _ => 0
     };
 }

@@ -15,4 +15,7 @@ public class Usuario : EntidadeDaLoja
     public required string Email { get; set; }
     public Papel Papel { get; set; }
     public bool Ativo { get; set; } = true;
+
+    /// <summary>Hash da senha (PasswordHasher do ASP.NET Core Identity). A senha nunca é guardada.</summary>
+    public string SenhaHash { get; set; } = "";
 }

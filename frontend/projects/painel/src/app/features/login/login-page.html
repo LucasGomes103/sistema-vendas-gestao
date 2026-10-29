@@ -1,0 +1,56 @@
+<div class="lado-marca">
+  <div class="marca">SV</div>
+  <h1>Venda pelo WhatsApp com o estoque de verdade.</h1>
+  <ul>
+    <li><mat-icon>water</mat-icon> Estoque por tanque, atualizado em um toque</li>
+    <li><mat-icon>smart_toy</mat-icon> Robô que responde preço, disponibilidade e frete</li>
+    <li><mat-icon>view_kanban</mat-icon> Funil que avisa quando o cliente quer comprar</li>
+  </ul>
+</div>
+
+<div class="lado-form">
+  <form class="cartao" (ngSubmit)="entrar()">
+    <h2>Entrar no painel</h2>
+    <p class="sub">Use o e-mail cadastrado na sua loja.</p>
+
+    <mat-form-field appearance="outline">
+      <mat-label>E-mail</mat-label>
+      <mat-icon matPrefix>mail</mat-icon>
+      <input matInput type="email" name="email" autocomplete="username" required [(ngModel)]="email" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Senha</mat-label>
+      <mat-icon matPrefix>lock</mat-icon>
+      <input
+        matInput
+        name="senha"
+        autocomplete="current-password"
+        required
+        [type]="mostrarSenha() ? 'text' : 'password'"
+        [(ngModel)]="senha"
+      />
+      <button
+        mat-icon-button
+        matSuffix
+        type="button"
+        [attr.aria-label]="mostrarSenha() ? 'Esconder senha' : 'Mostrar senha'"
+        (click)="mostrarSenha.set(!mostrarSenha())"
+      >
+        <mat-icon>{{ mostrarSenha() ? 'visibility_off' : 'visibility' }}</mat-icon>
+      </button>
+    </mat-form-field>
+
+    @if (erro(); as mensagem) {
+      <div class="erro" role="alert"><mat-icon>error</mat-icon> {{ mensagem }}</div>
+    }
+
+    <button mat-flat-button type="submit" class="entrar" [disabled]="enviando()">
+      @if (enviando()) {
+        <mat-spinner diameter="20" />
+      } @else {
+        Entrar
+      }
+    </button>
+  </form>
+</div>

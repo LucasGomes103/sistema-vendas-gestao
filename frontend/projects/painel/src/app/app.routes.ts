@@ -1,13 +1,30 @@
 import { Routes } from '@angular/router';
+import { exigeLogin, somenteVisitante } from './core/guards';
+import { Shell } from './layout/shell';
 
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'catalogo' },
   {
-    path: 'catalogo',
-    loadComponent: () => import('./features/catalogo/catalogo-page').then((m) => m.CatalogoPage),
+    path: 'login',
+    canActivate: [somenteVisitante],
+    loadComponent: () => import('./features/login/login-page').then((m) => m.LoginPage),
   },
   {
-    path: 'estoque',
-    loadComponent: () => import('./features/estoque/estoque-page').then((m) => m.EstoquePage),
+    path: '',
+    component: Shell,
+    canActivate: [exigeLogin],
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'estoque' },
+      {
+        path: 'catalogo',
+        title: 'Catálogo',
+        loadComponent: () => import('./features/catalogo/catalogo-page').then((m) => m.CatalogoPage),
+      },
+      {
+        path: 'estoque',
+        title: 'Estoque',
+        loadComponent: () => import('./features/estoque/estoque-page').then((m) => m.EstoquePage),
+      },
+    ],
   },
+  { path: '**', redirectTo: '' },
 ];

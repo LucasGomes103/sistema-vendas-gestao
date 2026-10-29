@@ -16,7 +16,8 @@ public record EspecieSaida(
     decimal? TamanhoCm,
     decimal Preco,
     string? Observacoes,
-    bool Ativo);
+    bool Ativo,
+    int Disponivel);
 
 public record ItemCatalogoPublico(
     Guid Id,

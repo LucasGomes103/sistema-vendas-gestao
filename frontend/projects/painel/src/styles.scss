@@ -1,39 +1,146 @@
-// Include theming for Angular Material with `mat.theme()`.
-// This Sass mixin will define CSS variables that are used for styling Angular Material
-// components according to the Material 3 design spec.
-// Learn more about theming and how to use it for your application's
-// custom components at https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
 
+// Tema Material 3 com a cor da marca: azul-petróleo (#006A6A, tom 40 da paleta cyan).
 html {
   height: 100%;
+  color-scheme: light;
   @include mat.theme(
     (
       color: (
         primary: mat.$cyan-palette,
         tertiary: mat.$orange-palette,
       ),
-      typography: Roboto,
+      typography: 'Roboto Flex',
       density: 0,
     )
   );
+
+  // Papéis ajustados para bater com as telas de referência (a paleta cyan padrão
+  // deixa os containers neon demais).
+  @include mat.theme-overrides(
+    (
+      primary: #006a6a,
+      on-primary: #ffffff,
+      primary-container: #9cf1f0,
+      on-primary-container: #002020,
+      secondary-container: #cce8e7,
+      on-secondary-container: #051f1f,
+      surface: #f4fbfa,
+      surface-container-lowest: #ffffff,
+      surface-container-low: #eff5f4,
+      surface-container: #e9efee,
+      surface-container-high: #e3e9e8,
+      surface-container-highest: #dde4e3,
+      on-surface: #161d1d,
+      on-surface-variant: #3f4948,
+      outline: #6f7979,
+      outline-variant: #d3dbda,
+    )
+  );
+
+  // Tokens do negócio, além dos papéis do Material.
+  --sv-alerta: #5c4200;
+  --sv-alerta-fundo: #fff4de;
+  --sv-alerta-borda: #e9c46a;
+  --sv-sucesso: #1d6b26;
+  --sv-sucesso-fundo: #e3f4e4;
+  --sv-raio-card: 16px;
+  --sv-raio-botao: 20px;
 }
 
 body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
-  color-scheme: light;
-
-  // Set a default background, font and text colors for the application using
-  // Angular Material's system-level CSS variables. Learn more about these
-  // variables at https://material.angular.dev/guide/system-variables
-  background-color: var(--mat-sys-surface);
+  margin: 0;
+  min-height: 100%;
+  background: var(--mat-sys-surface);
   color: var(--mat-sys-on-surface);
   font: var(--mat-sys-body-medium);
-
-  // Reset the user agent margin.
-  margin: 0;
-  height: 100%;
+  -webkit-font-smoothing: antialiased;
 }
-/* You can add global styles to this file, and also import other style files */
+
+* {
+  box-sizing: border-box;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+// Cards do painel: superfície branca, borda suave e cantos arredondados.
+.sv-card {
+  background: var(--mat-sys-surface-container-lowest);
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: var(--sv-raio-card);
+}
+
+// Selo de status: nunca só cor, sempre ícone + texto.
+.sv-selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px 2px 6px;
+  border-radius: 999px;
+  font: var(--mat-sys-label-medium);
+  white-space: nowrap;
+
+  .material-symbols-outlined {
+    font-size: 16px;
+  }
+
+  &.ok {
+    color: var(--sv-sucesso);
+    background: var(--sv-sucesso-fundo);
+  }
+  &.alerta {
+    color: var(--sv-alerta);
+    background: var(--sv-alerta-fundo);
+  }
+  &.info {
+    color: var(--mat-sys-on-secondary-container);
+    background: var(--mat-sys-secondary-container);
+  }
+}
+
+.sv-cabecalho-pagina {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+
+  h1 {
+    font: var(--mat-sys-headline-small);
+    font-weight: 600;
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.sv-vazio {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  padding: 48px 16px;
+  color: var(--mat-sys-on-surface-variant);
+  text-align: center;
+
+  .material-symbols-outlined {
+    font-size: 40px;
+  }
+}
+
+.mat-mdc-unelevated-button,
+.mat-mdc-outlined-button,
+.mat-mdc-button {
+  --mat-button-filled-container-shape: var(--sv-raio-botao);
+  --mat-button-outlined-container-shape: var(--sv-raio-botao);
+}

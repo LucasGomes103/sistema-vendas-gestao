@@ -1,0 +1,91 @@
+<header class="sv-cabecalho-pagina">
+  <div>
+    <h1>Estoque por tanque</h1>
+    <p>O que está em cada tanque e o que precisa de atenção.</p>
+  </div>
+  <button mat-stroked-button (click)="tanques.reload()"><mat-icon>refresh</mat-icon> Atualizar</button>
+</header>
+
+<section class="kpis">
+  <div class="sv-card kpi">
+    <span class="rotulo"><mat-icon>water</mat-icon> Tanques</span>
+    <strong>{{ resumo().tanques }}</strong>
+  </div>
+  <div class="sv-card kpi destaque">
+    <span class="rotulo"><mat-icon>set_meal</mat-icon> Disponíveis para venda</span>
+    <strong>{{ resumo().disponiveis }}</strong>
+  </div>
+  <div class="sv-card kpi">
+    <span class="rotulo"><mat-icon>shield</mat-icon> Em quarentena</span>
+    <strong>{{ resumo().quarentena }}</strong>
+  </div>
+  <div class="sv-card kpi" [class.atencao]="resumo().baixas > 0">
+    <span class="rotulo"><mat-icon>heart_minus</mat-icon> Baixas em 7 dias</span>
+    <strong>{{ resumo().baixas }}</strong>
+  </div>
+</section>
+
+<mat-chip-listbox
+  class="filtros"
+  aria-label="Filtro de tanques"
+  hideSingleSelectionIndicator
+  [value]="filtro()"
+  (change)="filtro.set($event.value ?? 'Venda')"
+>
+  <mat-chip-option value="Venda">Venda ({{ contagem().Venda }})</mat-chip-option>
+  <mat-chip-option value="Quarentena">Quarentena ({{ contagem().Quarentena }})</mat-chip-option>
+  <mat-chip-option value="Alertas">
+    <mat-icon matChipAvatar>warning</mat-icon>
+    Alertas ({{ contagem().Alertas }})
+  </mat-chip-option>
+</mat-chip-listbox>
+
+@if (tanques.isLoading() && !tanques.hasValue()) {
+  <mat-progress-bar mode="indeterminate" />
+} @else if (tanques.error()) {
+  <div class="sv-vazio">
+    <mat-icon>cloud_off</mat-icon>
+    <p>Não foi possível carregar os tanques.</p>
+    <button mat-stroked-button (click)="tanques.reload()">Tentar de novo</button>
+  </div>
+} @else {
+  <div class="grade">
+    @for (t of visiveis(); track t.id) {
+      @let s = status(t);
+      <article class="sv-card tanque" [class.alerta]="s.classe === 'alerta'">
+        <header>
+          <div>
+            <h3>{{ t.nome }}</h3>
+            <span class="litros">{{ t.litros ? t.litros + ' L' : '' }}</span>
+          </div>
+          <span class="sv-selo" [class]="s.classe"><mat-icon>{{ s.icone }}</mat-icon>{{ s.texto }}</span>
+        </header>
+
+        @if (t.itens.length) {
+          <ul class="itens">
+            @for (i of t.itens; track i.especieId + i.emQuarentena) {
+              <li>
+                <span>{{ i.especie }}</span>
+                <strong>{{ i.disponivel }}</strong>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="vazio">Nenhum peixe neste tanque.</p>
+        }
+
+        <div class="barra" role="presentation">
+          <span [style.width.%]="ocupacao(t)"></span>
+        </div>
+        <footer>
+          <span>{{ t.total }} {{ t.tipo === 'Quarentena' ? 'em quarentena' : 'disponíveis' }}</span>
+        </footer>
+      </article>
+    } @empty {
+      <div class="sv-vazio">
+        <mat-icon>{{ filtro() === 'Alertas' ? 'task_alt' : 'water' }}</mat-icon>
+        <p>{{ filtro() === 'Alertas' ? 'Nenhum alerta. Tudo certo nos tanques.' : 'Nenhum tanque aqui.' }}</p>
+      </div>
+    }
+  </div>
+}

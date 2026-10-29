@@ -1,40 +1,74 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
 import { httpResource } from '@angular/common/http';
-import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { API, Tanque } from '../../core/api';
 
+type Filtro = 'Venda' | 'Quarentena' | 'Alertas';
+
+interface StatusTanque {
+  classe: 'ok' | 'alerta' | 'info';
+  icone: string;
+  texto: string;
+}
+
+/** Abaixo disso, o tanque de venda é sinalizado como estoque baixo. */
+const ESTOQUE_BAIXO = 5;
+
 @Component({
   selector: 'app-estoque-page',
-  imports: [MatCardModule, MatProgressBarModule],
+  imports: [MatButtonModule, MatChipsModule, MatIconModule, MatProgressBarModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <h1>Estoque por tanque</h1>
-    @if (tanques.isLoading()) {
-      <mat-progress-bar mode="indeterminate" />
-    } @else if (tanques.error()) {
-      <p class="erro">Não foi possível carregar os tanques. A API está rodando?</p>
-    } @else {
-      <div class="grade">
-        @for (t of tanques.value() ?? []; track t.id) {
-          <mat-card appearance="outlined" [class.quarentena]="t.tipo === 'Quarentena'">
-            <mat-card-header>
-              <mat-card-title>{{ t.nome }}</mat-card-title>
-              <mat-card-subtitle>{{ t.tipo }}{{ t.litros ? ' · ' + t.litros + ' L' : '' }}</mat-card-subtitle>
-            </mat-card-header>
-          </mat-card>
-        } @empty {
-          <p>Nenhum tanque cadastrado.</p>
-        }
-      </div>
-    }
-  `,
-  styles: `
-    .grade { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
-    .quarentena { border-color: var(--mat-sys-tertiary); }
-    .erro { color: var(--mat-sys-error); }
-  `,
+  templateUrl: './estoque-page.html',
+  styleUrl: './estoque-page.scss',
 })
 export class EstoquePage {
   protected readonly tanques = httpResource<Tanque[]>(() => `${API}/tanques`);
+  protected readonly filtro = signal<Filtro>('Venda');
+
+  private readonly lista = computed(() => this.tanques.value() ?? []);
+  private readonly maior = computed(() => Math.max(1, ...this.lista().map((t) => t.total)));
+
+  protected readonly resumo = computed(() => {
+    const lista = this.lista();
+    return {
+      tanques: lista.length,
+      disponiveis: lista.filter((t) => t.tipo === 'Venda').reduce((s, t) => s + t.total, 0),
+      quarentena: lista.filter((t) => t.tipo === 'Quarentena').reduce((s, t) => s + t.total, 0),
+      baixas: lista.reduce((s, t) => s + t.baixasUltimos7Dias, 0),
+    };
+  });
+
+  protected readonly contagem = computed(() => ({
+    Venda: this.lista().filter((t) => t.tipo === 'Venda').length,
+    Quarentena: this.lista().filter((t) => t.tipo === 'Quarentena').length,
+    Alertas: this.lista().filter((t) => this.temAlerta(t)).length,
+  }));
+
+  /** Tanques com alerta aparecem primeiro: o que pede ação vem antes. */
+  protected readonly visiveis = computed(() => {
+    const f = this.filtro();
+    return this.lista()
+      .filter((t) => (f === 'Alertas' ? this.temAlerta(t) : t.tipo === f))
+      .sort((a, b) => Number(this.temAlerta(b)) - Number(this.temAlerta(a)));
+  });
+
+  protected status(t: Tanque): StatusTanque {
+    if (t.baixasUltimos7Dias > 0)
+      return { classe: 'alerta', icone: 'warning', texto: `${t.baixasUltimos7Dias} baixas em 7 dias` };
+    if (t.tipo === 'Quarentena') return { classe: 'info', icone: 'shield', texto: 'Em quarentena' };
+    if (t.total === 0) return { classe: 'alerta', icone: 'inventory_2', texto: 'Vazio' };
+    if (t.total <= ESTOQUE_BAIXO) return { classe: 'alerta', icone: 'trending_down', texto: 'Estoque baixo' };
+    return { classe: 'ok', icone: 'check_circle', texto: 'Tudo certo' };
+  }
+
+  protected ocupacao(t: Tanque): number {
+    return Math.round((t.total / this.maior()) * 100);
+  }
+
+  private temAlerta(t: Tanque): boolean {
+    return this.status(t).classe === 'alerta';
+  }
 }

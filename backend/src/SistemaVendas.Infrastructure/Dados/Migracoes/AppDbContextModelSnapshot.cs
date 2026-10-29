@@ -405,12 +405,20 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasColumnType("text")
                         .HasColumnName("papel");
 
+                    b.Property<string>("SenhaHash")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("senha_hash");
+
                     b.HasKey("Id")
                         .HasName("pk_usuario");
 
-                    b.HasIndex("LojaId", "Email")
+                    b.HasIndex("Email")
                         .IsUnique()
-                        .HasDatabaseName("ix_usuario_loja_id_email");
+                        .HasDatabaseName("ix_usuario_email");
+
+                    b.HasIndex("LojaId")
+                        .HasDatabaseName("ix_usuario_loja_id");
 
                     b.ToTable("usuario", (string)null);
                 });

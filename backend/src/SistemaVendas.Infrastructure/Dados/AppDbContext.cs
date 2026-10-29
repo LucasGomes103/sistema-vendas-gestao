@@ -36,7 +36,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
         modelBuilder.Entity<Usuario>(e =>
         {
             e.ToTable("usuario");
-            e.HasIndex(x => new { x.LojaId, x.Email }).IsUnique();
+            e.HasIndex(x => x.Email).IsUnique(); // login por e-mail, único entre lojas
         });
 
         modelBuilder.Entity<Especie>(e =>
@@ -71,7 +71,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
 
         foreach (var entidade in modelBuilder.Model.GetEntityTypes().ToList())
         {
-            // Enums gravados como texto para ficarem legíveis no banco.
+            // Enums gravados como texto para ficarem legÃ­veis no banco.
             foreach (var prop in entidade.GetProperties().Where(p => p.ClrType.IsEnum))
                 prop.SetProviderClrType(typeof(string));
 
@@ -96,7 +96,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        // Preenche loja_id automaticamente no que for criado durante a requisição.
+        // Preenche loja_id automaticamente no que for criado durante a requisiÃ§Ã£o.
         foreach (var entry in ChangeTracker.Entries<EntidadeDaLoja>().Where(e => e.State == EntityState.Added))
         {
             if (entry.Entity.LojaId == Guid.Empty && LojaId is { } loja)

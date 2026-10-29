@@ -1,0 +1,154 @@
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 839px) {
+  .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .kpi {
+    padding: 10px 12px;
+
+    strong {
+      font: var(--mat-sys-headline-small);
+      font-weight: 600;
+    }
+  }
+}
+
+.kpi {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+
+  .rotulo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-label-large);
+
+    mat-icon {
+      width: 20px;
+      height: 20px;
+      font-size: 20px;
+    }
+  }
+
+  strong {
+    font: var(--mat-sys-headline-medium);
+    font-weight: 600;
+  }
+
+  &.destaque {
+    border-color: var(--mat-sys-primary);
+    background: #e6f6f5;
+
+    strong {
+      color: var(--mat-sys-primary);
+    }
+  }
+
+  &.atencao {
+    border-color: var(--sv-alerta-borda);
+    background: var(--sv-alerta-fundo);
+
+    strong,
+    .rotulo {
+      color: var(--sv-alerta);
+    }
+  }
+}
+
+.filtros {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.grade {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+
+  .sv-vazio {
+    grid-column: 1 / -1;
+  }
+}
+
+.tanque {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+
+  &.alerta {
+    border: 1.5px solid var(--sv-alerta-borda);
+    background: color-mix(in srgb, var(--sv-alerta-fundo) 55%, var(--mat-sys-surface-container-lowest));
+  }
+
+  header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+
+    h3 {
+      font: var(--mat-sys-title-medium);
+      font-weight: 600;
+    }
+
+    .litros {
+      color: var(--mat-sys-on-surface-variant);
+      font: var(--mat-sys-body-small);
+    }
+  }
+}
+
+.itens {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: var(--mat-sys-surface-container);
+  }
+}
+
+.vazio {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.barra {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--mat-sys-surface-container-highest);
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    background: var(--mat-sys-primary);
+  }
+}
+
+.tanque.alerta .barra span {
+  background: var(--sv-alerta-borda);
+}
+
+footer {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
