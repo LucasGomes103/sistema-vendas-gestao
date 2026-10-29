@@ -1,0 +1,99 @@
+<a mat-button routerLink="/estoque" class="voltar"><mat-icon>arrow_back</mat-icon> Estoque</a>
+
+@if (tanque.isLoading() && !tanque.hasValue()) {
+  <mat-progress-bar mode="indeterminate" />
+} @else if (tanque.error()) {
+  <div class="sv-vazio">
+    <mat-icon>cloud_off</mat-icon>
+    <p>Não foi possível carregar o tanque.</p>
+    <button mat-stroked-button (click)="tanque.reload()">Tentar de novo</button>
+  </div>
+} @else if (tanque.value(); as t) {
+  <header class="sv-cabecalho-pagina">
+    <div>
+      <h1>{{ t.nome }}</h1>
+      <p>
+        {{ t.tipo === 'Quarentena' ? 'Tanque de quarentena' : 'Tanque de venda' }}{{ t.litros ? ' · ' + t.litros + ' L' : '' }}
+        · {{ total() }} {{ t.tipo === 'Quarentena' ? 'em quarentena' : 'peixes' }}
+      </p>
+    </div>
+  </header>
+
+  <!-- Ações principais com alvos grandes: estoque se mexe em pé, com o celular na mão. -->
+  <div class="acoes">
+    <button class="acao entrada" (click)="entrada()">
+      <mat-icon>add</mat-icon>
+      Entrada
+    </button>
+    <button class="acao baixa" [disabled]="!t.lotes.length" (click)="movimento('baixa')">
+      <mat-icon>remove</mat-icon>
+      Baixa
+    </button>
+    <button class="acao neutra" [disabled]="!t.lotes.length" (click)="movimento('transferencia')">
+      <mat-icon>swap_horiz</mat-icon>
+      Transferir
+    </button>
+  </div>
+
+  <section>
+    <h2>Lotes neste tanque</h2>
+    @for (l of t.lotes; track l.loteId) {
+      <article class="sv-card lote" [class.quarentena]="l.status === 'Quarentena'">
+        <div class="info">
+          <strong>{{ l.especie }}</strong>
+          <span class="meta">
+            Recebido em {{ l.recebidoEm | date: 'dd/MM' }}{{ l.fornecedor ? ' · ' + l.fornecedor : '' }}
+          </span>
+          @if (l.status === 'Quarentena') {
+            <span class="sv-selo info">
+              <mat-icon>shield</mat-icon>
+              Quarentena{{ l.quarentenaAte ? ' até ' + (l.quarentenaAte | date: 'dd/MM') : '' }}
+            </span>
+          }
+        </div>
+        <span class="quantidade">{{ l.disponivel }}</span>
+        <button mat-icon-button [matMenuTriggerFor]="menuLote" aria-label="Ações do lote">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #menuLote="matMenu" xPosition="before">
+          <button mat-menu-item (click)="movimento('baixa', l)"><mat-icon>heart_minus</mat-icon>Baixa por morte</button>
+          <button mat-menu-item (click)="movimento('transferencia', l)"><mat-icon>swap_horiz</mat-icon>Transferir</button>
+          @if (auth.ehDono()) {
+            <button mat-menu-item (click)="movimento('ajuste', l)"><mat-icon>tune</mat-icon>Ajustar contagem</button>
+            @if (l.status === 'Quarentena') {
+              <button mat-menu-item (click)="liberar(l)"><mat-icon>verified</mat-icon>Liberar para venda</button>
+            }
+          }
+        </mat-menu>
+      </article>
+    } @empty {
+      <div class="sv-vazio">
+        <mat-icon>water</mat-icon>
+        <p>Tanque vazio. Registre uma entrada quando chegar peixe.</p>
+      </div>
+    }
+  </section>
+
+  <section>
+    <h2>Histórico</h2>
+    <ol class="historico">
+      @for (m of t.movimentos; track m.id) {
+        @let r = rotulos[m.tipo];
+        <li>
+          <span class="icone" [class]="r.classe"><mat-icon>{{ r.icone }}</mat-icon></span>
+          <div class="texto">
+            <strong>{{ r.texto }} · {{ m.especie }}</strong>
+            <span>
+              {{ m.criadoEm | date: "dd/MM 'às' HH:mm" }}{{ m.usuario ? ' · ' + m.usuario : '' }}{{ m.observacao ? ' · ' + m.observacao : '' }}
+            </span>
+          </div>
+          <span class="delta" [class.negativo]="m.tipo === 'BaixaMorte' || m.tipo === 'Venda' || m.tipo === 'Reserva' || m.quantidade < 0">
+            {{ m.tipo === 'BaixaMorte' || m.tipo === 'Venda' || m.tipo === 'Reserva' ? '−' + m.quantidade : (m.quantidade > 0 ? '+' : '') + m.quantidade }}
+          </span>
+        </li>
+      } @empty {
+        <li class="vazio">Nenhum movimento ainda.</li>
+      }
+    </ol>
+  </section>
+}

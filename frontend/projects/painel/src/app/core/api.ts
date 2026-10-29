@@ -48,3 +48,47 @@ export interface Tanque {
   baixasUltimos7Dias: number;
   itens: ItemTanque[];
 }
+
+export interface LoteNoTanque {
+  loteId: string;
+  especieId: string;
+  especie: string;
+  fornecedor: string | null;
+  status: 'Quarentena' | 'Liberado' | 'Encerrado';
+  recebidoEm: string;
+  quarentenaAte: string | null;
+  disponivel: number;
+}
+
+export type TipoMovimento = 'Entrada' | 'BaixaMorte' | 'Reserva' | 'LiberaReserva' | 'Venda' | 'Transferencia' | 'Ajuste';
+
+export interface MovimentoResumo {
+  id: string;
+  tipo: TipoMovimento;
+  quantidade: number;
+  especie: string;
+  observacao: string | null;
+  usuario: string | null;
+  criadoEm: string;
+}
+
+export interface TanqueDetalhe {
+  id: string;
+  nome: string;
+  tipo: 'Venda' | 'Quarentena';
+  litros: number | null;
+  lotes: LoteNoTanque[];
+  movimentos: MovimentoResumo[];
+}
+
+export interface Fornecedor {
+  id: string;
+  nome: string;
+  telefone: string | null;
+}
+
+/** Mensagem do ProblemDetails da API (regras de negócio voltam como 422). */
+export function mensagemDeErro(erro: unknown, padrao = 'Não foi possível concluir. Tente de novo.'): string {
+  const corpo = (erro as { error?: { detail?: string } } | null)?.error;
+  return corpo?.detail ?? padrao;
+}

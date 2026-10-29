@@ -1,10 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { httpResource } from '@angular/common/http';
+import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { API, Tanque } from '../../core/api';
+import { EntradaDialog } from './entrada-dialog';
 
 type Filtro = 'Venda' | 'Quarentena' | 'Alertas';
 
@@ -19,14 +23,28 @@ const ESTOQUE_BAIXO = 5;
 
 @Component({
   selector: 'app-estoque-page',
-  imports: [MatButtonModule, MatChipsModule, MatIconModule, MatProgressBarModule],
+  imports: [RouterLink, MatButtonModule, MatChipsModule, MatIconModule, MatProgressBarModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './estoque-page.html',
   styleUrl: './estoque-page.scss',
 })
 export class EstoquePage {
+  private readonly dialog = inject(MatDialog);
+  private readonly snack = inject(MatSnackBar);
+
   protected readonly tanques = httpResource<Tanque[]>(() => `${API}/tanques`);
   protected readonly filtro = signal<Filtro>('Venda');
+
+  protected entrada(): void {
+    this.dialog
+      .open(EntradaDialog, { data: null, width: '560px', maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((ok) => {
+        if (!ok) return;
+        this.tanques.reload();
+        this.snack.open('Entrada registrada.', undefined, { duration: 3000 });
+      });
+  }
 
   private readonly lista = computed(() => this.tanques.value() ?? []);
   private readonly maior = computed(() => Math.max(1, ...this.lista().map((t) => t.total)));

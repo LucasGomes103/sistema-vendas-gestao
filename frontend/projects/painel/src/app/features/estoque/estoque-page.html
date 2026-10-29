@@ -3,7 +3,10 @@
     <h1>Estoque por tanque</h1>
     <p>O que está em cada tanque e o que precisa de atenção.</p>
   </div>
-  <button mat-stroked-button (click)="tanques.reload()"><mat-icon>refresh</mat-icon> Atualizar</button>
+  <div class="botoes">
+    <button mat-icon-button aria-label="Atualizar" (click)="tanques.reload()"><mat-icon>refresh</mat-icon></button>
+    <button mat-flat-button (click)="entrada()"><mat-icon>add</mat-icon> Entrada de lote</button>
+  </div>
 </header>
 
 <section class="kpis">
@@ -52,7 +55,7 @@
   <div class="grade">
     @for (t of visiveis(); track t.id) {
       @let s = status(t);
-      <article class="sv-card tanque" [class.alerta]="s.classe === 'alerta'">
+      <a class="sv-card tanque" [class.alerta]="s.classe === 'alerta'" [routerLink]="['/estoque/tanques', t.id]">
         <header>
           <div>
             <h3>{{ t.nome }}</h3>
@@ -79,8 +82,9 @@
         </div>
         <footer>
           <span>{{ t.total }} {{ t.tipo === 'Quarentena' ? 'em quarentena' : 'disponíveis' }}</span>
+          <mat-icon>chevron_right</mat-icon>
         </footer>
-      </article>
+      </a>
     } @empty {
       <div class="sv-vazio">
         <mat-icon>{{ filtro() === 'Alertas' ? 'task_alt' : 'water' }}</mat-icon>

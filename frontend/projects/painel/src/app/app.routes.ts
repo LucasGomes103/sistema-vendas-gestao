@@ -24,6 +24,11 @@ export const routes: Routes = [
         title: 'Estoque',
         loadComponent: () => import('./features/estoque/estoque-page').then((m) => m.EstoquePage),
       },
+      {
+        path: 'estoque/tanques/:id',
+        title: 'Tanque',
+        loadComponent: () => import('./features/estoque/tanque-page').then((m) => m.TanquePage),
+      },
     ],
   },
   { path: '**', redirectTo: '' },
