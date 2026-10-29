@@ -1,0 +1,156 @@
+<div class="layout" [class.com-chat]="!!id()">
+  <!-- Lista de conversas -->
+  <aside class="lista sv-card">
+    <header>
+      <h1>Conversas</h1>
+      @if (whatsApp.value()?.simulado) {
+        <span class="sv-selo alerta" matTooltip="Sem número da Meta conectado. Mensagens são simuladas.">
+          <mat-icon>science</mat-icon>Simulador
+        </span>
+      }
+    </header>
+
+    @if (whatsApp.value()?.simulado) {
+      <button class="nova-simulada" (click)="simulando.set(!simulando())">
+        <mat-icon>add_comment</mat-icon> Simular cliente chegando
+      </button>
+      @if (simulando() && !id()) {
+        <div class="simulador">
+          <input placeholder="Nome" [value]="simNome()" (input)="simNome.set($any($event.target).value)" />
+          <input placeholder="Telefone com DDD" inputmode="tel" [value]="simTelefone()" (input)="simTelefone.set($any($event.target).value)" />
+          <div class="linha">
+            <input
+              placeholder="Mensagem do cliente"
+              [value]="simTexto()"
+              (input)="simTexto.set($any($event.target).value)"
+              (keydown.enter)="simular()"
+            />
+            <button mat-icon-button aria-label="Enviar como cliente" (click)="simular()"><mat-icon>send</mat-icon></button>
+          </div>
+        </div>
+      }
+    }
+
+    @if (conversas.isLoading() && !conversas.hasValue()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+
+    <ul>
+      @for (c of conversas.value() ?? []; track c.id) {
+        <li>
+          <a [routerLink]="['/conversas', c.id]" [class.ativa]="c.id === id()">
+            <span class="avatar">{{ iniciais(c.cliente) }}</span>
+            <div class="resumo">
+              <div class="topo">
+                <strong>{{ c.cliente }}</strong>
+                <time>{{ c.ultimaMensagemEm | date: 'HH:mm' }}</time>
+              </div>
+              <div class="base">
+                <span class="previa">
+                  @if (c.ultimoAutor === 'Robo') {
+                    <mat-icon>smart_toy</mat-icon>
+                  } @else if (c.ultimoAutor === 'Vendedor') {
+                    <mat-icon>done_all</mat-icon>
+                  }
+                  {{ c.ultimaMensagem }}
+                </span>
+                @if (c.naoLidas > 0) {
+                  <span class="badge">{{ c.naoLidas }}</span>
+                }
+              </div>
+            </div>
+          </a>
+        </li>
+      } @empty {
+        @if (conversas.hasValue()) {
+          <li class="sv-vazio">
+            <mat-icon>forum</mat-icon>
+            <p>Nenhuma conversa ainda.</p>
+          </li>
+        }
+      }
+    </ul>
+  </aside>
+
+  <!-- Chat -->
+  <section class="chat sv-card">
+    @if (aberta(); as c) {
+      <header>
+        <a mat-icon-button routerLink="/conversas" class="voltar" aria-label="Voltar"><mat-icon>arrow_back</mat-icon></a>
+        <span class="avatar">{{ iniciais(c.cliente) }}</span>
+        <div class="quem">
+          <strong>{{ c.cliente }}</strong>
+          <span>+{{ c.telefone }}</span>
+        </div>
+        @if (c.dentroDaJanela) {
+          <span class="sv-selo ok" matTooltip="Dentro de 24 h da última mensagem do cliente: resposta livre e grátis.">
+            <mat-icon>schedule</mat-icon>Janela aberta · {{ horasRestantes(c) }} h
+          </span>
+        } @else {
+          <span class="sv-selo alerta" matTooltip="Fora das 24 h: só modelos aprovados pela Meta (pagos).">
+            <mat-icon>lock_clock</mat-icon>Janela fechada
+          </span>
+        }
+      </header>
+
+      <div class="mensagens">
+        @for (m of mensagens.value() ?? []; track m.id) {
+          <div class="bolha" [class.saida]="m.direcao === 'Saida'" [class.robo]="m.autor === 'Robo'">
+            @if (m.autor === 'Robo') {
+              <span class="autor"><mat-icon>smart_toy</mat-icon>Robô</span>
+            }
+            <p>{{ m.conteudo }}</p>
+            <span class="meta">
+              {{ m.criadoEm | date: 'HH:mm' }}
+              @if (m.direcao === 'Saida') {
+                @switch (m.status) {
+                  @case ('Pendente') { <mat-icon matTooltip="Enviando">schedule</mat-icon> }
+                  @case ('Enviada') { <mat-icon matTooltip="Enviada">done</mat-icon> }
+                  @case ('Entregue') { <mat-icon matTooltip="Entregue">done_all</mat-icon> }
+                  @case ('Lida') { <mat-icon class="lida" matTooltip="Lida">done_all</mat-icon> }
+                  @case ('Falhou') { <mat-icon class="falhou" [matTooltip]="m.erro ?? 'Falhou'">error</mat-icon> }
+                }
+              }
+            </span>
+          </div>
+        }
+      </div>
+
+      @if (erro()) {
+        <p class="erro"><mat-icon>error</mat-icon>{{ erro() }}</p>
+      }
+
+      <footer>
+        <textarea
+          rows="1"
+          placeholder="{{ c.dentroDaJanela ? 'Escreva uma mensagem' : 'Janela de 24 h fechada' }}"
+          [disabled]="!c.dentroDaJanela"
+          [value]="texto()"
+          (input)="texto.set($any($event.target).value)"
+          (keydown)="teclaEnviar($event)"
+        ></textarea>
+        <button mat-fab class="enviar" aria-label="Enviar" [disabled]="!texto().trim() || enviando() || !c.dentroDaJanela" (click)="enviar()">
+          <mat-icon>send</mat-icon>
+        </button>
+      </footer>
+
+      @if (whatsApp.value()?.simulado) {
+        <div class="simulador embutido">
+          <mat-icon>science</mat-icon>
+          <input
+            placeholder="Responder como o cliente (simulador)"
+            [value]="simTexto()"
+            (input)="simTexto.set($any($event.target).value)"
+            (keydown.enter)="simular()"
+          />
+          <button mat-button (click)="simular()">Enviar como cliente</button>
+        </div>
+      }
+    } @else {
+      <div class="sv-vazio">
+        <mat-icon>chat</mat-icon>
+        <p>Escolha uma conversa para ver as mensagens.</p>
+      </div>
+    }
+  </section>
+</div>

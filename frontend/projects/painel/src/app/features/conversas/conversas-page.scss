@@ -1,0 +1,348 @@
+:host {
+  display: block;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 16px;
+  height: calc(100vh - 76px);
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  font: var(--mat-sys-label-large);
+  font-weight: 600;
+}
+
+// Lista
+.lista {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 16px 8px;
+
+    h1 {
+      font: var(--mat-sys-title-large);
+      font-weight: 600;
+    }
+  }
+
+  ul {
+    flex: 1;
+    margin: 0;
+    padding: 4px 8px 8px;
+    overflow-y: auto;
+    list-style: none;
+  }
+
+  a {
+    display: flex;
+    gap: 12px;
+    padding: 10px 8px;
+    border-radius: 14px;
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      background: var(--mat-sys-surface-container);
+    }
+
+    &.ativa {
+      background: var(--mat-sys-secondary-container);
+    }
+  }
+}
+
+.resumo {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+
+  .topo,
+  .base {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  time {
+    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-body-small);
+  }
+
+  .previa {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    overflow: hidden;
+    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-body-medium);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+
+    mat-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      font-size: 16px;
+    }
+  }
+}
+
+.badge {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  font: var(--mat-sys-label-small);
+  font-weight: 700;
+}
+
+.nova-simulada {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 16px 8px;
+  padding: 8px 12px;
+  border: 1px dashed var(--sv-alerta-borda);
+  border-radius: 12px;
+  background: var(--sv-alerta-fundo);
+  color: var(--sv-alerta);
+  font: var(--mat-sys-label-large);
+  cursor: pointer;
+}
+
+.simulador {
+  display: grid;
+  gap: 6px;
+  margin: 0 16px 8px;
+
+  input {
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: 10px;
+    background: var(--mat-sys-surface-container-lowest);
+    font: var(--mat-sys-body-medium);
+  }
+
+  .linha {
+    display: flex;
+    gap: 4px;
+
+    input {
+      flex: 1;
+    }
+  }
+
+  &.embutido {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 8px 12px;
+    border-top: 1px dashed var(--sv-alerta-borda);
+    background: var(--sv-alerta-fundo);
+    color: var(--sv-alerta);
+
+    input {
+      flex: 1;
+    }
+  }
+}
+
+// Chat
+.chat {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  > header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+    .quem {
+      display: grid;
+      flex: 1;
+
+      span {
+        color: var(--mat-sys-on-surface-variant);
+        font: var(--mat-sys-body-small);
+      }
+    }
+  }
+
+  .voltar {
+    display: none;
+  }
+
+  > .sv-vazio {
+    flex: 1;
+  }
+}
+
+.mensagens {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  overflow-y: auto;
+  background: var(--mat-sys-surface-container-low);
+}
+
+.bolha {
+  align-self: flex-start;
+  max-width: min(75%, 520px);
+  padding: 8px 12px 6px;
+  border-radius: 18px 18px 18px 4px;
+  background: var(--mat-sys-surface-container-lowest);
+  box-shadow: 0 1px 1px rgb(0 0 0 / 6%);
+
+  p {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .autor {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 2px;
+    color: var(--mat-sys-primary);
+    font: var(--mat-sys-label-small);
+    font-weight: 600;
+
+    mat-icon {
+      width: 14px;
+      height: 14px;
+      font-size: 14px;
+    }
+  }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 2px;
+    margin-top: 2px;
+    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-label-small);
+
+    mat-icon {
+      width: 14px;
+      height: 14px;
+      font-size: 14px;
+
+      &.lida {
+        color: #1a8fd8;
+      }
+      &.falhou {
+        color: var(--mat-sys-error);
+      }
+    }
+  }
+
+  &.saida {
+    align-self: flex-end;
+    border-radius: 18px 18px 4px 18px;
+    background: #d8f3f2;
+  }
+
+  &.robo {
+    background: var(--mat-sys-secondary-container);
+  }
+}
+
+.erro {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 16px;
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+}
+
+footer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+
+  textarea {
+    flex: 1;
+    min-height: 44px;
+    max-height: 140px;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 22px;
+    outline: none;
+    background: var(--mat-sys-surface-container-high);
+    font: var(--mat-sys-body-large);
+    resize: none;
+
+    &:disabled {
+      opacity: 0.6;
+    }
+  }
+
+  .enviar {
+    width: 44px;
+    height: 44px;
+    box-shadow: none;
+  }
+}
+
+// Celular: lista ou chat, nunca os dois.
+@media (max-width: 839px) {
+  .layout {
+    grid-template-columns: 1fr;
+    height: calc(100vh - 160px);
+    margin: -20px -16px 0;
+    gap: 0;
+  }
+
+  .sv-card {
+    border: none;
+    border-radius: 0;
+  }
+
+  .layout.com-chat .lista,
+  .layout:not(.com-chat) .chat {
+    display: none;
+  }
+
+  .chat .voltar {
+    display: inline-flex;
+    margin-left: -8px;
+  }
+
+  .chat > header .sv-selo {
+    display: none;
+  }
+}

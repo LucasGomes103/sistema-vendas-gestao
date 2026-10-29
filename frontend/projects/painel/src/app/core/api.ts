@@ -87,6 +87,29 @@ export interface Fornecedor {
   telefone: string | null;
 }
 
+export interface ConversaResumo {
+  id: string;
+  clienteId: string;
+  cliente: string;
+  telefone: string;
+  ultimaMensagem: string | null;
+  ultimoAutor: 'Cliente' | 'Robo' | 'Vendedor' | 'Sistema' | null;
+  ultimaMensagemEm: string | null;
+  naoLidas: number;
+  dentroDaJanela: boolean;
+  janelaFechaEm: string | null;
+}
+
+export interface Mensagem {
+  id: string;
+  direcao: 'Entrada' | 'Saida';
+  autor: 'Cliente' | 'Robo' | 'Vendedor' | 'Sistema';
+  conteudo: string;
+  status: 'Pendente' | 'Enviada' | 'Entregue' | 'Lida' | 'Falhou' | 'Recebida';
+  erro: string | null;
+  criadoEm: string;
+}
+
 /** Mensagem do ProblemDetails da API (regras de negócio voltam como 422). */
 export function mensagemDeErro(erro: unknown, padrao = 'Não foi possível concluir. Tente de novo.'): string {
   const corpo = (erro as { error?: { detail?: string } } | null)?.error;

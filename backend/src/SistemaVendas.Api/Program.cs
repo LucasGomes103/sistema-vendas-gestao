@@ -49,6 +49,9 @@ builder.Services.AddRateLimiter(o =>
     o.AddPolicy(AuthEndpoints.LimiteLogin, ctx => RateLimitPartition.GetFixedWindowLimiter(
         ctx.Connection.RemoteIpAddress?.ToString() ?? "anonimo",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
+    o.AddPolicy(WebhookEndpoints.LimiteWebhook, ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "anonimo",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 600, Window = TimeSpan.FromMinutes(1) }));
 });
 
 var app = builder.Build();
@@ -84,6 +87,10 @@ v1.MapAuthEndpoints();
 v1.MapCatalogoPublicoEndpoints();
 v1.MapEspecieEndpoints();
 v1.MapEstoqueEndpoints();
+v1.MapConversaEndpoints();
+v1.MapWebhookEndpoints();
+if (app.Environment.IsDevelopment())
+    v1.MapSimuladorEndpoints();
 
 app.Run();
 

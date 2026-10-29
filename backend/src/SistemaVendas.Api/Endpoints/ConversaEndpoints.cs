@@ -1,0 +1,183 @@
+using System.Security.Claims;
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using SistemaVendas.Application.Atendimento;
+using SistemaVendas.Application.Comum;
+using SistemaVendas.Domain.Atendimento;
+using SistemaVendas.Infrastructure.Dados;
+
+namespace SistemaVendas.Api.Endpoints;
+
+public record ConversaResumo(
+    Guid Id,
+    Guid ClienteId,
+    string Cliente,
+    string Telefone,
+    string? UltimaMensagem,
+    string? UltimoAutor,
+    DateTimeOffset? UltimaMensagemEm,
+    int NaoLidas,
+    bool DentroDaJanela,
+    DateTimeOffset? JanelaFechaEm);
+
+public record MensagemSaida(Guid Id, string Direcao, string Autor, string Conteudo, string Status, string? Erro, DateTimeOffset CriadoEm);
+
+public record EnviarEntrada(string Texto);
+
+public record SimularEntrada(string Telefone, string? Nome, string Texto);
+
+public static class ConversaEndpoints
+{
+    public static void MapConversaEndpoints(this IEndpointRouteBuilder app)
+    {
+        var grupo = app.MapGroup("/conversas").WithTags("Conversas").RequireAuthorization(AuthEndpoints.PoliticaEquipe);
+
+        grupo.MapGet("/", async (AppDbContext db, CancellationToken ct) =>
+        {
+            var agora = DateTimeOffset.UtcNow;
+            var lista = await db.Conversas.AsNoTracking()
+                .Where(c => c.Aberta)
+                .OrderByDescending(c => c.UltimaMensagemEm)
+                .Take(100)
+                .Join(db.Clientes, c => c.ClienteId, cl => cl.Id, (c, cl) => new
+                {
+                    Conversa = c,
+                    cl.Nome,
+                    cl.Telefone,
+                    Ultima = db.Mensagens.Where(m => m.ConversaId == c.Id).OrderByDescending(m => m.CriadoEm)
+                        .Select(m => new { m.Conteudo, m.Autor }).FirstOrDefault()
+                })
+                .ToListAsync(ct);
+
+            return lista.Select(x => new ConversaResumo(
+                x.Conversa.Id, x.Conversa.ClienteId, x.Nome ?? FormatarTelefone(x.Telefone), x.Telefone,
+                x.Ultima?.Conteudo, x.Ultima?.Autor.ToString(), x.Conversa.UltimaMensagemEm, x.Conversa.NaoLidas,
+                x.Conversa.DentroDaJanela(agora), x.Conversa.UltimaMsgClienteEm + Conversa.Janela));
+        });
+
+        grupo.MapGet("/{id:guid}/mensagens", async (Guid id, AppDbContext db, CancellationToken ct) =>
+        {
+            var conversa = await db.Conversas.FirstOrDefaultAsync(c => c.Id == id, ct);
+            if (conversa is null)
+                return Results.NotFound();
+
+            // Abrir a conversa no painel marca como lida.
+            if (conversa.NaoLidas > 0)
+            {
+                conversa.NaoLidas = 0;
+                await db.SaveChangesAsync(ct);
+            }
+
+            var mensagens = await db.Mensagens.AsNoTracking()
+                .Where(m => m.ConversaId == id)
+                .OrderBy(m => m.CriadoEm)
+                .Select(m => new MensagemSaida(m.Id, m.Direcao.ToString(), m.Autor.ToString(), m.Conteudo, m.Status.ToString(), m.Erro, m.CriadoEm))
+                .ToListAsync(ct);
+
+            return Results.Ok(mensagens);
+        });
+
+        // Envio pelo vendedor: vai para o outbox; texto livre só dentro da janela de 24 h.
+        grupo.MapPost("/{id:guid}/mensagens", async (Guid id, EnviarEntrada entrada, AppDbContext db, ClaimsPrincipal user, CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(entrada.Texto))
+                return Results.Problem("Escreva a mensagem.", statusCode: StatusCodes.Status422UnprocessableEntity);
+
+            var conversa = await db.Conversas.FirstOrDefaultAsync(c => c.Id == id, ct);
+            if (conversa is null)
+                return Results.NotFound();
+
+            var agora = DateTimeOffset.UtcNow;
+            if (!conversa.DentroDaJanela(agora))
+                return Results.Problem(
+                    "Passaram 24 h desde a última mensagem do cliente. Pela regra da Meta, agora só é possível enviar um modelo aprovado.",
+                    statusCode: StatusCodes.Status422UnprocessableEntity);
+
+            var mensagem = new Mensagem
+            {
+                ConversaId = conversa.Id,
+                Direcao = DirecaoMensagem.Saida,
+                Autor = AutorMensagem.Vendedor,
+                Conteudo = entrada.Texto.Trim(),
+                Status = StatusMensagem.Pendente,
+                Categoria = CategoriaMensagem.Servico,
+                UsuarioId = Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var u) ? u : null
+            };
+            db.Mensagens.Add(mensagem);
+            conversa.UltimaMensagemEm = agora;
+            await db.SaveChangesAsync(ct);
+
+            return Results.Ok(new MensagemSaida(mensagem.Id, mensagem.Direcao.ToString(), mensagem.Autor.ToString(),
+                mensagem.Conteudo, mensagem.Status.ToString(), null, mensagem.CriadoEm));
+        });
+
+        grupo.MapGet("/status-whatsapp", (IWhatsAppCliente whatsApp) => Results.Ok(new { simulado = whatsApp.Simulado }));
+    }
+
+    /// <summary>
+    /// Simulador de cliente (só em desenvolvimento): monta um webhook igual ao da Meta e coloca na fila,
+    /// passando pelo mesmo caminho de uma mensagem real.
+    /// </summary>
+    public static void MapSimuladorEndpoints(this IEndpointRouteBuilder app)
+    {
+        app.MapPost("/dev/simular-mensagem", async (SimularEntrada entrada, AppDbContext db, ILojaAtual lojaAtual, CancellationToken ct) =>
+        {
+            var telefone = new string(entrada.Telefone.Where(char.IsDigit).ToArray());
+            if (telefone.Length < 10 || string.IsNullOrWhiteSpace(entrada.Texto))
+                return Results.Problem("Informe telefone (com DDD) e texto.", statusCode: StatusCodes.Status422UnprocessableEntity);
+            if (!telefone.StartsWith("55"))
+                telefone = "55" + telefone;
+
+            var loja = await db.Lojas.FirstAsync(l => l.Id == lojaAtual.LojaId, ct);
+            loja.PhoneNumberId ??= $"sim-{loja.Slug}";
+
+            var payload = JsonSerializer.Serialize(new
+            {
+                @object = "whatsapp_business_account",
+                entry = new[]
+                {
+                    new
+                    {
+                        id = "simulador",
+                        changes = new[]
+                        {
+                            new
+                            {
+                                field = "messages",
+                                value = new
+                                {
+                                    messaging_product = "whatsapp",
+                                    metadata = new { display_phone_number = "simulador", phone_number_id = loja.PhoneNumberId },
+                                    contacts = new[] { new { profile = new { name = entrada.Nome ?? "Cliente" }, wa_id = telefone } },
+                                    messages = new[]
+                                    {
+                                        new
+                                        {
+                                            from = telefone,
+                                            id = $"sim.{Guid.CreateVersion7():N}",
+                                            timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
+                                            type = "text",
+                                            text = new { body = entrada.Texto }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            db.WebhooksRecebidos.Add(new WebhookRecebido { Origem = "simulador", Payload = payload });
+            await db.SaveChangesAsync(ct);
+            return Results.Accepted();
+        })
+        .WithTags("Desenvolvimento")
+        .RequireAuthorization(AuthEndpoints.PoliticaEquipe);
+    }
+
+    private static string FormatarTelefone(string telefone)
+    {
+        var local = telefone.StartsWith("55") && telefone.Length > 11 ? telefone[2..] : telefone;
+        return local.Length == 11 ? $"({local[..2]}) {local[2..7]}-{local[7..]}" : telefone;
+    }
+}

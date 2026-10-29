@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SistemaVendas.Infrastructure.WhatsApp;
 
 namespace SistemaVendas.Workers;
 
@@ -28,6 +29,8 @@ public class FunilWorker(EstadoWorkers estado, ILogger<FunilWorker> logger) : Ba
 public class EstadoWorkers
 {
     public DateTimeOffset? UltimoCicloFunil { get; set; }
+    public DateTimeOffset? UltimoCicloWebhook { get; set; }
+    public DateTimeOffset? UltimoCicloMensagens { get; set; }
 }
 
 public static class DependencyInjection
@@ -36,7 +39,10 @@ public static class DependencyInjection
     public static IServiceCollection AddWorkers(this IServiceCollection services)
     {
         services.AddSingleton<EstadoWorkers>();
+        services.AddScoped<ProcessadorWebhook>();
         services.AddHostedService<FunilWorker>();
+        services.AddHostedService<WebhookWorker>();
+        services.AddHostedService<MensagemWorker>();
         return services;
     }
 }

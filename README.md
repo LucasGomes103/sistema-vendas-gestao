@@ -44,6 +44,9 @@ infra/docker-compose.yml            PostgreSQL 18 local
 - Painel no padrão Material 3 das telas de referência: login, Estoque (resumo, alertas, tanques) e Catálogo
   (busca, filtros, cadastro e edição de espécies), com menu lateral no desktop e barra inferior no celular.
 - Vitrine pública em `/{loja}`, renderizada no servidor, só com o que está disponível.
+- Estoque com entrada de lote, baixa, transferência, ajuste e quarentena, com histórico por tanque.
+- Conversas do WhatsApp: webhook da Meta com assinatura validada, fila de processamento, envio por outbox com
+  novas tentativas, janela de 24 h e simulador de cliente para desenvolver sem número conectado.
 - Regra de horário comercial do funil, com testes.
 
 ## Pré-requisitos
@@ -113,13 +116,28 @@ dotnet tool restore
 dotnet ef migrations add NomeDaMigracao -p src/SistemaVendas.Infrastructure -s src/SistemaVendas.Api -o Dados/Migracoes
 ```
 
+## WhatsApp
+
+Sem configuração, o envio é **simulado**: a tela de Conversas mostra um simulador para fazer o papel do cliente,
+e as mensagens passam pelo mesmo caminho de uma mensagem real (fila de webhooks, worker, outbox).
+
+Para ligar o número de teste da Meta, guarde os segredos com `dotnet user-secrets` (ficam fora do repositório):
+
+```bash
+cd backend/src/SistemaVendas.Api
+dotnet user-secrets set "WhatsApp:AccessToken" "<token do app na Meta>"
+dotnet user-secrets set "WhatsApp:AppSecret" "<chave secreta do app>"
+dotnet user-secrets set "WhatsApp:VerifyToken" "<texto qualquer, o mesmo cadastrado no webhook da Meta>"
+```
+
+O webhook da Meta aponta para `https://<seu-domínio>/api/v1/webhooks/whatsapp`. Em desenvolvimento, use um túnel
+gratuito (Cloudflare Tunnel ou ngrok) para expor a API local.
+
 ## Próximos passos (fase 1)
 
-1. Login com ASP.NET Core Identity (cookie) e papéis Dono, Vendedor e Entregador.
-2. Entrada de lote, quarentena, baixa e transferência pelo celular.
-3. Webhook do WhatsApp Cloud API, conversas e outbox de mensagens.
-4. Cards do funil, motor de regras e kanban com SignalR.
-5. IA do atendimento (Gemini Flash-Lite, camada gratuita) com function calling.
-6. Deploy no Oracle Cloud Always Free com Caddy e backup diário.
+1. Cards do funil, motor de regras e kanban com SignalR.
+2. IA do atendimento (Gemini Flash-Lite, camada gratuita) com function calling.
+3. Pedidos, reserva e Pix.
+4. Deploy no Oracle Cloud Always Free com Caddy e backup diário.
 
 Segredos (tokens da Meta, Pix, IA) ficam em variáveis de ambiente ou em `dotnet user-secrets`, nunca no repositório.

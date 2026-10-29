@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaVendas.Application.Comum;
+using SistemaVendas.Domain.Atendimento;
 using SistemaVendas.Domain.Catalogo;
 using SistemaVendas.Domain.Comum;
 using SistemaVendas.Domain.Estoque;
@@ -17,6 +18,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
     public DbSet<Fornecedor> Fornecedores => Set<Fornecedor>();
     public DbSet<Lote> Lotes => Set<Lote>();
     public DbSet<MovimentoEstoque> Movimentos => Set<MovimentoEstoque>();
+    public DbSet<Cliente> Clientes => Set<Cliente>();
+    public DbSet<Conversa> Conversas => Set<Conversa>();
+    public DbSet<Mensagem> Mensagens => Set<Mensagem>();
+    public DbSet<WebhookRecebido> WebhooksRecebidos => Set<WebhookRecebido>();
 
     // Lido pelo filtro global a cada consulta.
     private Guid? LojaId => lojaAtual.LojaId;
@@ -69,9 +74,41 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
             e.HasOne<Tanque>().WithMany().HasForeignKey(x => x.TanqueId).OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<Cliente>(e =>
+        {
+            e.ToTable("cliente");
+            e.HasIndex(x => new { x.LojaId, x.Telefone }).IsUnique();
+            e.Property(x => x.Telefone).HasMaxLength(20);
+        });
+
+        modelBuilder.Entity<Conversa>(e =>
+        {
+            e.ToTable("conversa");
+            e.HasOne<Cliente>().WithMany().HasForeignKey(x => x.ClienteId);
+            e.HasIndex(x => new { x.LojaId, x.UltimaMensagemEm });
+        });
+
+        modelBuilder.Entity<Mensagem>(e =>
+        {
+            e.ToTable("mensagem");
+            e.HasOne<Conversa>().WithMany().HasForeignKey(x => x.ConversaId);
+            e.HasIndex(x => x.Wamid).IsUnique().HasFilter("wamid IS NOT NULL");
+            e.HasIndex(x => new { x.ConversaId, x.CriadoEm });
+            // Fila do outbox: só o que ainda precisa ser enviado.
+            e.HasIndex(x => x.ProximaTentativaEm).HasFilter("status = 'Pendente'");
+            e.Property(x => x.CustoEstimado).HasPrecision(10, 4);
+        });
+
+        modelBuilder.Entity<WebhookRecebido>(e =>
+        {
+            e.ToTable("webhook_recebido");
+            e.Property(x => x.Payload).HasColumnType("jsonb");
+            e.HasIndex(x => x.CriadoEm).HasFilter("processado_em IS NULL");
+        });
+
         foreach (var entidade in modelBuilder.Model.GetEntityTypes().ToList())
         {
-            // Enums gravados como texto para ficarem legÃ­veis no banco.
+            // Enums gravados como texto para ficarem legíveis no banco.
             foreach (var prop in entidade.GetProperties().Where(p => p.ClrType.IsEnum))
                 prop.SetProviderClrType(typeof(string));
 
@@ -92,11 +129,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
         modelBuilder.Entity<Fornecedor>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<Lote>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<MovimentoEstoque>().HasQueryFilter(x => x.LojaId == LojaId);
+        modelBuilder.Entity<Cliente>().HasQueryFilter(x => x.LojaId == LojaId);
+        modelBuilder.Entity<Conversa>().HasQueryFilter(x => x.LojaId == LojaId);
+        modelBuilder.Entity<Mensagem>().HasQueryFilter(x => x.LojaId == LojaId);
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        // Preenche loja_id automaticamente no que for criado durante a requisiÃ§Ã£o.
+        // Preenche loja_id automaticamente no que for criado durante a requisição.
         foreach (var entry in ChangeTracker.Entries<EntidadeDaLoja>().Where(e => e.State == EntityState.Added))
         {
             if (entry.Entity.LojaId == Guid.Empty && LojaId is { } loja)

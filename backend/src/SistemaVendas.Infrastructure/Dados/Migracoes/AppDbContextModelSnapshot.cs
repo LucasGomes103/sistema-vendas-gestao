@@ -23,6 +23,246 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "pg_trgm");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("SistemaVendas.Domain.Atendimento.Cliente", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AceitaMarketing")
+                        .HasColumnType("boolean")
+                        .HasColumnName("aceita_marketing");
+
+                    b.Property<DateTimeOffset?>("AceitaMarketingEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("aceita_marketing_em");
+
+                    b.Property<DateTimeOffset?>("AnonimizadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("anonimizado_em");
+
+                    b.Property<string>("Cep")
+                        .HasColumnType("text")
+                        .HasColumnName("cep");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<string>("Endereco")
+                        .HasColumnType("text")
+                        .HasColumnName("endereco");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_id");
+
+                    b.Property<string>("Nome")
+                        .HasColumnType("text")
+                        .HasColumnName("nome");
+
+                    b.Property<string>("Telefone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("telefone");
+
+                    b.HasKey("Id")
+                        .HasName("pk_cliente");
+
+                    b.HasIndex("LojaId", "Telefone")
+                        .IsUnique()
+                        .HasDatabaseName("ix_cliente_loja_id_telefone");
+
+                    b.ToTable("cliente", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Atendimento.Conversa", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Aberta")
+                        .HasColumnType("boolean")
+                        .HasColumnName("aberta");
+
+                    b.Property<Guid>("ClienteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cliente_id");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_id");
+
+                    b.Property<int>("NaoLidas")
+                        .HasColumnType("integer")
+                        .HasColumnName("nao_lidas");
+
+                    b.Property<DateTimeOffset?>("UltimaMensagemEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ultima_mensagem_em");
+
+                    b.Property<DateTimeOffset?>("UltimaMsgClienteEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ultima_msg_cliente_em");
+
+                    b.HasKey("Id")
+                        .HasName("pk_conversa");
+
+                    b.HasIndex("ClienteId")
+                        .HasDatabaseName("ix_conversa_cliente_id");
+
+                    b.HasIndex("LojaId", "UltimaMensagemEm")
+                        .HasDatabaseName("ix_conversa_loja_id_ultima_mensagem_em");
+
+                    b.ToTable("conversa", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Atendimento.Mensagem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Autor")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("autor");
+
+                    b.Property<string>("Categoria")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("categoria");
+
+                    b.Property<string>("Conteudo")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("conteudo");
+
+                    b.Property<Guid>("ConversaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("conversa_id");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<decimal?>("CustoEstimado")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("numeric(10,4)")
+                        .HasColumnName("custo_estimado");
+
+                    b.Property<string>("Direcao")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("direcao");
+
+                    b.Property<string>("Erro")
+                        .HasColumnType("text")
+                        .HasColumnName("erro");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_id");
+
+                    b.Property<DateTimeOffset?>("ProximaTentativaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("proxima_tentativa_em");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Template")
+                        .HasColumnType("text")
+                        .HasColumnName("template");
+
+                    b.Property<int>("Tentativas")
+                        .HasColumnType("integer")
+                        .HasColumnName("tentativas");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("tipo");
+
+                    b.Property<Guid?>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.Property<string>("Wamid")
+                        .HasColumnType("text")
+                        .HasColumnName("wamid");
+
+                    b.HasKey("Id")
+                        .HasName("pk_mensagem");
+
+                    b.HasIndex("LojaId")
+                        .HasDatabaseName("ix_mensagem_loja_id");
+
+                    b.HasIndex("ProximaTentativaEm")
+                        .HasDatabaseName("ix_mensagem_proxima_tentativa_em")
+                        .HasFilter("status = 'Pendente'");
+
+                    b.HasIndex("Wamid")
+                        .IsUnique()
+                        .HasDatabaseName("ix_mensagem_wamid")
+                        .HasFilter("wamid IS NOT NULL");
+
+                    b.HasIndex("ConversaId", "CriadoEm")
+                        .HasDatabaseName("ix_mensagem_conversa_id_criado_em");
+
+                    b.ToTable("mensagem", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Atendimento.WebhookRecebido", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<string>("Erro")
+                        .HasColumnType("text")
+                        .HasColumnName("erro");
+
+                    b.Property<string>("Origem")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("origem");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("payload");
+
+                    b.Property<DateTimeOffset?>("ProcessadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("processado_em");
+
+                    b.HasKey("Id")
+                        .HasName("pk_webhook_recebido");
+
+                    b.HasIndex("CriadoEm")
+                        .HasDatabaseName("ix_webhook_recebido_criado_em")
+                        .HasFilter("processado_em IS NULL");
+
+                    b.ToTable("webhook_recebido", (string)null);
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Catalogo.Especie", b =>
                 {
                     b.Property<Guid>("Id")
@@ -421,6 +661,50 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasDatabaseName("ix_usuario_loja_id");
 
                     b.ToTable("usuario", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Atendimento.Cliente", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_cliente_loja_loja_id");
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Atendimento.Conversa", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Atendimento.Cliente", null)
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_conversa_cliente_cliente_id");
+
+                    b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_conversa_loja_loja_id");
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Atendimento.Mensagem", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Atendimento.Conversa", null)
+                        .WithMany()
+                        .HasForeignKey("ConversaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_mensagem_conversa_conversa_id");
+
+                    b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_mensagem_loja_loja_id");
                 });
 
             modelBuilder.Entity("SistemaVendas.Domain.Catalogo.Especie", b =>

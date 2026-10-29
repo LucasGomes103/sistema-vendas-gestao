@@ -19,7 +19,7 @@ public static class CatalogoEndpoints
             if (loja is null)
                 return Results.NotFound();
 
-            ((LojaAtualDaRequisicao)lojaAtual).Definir(loja.Id);
+            lojaAtual.Definir(loja.Id);
 
             var disponivel = Saldos.DisponivelPorEspecie(await Saldos.PorLoteAsync(db, ct));
             var comEstoque = disponivel.Where(x => x.Value > 0).Select(x => x.Key).ToList();

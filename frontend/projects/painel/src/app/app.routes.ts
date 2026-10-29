@@ -25,6 +25,16 @@ export const routes: Routes = [
         loadComponent: () => import('./features/estoque/estoque-page').then((m) => m.EstoquePage),
       },
       {
+        path: 'conversas',
+        title: 'Conversas',
+        loadComponent: () => import('./features/conversas/conversas-page').then((m) => m.ConversasPage),
+      },
+      {
+        path: 'conversas/:id',
+        title: 'Conversa',
+        loadComponent: () => import('./features/conversas/conversas-page').then((m) => m.ConversasPage),
+      },
+      {
         path: 'estoque/tanques/:id',
         title: 'Tanque',
         loadComponent: () => import('./features/estoque/tanque-page').then((m) => m.TanquePage),
