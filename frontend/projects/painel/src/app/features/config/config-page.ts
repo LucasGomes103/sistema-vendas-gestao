@@ -9,11 +9,12 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { firstValueFrom } from 'rxjs';
 import { API, ConfigFunil, mensagemDeErro } from '../../core/api';
+import { ConfigWhatsAppComponent } from './config-whatsapp';
 
 /** Prazos do funil e respostas prontas. Mudar um prazo é editar aqui, não fazer deploy. */
 @Component({
   selector: 'app-config-page',
-  imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule],
+  imports: [ConfigWhatsAppComponent, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './config-page.html',
   styleUrl: './config-page.scss',

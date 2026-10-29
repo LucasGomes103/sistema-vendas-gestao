@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using SistemaVendas.Domain.Atendimento;
 using SistemaVendas.Infrastructure.Dados;
@@ -14,6 +15,16 @@ public record MensagemLocal(string De, string? Nome, string Id, string Texto, lo
 public static class WebhookEndpoints
 {
     public const string LimiteWebhook = "webhook";
+
+    private static IResult? ValidarPonte(HttpRequest req, WhatsAppOptions opcoes)
+    {
+        var segredo = opcoes.Local.Segredo;
+        if (!opcoes.UsaPonteLocal || string.IsNullOrEmpty(segredo))
+            return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+        return CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(req.Headers["x-segredo"].ToString()), Encoding.UTF8.GetBytes(segredo))
+            ? null
+            : Results.Unauthorized();
+    }
 
     public static void MapWebhookEndpoints(this IEndpointRouteBuilder app)
     {
@@ -47,14 +58,29 @@ public static class WebhookEndpoints
             return Results.Ok();
         });
 
+        // Lista de quem a ponte local pode atender (configurada no painel). A ponte consulta a cada 30 s.
+        grupo.MapGet("/local/permitidos", async (HttpRequest req, IOptions<WhatsAppOptions> opcoes, AppDbContext db, CancellationToken ct) =>
+        {
+            if (ValidarPonte(req, opcoes.Value) is { } erro)
+                return erro;
+
+            var loja = await db.Lojas.AsNoTracking().FirstOrDefaultAsync(l => l.Slug == opcoes.Value.Local.LojaSlug, ct);
+            return loja is null
+                ? Results.Ok(new { atenderTodos = false, numeros = Array.Empty<string>() })
+                : Results.Ok(new { atenderTodos = loja.AtenderTodos, numeros = loja.NumerosPermitidos });
+        });
+
         // Ponte local (QR code, não oficial): converte para o formato da Meta e entra na mesma fila.
         grupo.MapPost("/local", async (MensagemLocal m, HttpRequest req, IOptions<WhatsAppOptions> opcoes, AppDbContext db, CancellationToken ct) =>
         {
             var local = opcoes.Value.Local;
-            if (!opcoes.Value.UsaPonteLocal || string.IsNullOrEmpty(local.Segredo))
-                return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
-            if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(req.Headers["x-segredo"].ToString()), Encoding.UTF8.GetBytes(local.Segredo)))
-                return Results.Unauthorized();
+            if (ValidarPonte(req, opcoes.Value) is { } erro)
+                return erro;
+
+            // Segunda barreira: mesmo que a ponte esteja desatualizada, número fora da lista não entra no sistema.
+            var loja = await db.Lojas.AsNoTracking().FirstOrDefaultAsync(l => l.Slug == local.LojaSlug, ct);
+            if (loja is null || !loja.PodeAtender(m.De))
+                return Results.NoContent();
 
             var payload = JsonSerializer.Serialize(new
             {

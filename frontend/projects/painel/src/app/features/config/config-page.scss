@@ -6,6 +6,12 @@
 form {
   display: grid;
   gap: 16px;
+  margin-top: 16px;
+}
+
+.salvar-funil {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .bloco {

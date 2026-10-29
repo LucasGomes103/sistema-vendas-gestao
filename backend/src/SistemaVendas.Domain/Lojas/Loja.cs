@@ -15,7 +15,27 @@ public class Loja : Entidade
     /// <summary>Número do WhatsApp da loja (só dígitos, com DDI), usado no botão "pedir pelo WhatsApp" da vitrine.</summary>
     public string? WhatsAppNumero { get; set; }
 
+    /// <summary>
+    /// Trava de segurança da conexão local (QR code): falso = o sistema só lê e responde os números permitidos.
+    /// Só ligar em número dedicado à loja.
+    /// </summary>
+    public bool AtenderTodos { get; set; }
+
+    /// <summary>Números (só dígitos, com DDI) que podem conversar com o robô quando AtenderTodos está desligado.</summary>
+    public List<string> NumerosPermitidos { get; set; } = [];
+
     public string Fuso { get; set; } = "America/Sao_Paulo";
     public TimeOnly HorarioInicio { get; set; } = new(9, 0);
     public TimeOnly HorarioFim { get; set; } = new(20, 0);
+
+    public bool PodeAtender(string telefone) => AtenderTodos || NumerosPermitidos.Contains(telefone);
+
+    /// <summary>Normaliza a lista: só dígitos, sem repetidos; aceita número sem DDI e completa com 55.</summary>
+    public static List<string> NormalizarNumeros(IEnumerable<string> numeros) =>
+        numeros
+            .Select(n => new string(n.Where(char.IsDigit).ToArray()))
+            .Where(n => n.Length >= 10)
+            .Select(n => n.Length <= 11 ? "55" + n : n)
+            .Distinct()
+            .ToList();
 }

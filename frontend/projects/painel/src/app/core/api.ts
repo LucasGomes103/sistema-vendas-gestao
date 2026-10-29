@@ -157,6 +157,13 @@ export interface ConfigFunil {
   textoChamarVendedor: string;
 }
 
+export interface ConfigWhatsApp {
+  atenderTodos: boolean;
+  numerosPermitidos: string[];
+  whatsAppNumero: string | null;
+  provedor: 'Meta' | 'Local';
+}
+
 /** Mensagem do ProblemDetails da API (regras de negócio voltam como 422). */
 export function mensagemDeErro(erro: unknown, padrao = 'Não foi possível concluir. Tente de novo.'): string {
   const corpo = (erro as { error?: { detail?: string } } | null)?.error;

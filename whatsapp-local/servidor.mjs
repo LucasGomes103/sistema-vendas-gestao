@@ -19,19 +19,42 @@ if (!SEGREDO) {
   process.exit(1);
 }
 
-// Trava de segurança: por padrão a ponte só lê e responde os números desta lista (ex.: 5511987654321,5511912345678).
-// Para atender qualquer pessoa (número dedicado só à loja), defina ATENDER_TODOS=sim.
-const ATENDER_TODOS = (process.env.ATENDER_TODOS ?? '').toLowerCase() === 'sim';
-const PERMITIDOS = new Set(
-  (process.env.NUMEROS_PERMITIDOS ?? '')
-    .split(',')
-    .map((n) => n.replace(/\D/g, ''))
-    .filter(Boolean),
-);
+// Trava de segurança: a lista de quem pode conversar com o robô é configurada no painel
+// (Configuração > WhatsApp) e buscada na API a cada 30 s. Sem resposta da API, ninguém é atendido.
+let atenderTodos = false;
+let permitidos = new Set();
+let travaCarregada = false;
+
+async function atualizarTrava() {
+  try {
+    const r = await fetch(`${API_URL}/api/v1/webhooks/local/permitidos`, { headers: { 'x-segredo': SEGREDO } });
+    if (!r.ok) throw new Error(`API respondeu ${r.status}`);
+    const trava = await r.json();
+    const antes = `${atenderTodos}|${[...permitidos].join(',')}`;
+    atenderTodos = trava.atenderTodos === true;
+    permitidos = new Set(trava.numeros ?? []);
+    const depois = `${atenderTodos}|${[...permitidos].join(',')}`;
+    if (!travaCarregada || antes !== depois) {
+      if (atenderTodos) console.warn('ATENÇÃO: atendendo TODOS os contatos deste número.');
+      else if (permitidos.size === 0) console.log('Nenhum número permitido no painel: o sistema não lê nem responde ninguém.');
+      else console.log(`Só atende: ${[...permitidos].join(', ')}`);
+    }
+    travaCarregada = true;
+  } catch (e) {
+    // API fora do ar: fecha a trava por segurança.
+    atenderTodos = false;
+    permitidos = new Set();
+    if (travaCarregada) console.warn('Não foi possível ler a trava na API; ninguém será atendido até voltar:', e.message);
+    travaCarregada = false;
+  }
+}
 
 function permitido(identificador) {
-  return ATENDER_TODOS || PERMITIDOS.has(identificador);
+  return atenderTodos || permitidos.has(identificador);
 }
+
+await atualizarTrava();
+setInterval(atualizarTrava, 30_000);
 
 const logger = pino({ level: 'warn' });
 let sock = null;
@@ -221,11 +244,6 @@ http
       responder(res, 500, { erro: e.message });
     }
   })
-  .listen(PORTA, '127.0.0.1', () => {
-    console.log(`Ponte WhatsApp local em http://localhost:${PORTA} (QR em /qr)`);
-    if (ATENDER_TODOS) console.warn('ATENÇÃO: atendendo TODOS os contatos deste número.');
-    else if (PERMITIDOS.size === 0) console.warn('Nenhum número permitido: o sistema não vai ler nem responder ninguém (NUMEROS_PERMITIDOS).');
-    else console.log(`Só atende: ${[...PERMITIDOS].join(', ')}`);
-  });
+  .listen(PORTA, '127.0.0.1', () => console.log(`Ponte WhatsApp local em http://localhost:${PORTA} (QR em /qr)`));
 
 conectar();

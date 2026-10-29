@@ -4,6 +4,9 @@ using SistemaVendas.Application.Comum;
 using SistemaVendas.Domain.Atendimento;
 using SistemaVendas.Domain.Funil;
 using SistemaVendas.Infrastructure.Dados;
+using SistemaVendas.Infrastructure.WhatsApp;
+using SistemaVendas.Domain.Lojas;
+using Microsoft.Extensions.Options;
 
 namespace SistemaVendas.Api.Endpoints;
 
@@ -35,6 +38,8 @@ public record ConfigFunilDto(
     string TextoFollowup2,
     string TextoFrete,
     string TextoChamarVendedor);
+
+public record ConfigWhatsAppDto(bool AtenderTodos, List<string> NumerosPermitidos, string? WhatsAppNumero, string Provedor);
 
 public static class FunilEndpoints
 {
@@ -101,6 +106,25 @@ public static class FunilEndpoints
                 .ToListAsync(ct));
 
         var config = app.MapGroup("/config").WithTags("Configuração").RequireAuthorization(AuthEndpoints.PoliticaDono);
+
+        config.MapGet("/whatsapp", async (AppDbContext db, ILojaAtual loja, IOptions<WhatsAppOptions> wa, CancellationToken ct) =>
+        {
+            var l = await db.Lojas.AsNoTracking().FirstAsync(x => x.Id == loja.LojaId, ct);
+            return new ConfigWhatsAppDto(l.AtenderTodos, l.NumerosPermitidos, l.WhatsAppNumero, wa.Value.UsaPonteLocal ? "Local" : "Meta");
+        });
+
+        config.MapPut("/whatsapp", async (ConfigWhatsAppDto entrada, AppDbContext db, ILojaAtual loja, IOptions<WhatsAppOptions> wa, CancellationToken ct) =>
+        {
+            var l = await db.Lojas.FirstAsync(x => x.Id == loja.LojaId, ct);
+            l.AtenderTodos = entrada.AtenderTodos;
+            l.NumerosPermitidos = Loja.NormalizarNumeros(entrada.NumerosPermitidos ?? []);
+
+            var numero = new string((entrada.WhatsAppNumero ?? "").Where(char.IsDigit).ToArray());
+            l.WhatsAppNumero = numero.Length == 0 ? null : Loja.NormalizarNumeros([numero]).FirstOrDefault();
+
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new ConfigWhatsAppDto(l.AtenderTodos, l.NumerosPermitidos, l.WhatsAppNumero, wa.Value.UsaPonteLocal ? "Local" : "Meta"));
+        });
 
         config.MapGet("/funil", async (ServicoFunil funil, AppDbContext db, ILojaAtual loja, CancellationToken ct) =>
         {

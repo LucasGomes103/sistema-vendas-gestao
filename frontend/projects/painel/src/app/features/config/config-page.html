@@ -1,12 +1,11 @@
 <header class="sv-cabecalho-pagina">
   <div>
     <h1>Configuração</h1>
-    <p>Prazos do funil e respostas prontas do robô.</p>
+    <p>WhatsApp, prazos do funil e respostas prontas do robô.</p>
   </div>
-  <button mat-flat-button [disabled]="salvando() || form.pristine" (click)="salvar()">
-    <mat-icon>save</mat-icon> Salvar
-  </button>
 </header>
+
+<app-config-whatsapp />
 
 @if (config.isLoading() && !config.hasValue()) {
   <mat-progress-bar mode="indeterminate" />
@@ -68,4 +67,10 @@
       <textarea matInput rows="2" formControlName="textoChamarVendedor"></textarea>
     </mat-form-field>
   </section>
+
+  <div class="salvar-funil">
+    <button mat-flat-button type="submit" [disabled]="salvando() || form.pristine">
+      <mat-icon>save</mat-icon> Salvar funil e respostas
+    </button>
+  </div>
 </form>

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using SistemaVendas.Application.Atendimento;
 using SistemaVendas.Domain.Atendimento;
 using SistemaVendas.Infrastructure.Dados;
@@ -71,6 +72,7 @@ public class MensagemWorker(
     IServiceScopeFactory scopes,
     IWhatsAppCliente whatsApp,
     WhatsAppSimulado simulado,
+    IOptions<WhatsAppOptions> opcoes,
     EstadoWorkers estado,
     ILogger<MensagemWorker> logger) : BackgroundService
 {
@@ -106,7 +108,7 @@ public class MensagemWorker(
             .Take(20)
             .Join(db.Conversas.IgnoreQueryFilters(), m => m.ConversaId, c => c.Id, (m, c) => new { m, c.ClienteId, c.Simulada })
             .Join(db.Clientes.IgnoreQueryFilters(), x => x.ClienteId, c => c.Id, (x, c) => new { x.m, x.Simulada, c.Telefone })
-            .Join(db.Lojas, x => x.m.LojaId, l => l.Id, (x, l) => new { Mensagem = x.m, x.Simulada, x.Telefone, l.PhoneNumberId })
+            .Join(db.Lojas, x => x.m.LojaId, l => l.Id, (x, l) => new { Mensagem = x.m, x.Simulada, x.Telefone, l.PhoneNumberId, Loja = l })
             .ToListAsync(ct);
 
         foreach (var p in pendentes)
@@ -117,6 +119,14 @@ public class MensagemWorker(
                 if (p.Simulada)
                 {
                     p.Mensagem.Wamid = await simulado.EnviarTextoAsync("simulador", p.Telefone, p.Mensagem.Conteudo, ct);
+                }
+                else if (opcoes.Value.UsaPonteLocal && !p.Loja.PodeAtender(p.Telefone))
+                {
+                    // Trava de segurança da conexão local: nunca escreve para quem está fora da lista.
+                    p.Mensagem.Status = StatusMensagem.Falhou;
+                    p.Mensagem.Erro = "Número fora da lista de permitidos (Configuração > WhatsApp).";
+                    await db.SaveChangesAsync(ct);
+                    continue;
                 }
                 else
                 {
