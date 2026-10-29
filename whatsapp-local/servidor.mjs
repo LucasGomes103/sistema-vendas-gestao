@@ -6,7 +6,7 @@
 //        API quer enviar  -> POST aqui (/enviar) -> WhatsApp.
 
 import http from 'node:http';
-import makeWASocket, { DisconnectReason, fetchLatestBaileysVersion, useMultiFileAuthState } from 'baileys';
+import makeWASocket, { Browsers, DisconnectReason, fetchLatestBaileysVersion, useMultiFileAuthState } from 'baileys';
 import pino from 'pino';
 import QRCode from 'qrcode';
 
@@ -22,6 +22,7 @@ if (!SEGREDO) {
 const logger = pino({ level: 'warn' });
 let sock = null;
 let qrAtual = null;
+let codigoAtual = null;
 let status = 'iniciando';
 
 /** "5511987654321@s.whatsapp.net" -> "5511987654321"; "123@lid" -> "lid:123". */
@@ -71,30 +72,43 @@ async function avisarApi(mensagem) {
 
 async function conectar() {
   const { state, saveCreds } = await useMultiFileAuthState('sessao');
-  const { version } = await fetchLatestBaileysVersion();
+  const { version, isLatest } = await fetchLatestBaileysVersion();
+  console.log(`Versão do WhatsApp Web: ${version.join('.')}${isLatest ? '' : ' (não foi possível buscar a mais recente)'}`);
 
-  sock = makeWASocket({ version, auth: state, logger, markOnlineOnConnect: false, syncFullHistory: false });
+  sock = makeWASocket({
+    version,
+    auth: state,
+    logger,
+    // Identificação de navegador aceita tanto pelo QR quanto pelo código de pareamento.
+    browser: Browsers.ubuntu('Chrome'),
+    markOnlineOnConnect: false,
+    syncFullHistory: false,
+  });
   sock.ev.on('creds.update', saveCreds);
 
   sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
     if (qr) {
+      if (!qrAtual) console.log(`Abra http://localhost:${PORTA}/qr e conecte o número reserva (QR code ou código).`);
       qrAtual = qr;
-      status = 'aguardando QR code';
-      console.log(`Abra http://localhost:${PORTA}/qr e leia o QR code com o WhatsApp do número reserva.`);
+      status = 'aguardando conexão';
     }
     if (connection === 'open') {
       qrAtual = null;
+      codigoAtual = null;
       status = 'conectado';
       console.log('WhatsApp conectado.');
     }
     if (connection === 'close') {
       const codigo = lastDisconnect?.error?.output?.statusCode;
+      const motivo = lastDisconnect?.error?.message ?? 'sem detalhe';
+      console.warn(`Conexão fechada (código ${codigo}: ${motivo}).`);
       if (codigo === DisconnectReason.loggedOut) {
-        status = 'desconectado (apague a pasta "sessao" e leia o QR de novo)';
+        status = 'desconectado: apague a pasta "sessao" e conecte de novo';
         console.error(status);
       } else {
-        status = 'reconectando';
-        setTimeout(conectar, 3000);
+        // 515 (restartRequired) é normal logo depois de ler o QR: reconecta com a sessão salva.
+        status = codigo === DisconnectReason.restartRequired ? 'finalizando conexão' : 'reconectando';
+        setTimeout(conectar, codigo === DisconnectReason.restartRequired ? 500 : 3000);
       }
     }
   });
@@ -110,6 +124,39 @@ async function conectar() {
   });
 }
 
+function redirecionar(res) {
+  res.writeHead(303, { location: '/qr' });
+  res.end();
+}
+
+async function paginaConexao() {
+  let conteudo;
+  if (status === 'conectado') {
+    conteudo = '<p style="font-size:20px">✅ <strong>Conectado.</strong> Pode fechar esta página.</p>';
+  } else if (codigoAtual) {
+    conteudo = `<p>No celular do número reserva: <b>WhatsApp &gt; Aparelhos conectados &gt; Conectar um aparelho &gt;
+      Conectar com número de telefone</b> e digite:</p>
+      <p style="font-size:40px;letter-spacing:4px;font-weight:700">${codigoAtual}</p>`;
+  } else if (qrAtual) {
+    conteudo = `<img src="${await QRCode.toDataURL(qrAtual, { width: 300 })}" alt="QR code">
+      <p>No celular: <b>WhatsApp &gt; Aparelhos conectados &gt; Conectar um aparelho</b> e aponte para o QR.</p>
+      <hr style="margin:24px 0"><p>QR não funcionou? Conecte com código:</p>
+      <form method="post" action="/codigo">
+        <input name="numero" placeholder="Número reserva: 5511987654321" style="padding:8px;width:260px">
+        <button style="padding:8px 14px">Gerar código</button>
+      </form>`;
+  } else {
+    conteudo = `<p>Status: <strong>${status}</strong></p>`;
+  }
+
+  // Só atualiza sozinha enquanto espera o QR; com o código na tela, não recarrega.
+  const atualizar = codigoAtual || status === 'conectado' ? '' : '<meta http-equiv="refresh" content="15">';
+  return `<!doctype html><meta charset="utf-8">${atualizar}<title>WhatsApp local</title>
+    <body style="font-family:system-ui;display:grid;place-items:center;min-height:90vh;text-align:center;padding:16px">
+    <div style="max-width:520px"><h2>WhatsApp local (não oficial)</h2>${conteudo}
+    <p style="color:#a00;margin-top:24px">Use um número reserva, não o da loja.</p></div></body>`;
+}
+
 function responder(res, codigo, corpo, tipo = 'application/json') {
   res.writeHead(codigo, { 'content-type': tipo });
   res.end(tipo === 'application/json' ? JSON.stringify(corpo) : corpo);
@@ -121,17 +168,23 @@ http
       if (req.method === 'GET' && req.url === '/status') return responder(res, 200, { status });
 
       if (req.method === 'GET' && req.url === '/qr') {
-        const conteudo = qrAtual
-          ? `<img src="${await QRCode.toDataURL(qrAtual, { width: 320 })}" alt="QR code"><p>No celular: WhatsApp &gt; Aparelhos conectados &gt; Conectar um aparelho.</p>`
-          : `<p>Status: <strong>${status}</strong></p>`;
-        return responder(
-          res,
-          200,
-          `<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="5"><title>WhatsApp local</title>
-           <body style="font-family:system-ui;display:grid;place-items:center;min-height:90vh;text-align:center">
-           <div><h2>WhatsApp local (não oficial)</h2>${conteudo}<p style="color:#a00">Use um número reserva, não o da loja.</p></div></body>`,
-          'text/html; charset=utf-8',
-        );
+        return responder(res, 200, await paginaConexao(), 'text/html; charset=utf-8');
+      }
+
+      // Alternativa ao QR: código de 8 dígitos digitado no celular.
+      if (req.method === 'POST' && req.url === '/codigo') {
+        let dados = '';
+        for await (const parte of req) dados += parte;
+        const numero = new URLSearchParams(dados).get('numero')?.replace(/\D/g, '') ?? '';
+        if (status === 'conectado') return redirecionar(res);
+        if (numero.length < 12) {
+          codigoAtual = 'Número inválido: use DDI + DDD + número, ex.: 5511987654321';
+        } else {
+          const codigo = await sock.requestPairingCode(numero);
+          codigoAtual = codigo.match(/.{1,4}/g).join('-');
+          console.log(`Código de pareamento: ${codigoAtual}`);
+        }
+        return redirecionar(res);
       }
 
       if (req.method === 'POST' && req.url === '/enviar') {
