@@ -30,7 +30,7 @@ export class ConversasPage {
 
   protected readonly conversas = httpResource<ConversaResumo[]>(() => `${API}/conversas`);
   protected readonly mensagens = httpResource<Mensagem[]>(() => (this.id() ? `${API}/conversas/${this.id()}/mensagens` : undefined));
-  protected readonly whatsApp = httpResource<{ simulado: boolean; simuladorDisponivel: boolean; phoneNumberId: string | null }>(() => `${API}/conversas/status-whatsapp`);
+  protected readonly whatsApp = httpResource<{ simulado: boolean; simuladorDisponivel: boolean; phoneNumberId: string | null; atendente: string }>(() => `${API}/conversas/status-whatsapp`);
 
   protected readonly aberta = computed(() => this.conversas.value()?.find((c) => c.id === this.id()));
   protected readonly texto = signal('');
@@ -93,6 +93,16 @@ export class ConversasPage {
       this.conversas.reload();
       this.mensagens.reload();
     }, 2500);
+  }
+
+  protected async assumir(c: ConversaResumo): Promise<void> {
+    await firstValueFrom(this.http.post(`${API}/conversas/${c.id}/assumir`, {}));
+    this.conversas.reload();
+  }
+
+  protected async devolver(c: ConversaResumo): Promise<void> {
+    await firstValueFrom(this.http.post(`${API}/conversas/${c.id}/devolver`, {}));
+    this.conversas.reload();
   }
 
   protected abrir(c: ConversaResumo): void {

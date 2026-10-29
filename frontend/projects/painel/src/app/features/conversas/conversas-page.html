@@ -40,7 +40,7 @@
     <ul>
       @for (c of conversas.value() ?? []; track c.id) {
         <li>
-          <a [routerLink]="['/conversas', c.id]" [class.ativa]="c.id === id()">
+          <a [routerLink]="['/conversas', c.id]" [class.ativa]="c.id === id()" [class.quente]="c.chamouVendedor">
             <span class="avatar">{{ iniciais(c.cliente) }}</span>
             <div class="resumo">
               <div class="topo">
@@ -60,6 +60,9 @@
                   <span class="badge">{{ c.naoLidas }}</span>
                 }
               </div>
+              @if (c.chamouVendedor) {
+                <span class="aviso-quente"><mat-icon>local_fire_department</mat-icon>Quente · chamar já</span>
+              }
             </div>
           </a>
         </li>
@@ -94,6 +97,23 @@
           </span>
         }
       </header>
+
+      <!-- Quem está atendendo: o robô responde até o vendedor assumir. -->
+      <div class="atendimento" [class.quente]="c.chamouVendedor" [class.vendedor]="c.roboPausado && !c.chamouVendedor">
+        @if (c.chamouVendedor) {
+          <mat-icon>local_fire_department</mat-icon>
+          <span><strong>Cliente quente:</strong> {{ c.motivoVendedor }}. O robô parou de responder.</span>
+          <button mat-flat-button (click)="devolver(c)">Devolver ao robô</button>
+        } @else if (c.roboPausado) {
+          <mat-icon>support_agent</mat-icon>
+          <span>Você está atendendo. O robô está pausado nesta conversa.</span>
+          <button mat-stroked-button (click)="devolver(c)">Devolver ao robô</button>
+        } @else {
+          <mat-icon>smart_toy</mat-icon>
+          <span>Robô atendendo{{ whatsApp.value()?.atendente ? ' · ' + whatsApp.value()!.atendente : '' }}</span>
+          <button mat-flat-button (click)="assumir(c)">Assumir conversa</button>
+        }
+      </div>
 
       <div class="mensagens">
         @for (m of mensagens.value() ?? []; track m.id) {

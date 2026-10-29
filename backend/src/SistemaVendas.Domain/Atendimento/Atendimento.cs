@@ -64,10 +64,55 @@ public class Conversa : EntidadeDaLoja
     /// <summary>Mensagens do cliente ainda não vistas no painel.</summary>
     public int NaoLidas { get; set; }
 
+    /// <summary>Vendedor assumiu: o robô não responde até a conversa ser devolvida.</summary>
+    public bool RoboPausado { get; set; }
+
+    /// <summary>Há mensagem do cliente esperando resposta do robô.</summary>
+    public bool AguardandoRobo { get; set; }
+
+    /// <summary>Cliente quente: quer comprar, reservar ou falar com uma pessoa. O vendedor recebe aviso.</summary>
+    public bool ChamouVendedor { get; set; }
+    public string? MotivoVendedor { get; set; }
+    public DateTimeOffset? ChamouVendedorEm { get; set; }
+
     public static readonly TimeSpan Janela = TimeSpan.FromHours(24);
 
     public bool DentroDaJanela(DateTimeOffset agora) =>
         UltimaMsgClienteEm is { } ultima && agora - ultima < Janela;
+
+    /// <summary>Mensagem nova do cliente: o robô responde, a menos que um vendedor tenha assumido.</summary>
+    public void ReceberDoCliente(DateTimeOffset em)
+    {
+        UltimaMsgClienteEm = em;
+        UltimaMensagemEm = em;
+        NaoLidas++;
+        AguardandoRobo = !RoboPausado;
+    }
+
+    /// <summary>Robô ou cliente pediram uma pessoa: pausa o robô e marca para o vendedor.</summary>
+    public void ChamarVendedor(string motivo, DateTimeOffset agora)
+    {
+        ChamouVendedor = true;
+        MotivoVendedor = motivo;
+        ChamouVendedorEm ??= agora;
+        RoboPausado = true;
+        AguardandoRobo = false;
+    }
+
+    public void Assumir()
+    {
+        RoboPausado = true;
+        AguardandoRobo = false;
+    }
+
+    /// <summary>Vendedor devolve ao robô; o histórico fica guardado.</summary>
+    public void DevolverAoRobo()
+    {
+        RoboPausado = false;
+        ChamouVendedor = false;
+        MotivoVendedor = null;
+        ChamouVendedorEm = null;
+    }
 }
 
 public class Mensagem : EntidadeDaLoja

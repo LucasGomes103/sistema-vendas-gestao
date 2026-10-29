@@ -20,7 +20,11 @@ public record ConversaResumo(
     int NaoLidas,
     bool DentroDaJanela,
     DateTimeOffset? JanelaFechaEm,
-    bool Simulada);
+    bool Simulada,
+    bool RoboPausado,
+    bool ChamouVendedor,
+    string? MotivoVendedor,
+    DateTimeOffset? ChamouVendedorEm);
 
 public record MensagemSaida(Guid Id, string Direcao, string Autor, string Conteudo, string Status, string? Erro, DateTimeOffset CriadoEm);
 
@@ -41,7 +45,8 @@ public static class ConversaEndpoints
             var agora = DateTimeOffset.UtcNow;
             var lista = await db.Conversas.AsNoTracking()
                 .Where(c => c.Aberta)
-                .OrderByDescending(c => c.UltimaMensagemEm)
+                .OrderByDescending(c => c.ChamouVendedor)
+                .ThenByDescending(c => c.UltimaMensagemEm)
                 .Take(100)
                 .Join(db.Clientes, c => c.ClienteId, cl => cl.Id, (c, cl) => new
                 {
@@ -56,7 +61,8 @@ public static class ConversaEndpoints
             return lista.Select(x => new ConversaResumo(
                 x.Conversa.Id, x.Conversa.ClienteId, x.Nome ?? FormatarTelefone(x.Telefone), x.Telefone,
                 x.Ultima?.Conteudo, x.Ultima?.Autor.ToString(), x.Conversa.UltimaMensagemEm, x.Conversa.NaoLidas,
-                x.Conversa.DentroDaJanela(agora), x.Conversa.UltimaMsgClienteEm + Conversa.Janela, x.Conversa.Simulada));
+                x.Conversa.DentroDaJanela(agora), x.Conversa.UltimaMsgClienteEm + Conversa.Janela, x.Conversa.Simulada,
+                x.Conversa.RoboPausado, x.Conversa.ChamouVendedor, x.Conversa.MotivoVendedor, x.Conversa.ChamouVendedorEm));
         });
 
         grupo.MapGet("/{id:guid}/mensagens", async (Guid id, AppDbContext db, CancellationToken ct) =>
@@ -109,17 +115,24 @@ public static class ConversaEndpoints
             };
             db.Mensagens.Add(mensagem);
             conversa.UltimaMensagemEm = agora;
+            conversa.Assumir(); // vendedor respondeu: o robô para de falar nesta conversa
             await db.SaveChangesAsync(ct);
 
             return Results.Ok(new MensagemSaida(mensagem.Id, mensagem.Direcao.ToString(), mensagem.Autor.ToString(),
                 mensagem.Conteudo, mensagem.Status.ToString(), null, mensagem.CriadoEm));
         });
 
-        grupo.MapGet("/status-whatsapp", async (IWhatsAppCliente whatsApp, AppDbContext db, ILojaAtual lojaAtual, IHostEnvironment env, CancellationToken ct) =>
+        grupo.MapPost("/{id:guid}/assumir", (Guid id, AppDbContext db, CancellationToken ct) =>
+            AlterarAsync(db, id, c => c.Assumir(), ct));
+
+        grupo.MapPost("/{id:guid}/devolver", (Guid id, AppDbContext db, CancellationToken ct) =>
+            AlterarAsync(db, id, c => c.DevolverAoRobo(), ct));
+
+        grupo.MapGet("/status-whatsapp", async (IWhatsAppCliente whatsApp, IAtendenteIA atendente, AppDbContext db, ILojaAtual lojaAtual, IHostEnvironment env, CancellationToken ct) =>
         {
             var phoneNumberId = await db.Lojas.Where(l => l.Id == lojaAtual.LojaId).Select(l => l.PhoneNumberId).FirstOrDefaultAsync(ct);
             // Em desenvolvimento o simulador fica disponível mesmo com o número real ligado.
-            return Results.Ok(new { simulado = whatsApp.Simulado, simuladorDisponivel = env.IsDevelopment(), phoneNumberId });
+            return Results.Ok(new { simulado = whatsApp.Simulado, simuladorDisponivel = env.IsDevelopment(), phoneNumberId, atendente = atendente.Nome });
         });
 
         // Número do WhatsApp da loja (phone_number_id da Meta). Não é segredo; o token fica fora do banco.
@@ -197,6 +210,16 @@ public static class ConversaEndpoints
         })
         .WithTags("Desenvolvimento")
         .RequireAuthorization(AuthEndpoints.PoliticaEquipe);
+    }
+
+    private static async Task<IResult> AlterarAsync(AppDbContext db, Guid id, Action<Conversa> alterar, CancellationToken ct)
+    {
+        var conversa = await db.Conversas.FirstOrDefaultAsync(c => c.Id == id, ct);
+        if (conversa is null)
+            return Results.NotFound();
+        alterar(conversa);
+        await db.SaveChangesAsync(ct);
+        return Results.NoContent();
     }
 
     private static string FormatarTelefone(string telefone)

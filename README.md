@@ -133,10 +133,21 @@ dotnet user-secrets set "WhatsApp:VerifyToken" "<texto qualquer, o mesmo cadastr
 O webhook da Meta aponta para `https://<seu-domínio>/api/v1/webhooks/whatsapp`. Em desenvolvimento, use um túnel
 gratuito (Cloudflare Tunnel ou ngrok) para expor a API local.
 
+## Robô de atendimento (IA)
+
+Com a chave do Gemini (camada gratuita), o robô responde usando só dados das ferramentas do backend
+(buscar espécie, consultar estoque) e chama o vendedor quando o cliente quer reservar, comprar, saber frete
+ou falar com uma pessoa. Nome, telefone e endereço não vão para o modelo. Sem chave, ou se o Gemini falhar,
+entra um atendente por regras.
+
+```bash
+cd backend/src/SistemaVendas.Api
+dotnet user-secrets set "IA:Gemini:ApiKey" "<sua chave do AI Studio>"
+```
+
 ## Próximos passos (fase 1)
 
-1. Cards do funil, motor de regras e kanban com SignalR.
-2. IA do atendimento (Gemini Flash-Lite, camada gratuita) com function calling.
+1. Cards do funil, motor de regras de tempo (follow-ups) e kanban com SignalR.
 3. Pedidos, reserva e Pix.
 4. Deploy no Oracle Cloud Always Free com Caddy e backup diário.
 

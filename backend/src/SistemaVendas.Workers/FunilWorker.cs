@@ -31,6 +31,7 @@ public class EstadoWorkers
     public DateTimeOffset? UltimoCicloFunil { get; set; }
     public DateTimeOffset? UltimoCicloWebhook { get; set; }
     public DateTimeOffset? UltimoCicloMensagens { get; set; }
+    public DateTimeOffset? UltimoCicloRobo { get; set; }
 }
 
 public static class DependencyInjection
@@ -43,6 +44,7 @@ public static class DependencyInjection
         services.AddHostedService<FunilWorker>();
         services.AddHostedService<WebhookWorker>();
         services.AddHostedService<MensagemWorker>();
+        services.AddHostedService<RoboWorker>();
         return services;
     }
 }

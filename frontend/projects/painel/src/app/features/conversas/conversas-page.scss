@@ -44,6 +44,7 @@
     flex: 1;
     margin: 0;
     padding: 4px 8px 8px;
+    overflow-x: hidden;
     overflow-y: auto;
     list-style: none;
   }
@@ -210,6 +211,49 @@
   > .sv-vazio {
     flex: 1;
   }
+}
+
+.atendimento {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  font: var(--mat-sys-body-medium);
+
+  span {
+    flex: 1;
+  }
+
+  &.vendedor {
+    background: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface);
+  }
+
+  &.quente {
+    background: var(--sv-alerta-fundo);
+    color: var(--sv-alerta);
+  }
+}
+
+.aviso-quente {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: #b3261e;
+  font: var(--mat-sys-label-medium);
+  font-weight: 600;
+
+  mat-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+  }
+}
+
+.lista a.quente:not(.ativa) {
+  background: var(--sv-alerta-fundo);
 }
 
 .mensagens {

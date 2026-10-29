@@ -118,9 +118,7 @@ public class ProcessadorWebhook(AppDbContext db, ILojaAtual lojaAtual, ILogger<P
             db.Conversas.Add(conversa);
         }
 
-        conversa.UltimaMsgClienteEm = m.Em;
-        conversa.UltimaMensagemEm = m.Em;
-        conversa.NaoLidas++;
+        conversa.ReceberDoCliente(m.Em);
 
         db.Mensagens.Add(new Mensagem
         {

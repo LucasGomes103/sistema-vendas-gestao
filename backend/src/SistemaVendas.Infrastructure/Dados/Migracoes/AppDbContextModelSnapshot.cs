@@ -89,6 +89,18 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasColumnType("boolean")
                         .HasColumnName("aberta");
 
+                    b.Property<bool>("AguardandoRobo")
+                        .HasColumnType("boolean")
+                        .HasColumnName("aguardando_robo");
+
+                    b.Property<bool>("ChamouVendedor")
+                        .HasColumnType("boolean")
+                        .HasColumnName("chamou_vendedor");
+
+                    b.Property<DateTimeOffset?>("ChamouVendedorEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("chamou_vendedor_em");
+
                     b.Property<Guid>("ClienteId")
                         .HasColumnType("uuid")
                         .HasColumnName("cliente_id");
@@ -101,9 +113,17 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasColumnType("uuid")
                         .HasColumnName("loja_id");
 
+                    b.Property<string>("MotivoVendedor")
+                        .HasColumnType("text")
+                        .HasColumnName("motivo_vendedor");
+
                     b.Property<int>("NaoLidas")
                         .HasColumnType("integer")
                         .HasColumnName("nao_lidas");
+
+                    b.Property<bool>("RoboPausado")
+                        .HasColumnType("boolean")
+                        .HasColumnName("robo_pausado");
 
                     b.Property<bool>("Simulada")
                         .HasColumnType("boolean")

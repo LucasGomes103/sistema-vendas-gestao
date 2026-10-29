@@ -99,6 +99,10 @@ export interface ConversaResumo {
   dentroDaJanela: boolean;
   janelaFechaEm: string | null;
   simulada: boolean;
+  roboPausado: boolean;
+  chamouVendedor: boolean;
+  motivoVendedor: string | null;
+  chamouVendedorEm: string | null;
 }
 
 export interface Mensagem {

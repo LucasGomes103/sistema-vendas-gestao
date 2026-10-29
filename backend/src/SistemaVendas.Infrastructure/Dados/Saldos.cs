@@ -1,8 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaVendas.Domain.Estoque;
-using SistemaVendas.Infrastructure.Dados;
 
-namespace SistemaVendas.Api.Comum;
+namespace SistemaVendas.Infrastructure.Dados;
 
 public record SaldoLote(Guid LoteId, Guid EspecieId, Guid TanqueId, StatusLote Status, int Disponivel, int BaixasRecentes);
 
