@@ -122,6 +122,29 @@ public static class ConversaEndpoints
                 mensagem.Conteudo, mensagem.Status.ToString(), null, mensagem.CriadoEm));
         });
 
+        // Conversa do simulador é apagada de vez; conversa real é só arquivada (o histórico de vendas depende dela).
+        grupo.MapDelete("/{id:guid}", async (Guid id, AppDbContext db, CancellationToken ct) =>
+        {
+            var conversa = await db.Conversas.FirstOrDefaultAsync(c => c.Id == id, ct);
+            if (conversa is null)
+                return Results.NotFound();
+
+            if (conversa.Simulada)
+            {
+                await db.Mensagens.Where(m => m.ConversaId == id).ExecuteDeleteAsync(ct);
+                db.Conversas.Remove(conversa);
+            }
+            else
+            {
+                conversa.Aberta = false;
+                conversa.AguardandoRobo = false;
+            }
+
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        })
+        .RequireAuthorization(AuthEndpoints.PoliticaDono);
+
         grupo.MapPost("/{id:guid}/assumir", (Guid id, AppDbContext db, CancellationToken ct) =>
             AlterarAsync(db, id, c => c.Assumir(), ct));
 

@@ -100,6 +100,15 @@
             <mat-icon>lock_clock</mat-icon>Janela fechada
           </span>
         }
+        @if (auth.ehDono()) {
+          <button mat-icon-button [matMenuTriggerFor]="menuConversa" aria-label="Mais opções"><mat-icon>more_vert</mat-icon></button>
+          <mat-menu #menuConversa="matMenu" xPosition="before">
+            <button mat-menu-item (click)="excluir(c)">
+              <mat-icon>{{ c.simulada ? 'delete' : 'archive' }}</mat-icon>
+              <span>{{ c.simulada ? 'Excluir conversa' : 'Arquivar conversa' }}</span>
+            </button>
+          </mat-menu>
+        }
       </header>
 
       <!-- Quem está atendendo: o robô responde até o vendedor assumir. -->

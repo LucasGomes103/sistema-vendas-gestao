@@ -3,12 +3,14 @@ import { DatePipe } from '@angular/common';
 import { HttpClient, httpResource } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { firstValueFrom } from 'rxjs';
 import { API, ConversaResumo, Mensagem, mensagemDeErro } from '../../core/api';
 import { atualizarACada } from '../../core/atualizar';
+import { Auth } from '../../core/auth';
 
 /**
  * Conversas do WhatsApp: lista à esquerda e chat à direita no desktop;
@@ -16,7 +18,7 @@ import { atualizarACada } from '../../core/atualizar';
  */
 @Component({
   selector: 'app-conversas-page',
-  imports: [DatePipe, RouterLink, MatButtonModule, MatIconModule, MatProgressBarModule, MatTooltipModule],
+  imports: [DatePipe, RouterLink, MatButtonModule, MatMenuModule, MatIconModule, MatProgressBarModule, MatTooltipModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './conversas-page.html',
   styleUrl: './conversas-page.scss',
@@ -25,6 +27,7 @@ export class ConversasPage {
   /** Conversa aberta, vinda da rota /conversas/:id. */
   readonly id = input<string>();
 
+  protected readonly auth = inject(Auth);
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
 
@@ -116,6 +119,16 @@ export class ConversasPage {
   protected async devolver(c: ConversaResumo): Promise<void> {
     await firstValueFrom(this.http.post(`${API}/conversas/${c.id}/devolver`, {}));
     this.conversas.reload();
+  }
+
+  protected async excluir(c: ConversaResumo): Promise<void> {
+    const pergunta = c.simulada
+      ? `Excluir a conversa simulada com ${c.cliente}? As mensagens serão apagadas.`
+      : `Arquivar a conversa com ${c.cliente}? Ela sai da lista; se o cliente escrever de novo, abre uma conversa nova.`;
+    if (!confirm(pergunta)) return;
+    await firstValueFrom(this.http.delete(`${API}/conversas/${c.id}`));
+    this.conversas.reload();
+    void this.router.navigate(['/conversas']);
   }
 
   protected abrir(c: ConversaResumo): void {
