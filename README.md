@@ -151,9 +151,13 @@ npm install
 npm start          # abra http://localhost:5050/qr e leia com o celular do número reserva
 ```
 
-**Trava de segurança:** por padrão a ponte **não lê nem responde ninguém**. Coloque em `whatsapp-local/.env` os números
-que podem conversar com o robô (`NUMEROS_PERMITIDOS=5511987654321,5511912345678`). Só use `ATENDER_TODOS=sim` num número
-dedicado à loja, nunca num número pessoal.
+**Trava de segurança:** por padrão a ponte **não lê nem responde ninguém**. Os números que podem conversar com o robô
+são configurados no painel (**Configuração → WhatsApp**). Só ligue "Atender todos os contatos" num número dedicado à loja,
+nunca num número pessoal.
+
+**Na nuvem (Render):** a imagem `infra/render/Dockerfile` roda a API e a ponte no mesmo serviço. A ponte guarda a
+sessão no PostgreSQL (tabela `whatsapp_sessao`), então reiniciar não pede o QR de novo, e se visita a cada 10 min
+para o serviço grátis não dormir. O número é conectado pelo painel, em **Configuração → Conexão do WhatsApp**.
 
 Para voltar à Meta: `dotnet user-secrets remove "WhatsApp:Provedor"`.
 

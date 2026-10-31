@@ -1,0 +1,12 @@
+# Build do Render (infra/render/Dockerfile) usa a raiz como contexto: só backend e whatsapp-local importam.
+.git
+docs
+frontend
+**/bin
+**/obj
+**/TestResults
+**/node_modules
+whatsapp-local/sessao
+whatsapp-local/.env
+infra/.env
+infra/producao

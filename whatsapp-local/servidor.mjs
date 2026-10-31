@@ -6,9 +6,11 @@
 //        API quer enviar  -> POST aqui (/enviar) -> WhatsApp.
 
 import http from 'node:http';
+import { rm } from 'node:fs/promises';
 import makeWASocket, { Browsers, DisconnectReason, fetchLatestBaileysVersion, useMultiFileAuthState } from 'baileys';
 import pino from 'pino';
 import QRCode from 'qrcode';
+import { useSessaoNoBanco } from './sessao-banco.mjs';
 
 const PORTA = Number(process.env.PORTA ?? 5050);
 // No servidor (Docker) a ponte escuta na rede interna; no PC, só na própria máquina.
@@ -16,6 +18,11 @@ const HOST = process.env.HOST ?? '127.0.0.1';
 const PASTA_SESSAO = process.env.PASTA_SESSAO ?? 'sessao';
 const API_URL = process.env.API_URL ?? 'http://localhost:5007';
 const SEGREDO = process.env.WHATSAPP_LOCAL_SEGREDO;
+// Na nuvem a sessão fica no banco (connection string no formato do Npgsql); no PC, na pasta "sessao".
+const SESSAO_BANCO = process.env.SESSAO_BANCO;
+const PREFIXO_SESSAO = `${process.env.LOJA_SLUG ?? 'loja'}:`;
+// Render grátis dorme após 15 min sem acessos; a ponte precisa ficar conectada, então se visita sozinha.
+const MANTER_ACORDADO_URL = process.env.MANTER_ACORDADO_URL;
 
 if (!SEGREDO) {
   console.error('Defina WHATSAPP_LOCAL_SEGREDO (o mesmo valor de WhatsApp:Local:Segredo na API).');
@@ -113,8 +120,14 @@ async function avisarApi(mensagem) {
   }
 }
 
+async function abrirSessao() {
+  if (SESSAO_BANCO) return useSessaoNoBanco(SESSAO_BANCO, PREFIXO_SESSAO);
+  const sessao = await useMultiFileAuthState(PASTA_SESSAO);
+  return { ...sessao, limpar: () => rm(PASTA_SESSAO, { recursive: true, force: true }) };
+}
+
 async function conectar() {
-  const { state, saveCreds } = await useMultiFileAuthState(PASTA_SESSAO);
+  const { state, saveCreds, limpar } = await abrirSessao();
   const { version, isLatest } = await fetchLatestBaileysVersion();
   console.log(`Versão do WhatsApp Web: ${version.join('.')}${isLatest ? '' : ' (não foi possível buscar a mais recente)'}`);
 
@@ -146,8 +159,12 @@ async function conectar() {
       const motivo = lastDisconnect?.error?.message ?? 'sem detalhe';
       console.warn(`Conexão fechada (código ${codigo}: ${motivo}).`);
       if (codigo === DisconnectReason.loggedOut) {
-        status = 'desconectado: apague a pasta "sessao" e conecte de novo';
-        console.error(status);
+        // Desconectado pelo celular (ou pelo painel): apaga a sessão e volta a mostrar um QR novo.
+        status = 'desconectado';
+        qrAtual = null;
+        codigoAtual = null;
+        console.warn('Sessão encerrada; gerando um QR code novo.');
+        limpar().then(() => setTimeout(conectar, 1000));
       } else {
         // 515 (restartRequired) é normal logo depois de ler o QR: reconecta com a sessão salva.
         status = codigo === DisconnectReason.restartRequired ? 'finalizando conexão' : 'reconectando';
@@ -230,6 +247,33 @@ http
         return redirecionar(res);
       }
 
+      // Usado pelo painel (através da API) para conectar o número sem acessar esta máquina.
+      if (req.url === '/estado' || req.url === '/estado/codigo' || req.url === '/estado/desconectar') {
+        if (req.headers['x-segredo'] !== SEGREDO) return responder(res, 401, { erro: 'segredo inválido' });
+
+        if (req.method === 'POST' && req.url === '/estado/codigo') {
+          let dados = '';
+          for await (const parte of req) dados += parte;
+          const numero = String(JSON.parse(dados || '{}').numero ?? '').replace(/D/g, '');
+          if (status === 'conectado') return responder(res, 409, { erro: 'já está conectado' });
+          if (numero.length < 12) return responder(res, 400, { erro: 'Use DDI + DDD + número, ex.: 5511987654321' });
+          const codigo = await sock.requestPairingCode(numero);
+          codigoAtual = codigo.match(/.{1,4}/g).join('-');
+        } else if (req.method === 'POST' && req.url === '/estado/desconectar') {
+          if (status === 'conectado') await sock.logout();
+        } else if (req.method !== 'GET') {
+          return responder(res, 405, { erro: 'método não permitido' });
+        }
+
+        return responder(res, 200, {
+          status,
+          conectado: status === 'conectado',
+          numero: status === 'conectado' ? paraIdentificador(sock?.user?.id ?? '') : null,
+          qr: qrAtual && !codigoAtual ? await QRCode.toDataURL(qrAtual, { width: 280, margin: 1 }) : null,
+          codigo: codigoAtual,
+        });
+      }
+
       if (req.method === 'POST' && req.url === '/enviar') {
         if (req.headers['x-segredo'] !== SEGREDO) return responder(res, 401, { erro: 'segredo inválido' });
         if (status !== 'conectado') return responder(res, 503, { erro: `WhatsApp ${status}` });
@@ -250,3 +294,8 @@ http
   .listen(PORTA, HOST, () => console.log(`Ponte WhatsApp local em http://localhost:${PORTA} (QR em /qr)`));
 
 conectar();
+
+if (MANTER_ACORDADO_URL) {
+  setInterval(() => fetch(MANTER_ACORDADO_URL).catch(() => {}), 10 * 60_000);
+  console.log(`Mantendo o serviço acordado: visita ${MANTER_ACORDADO_URL} a cada 10 min.`);
+}

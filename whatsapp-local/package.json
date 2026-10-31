@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "baileys": "7.0.0-rc14",
+    "pg": "^8.23.1",
     "pino": "^9.0.0",
     "qrcode": "1.5.4"
   }

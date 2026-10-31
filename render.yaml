@@ -1,4 +1,5 @@
-# Render Blueprint: API (.NET) no plano grátis. Os segredos (sync: false) são digitados no painel do Render.
+# Render Blueprint: API (.NET) + ponte do WhatsApp (Node) num serviço só, no plano grátis.
+# Os segredos (sync: false) são digitados no painel do Render.
 services:
   - type: web
     name: sistema-vendas-api
@@ -6,8 +7,15 @@ services:
     plan: free
     # Mesma região do banco no Supabase (East US - North Virginia), para as consultas serem rápidas.
     region: virginia
-    rootDir: backend
-    dockerfilePath: ./Dockerfile
+    # Contexto = raiz do repositório (a imagem junta backend/ e whatsapp-local/).
+    dockerfilePath: ./infra/render/Dockerfile
+    dockerContext: .
+    # Só recompila quando muda algo da API ou da ponte (mudança no front fica com o Netlify).
+    buildFilter:
+      paths:
+        - backend/**
+        - whatsapp-local/**
+        - infra/render/**
     healthCheckPath: /health
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
