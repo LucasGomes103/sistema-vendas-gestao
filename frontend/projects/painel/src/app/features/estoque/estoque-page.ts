@@ -8,7 +8,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { API, Tanque } from '../../core/api';
+import { Auth } from '../../core/auth';
 import { EntradaDialog } from './entrada-dialog';
+import { TanqueDialog, TanqueCriado } from './tanque-dialog';
 
 type Filtro = 'Venda' | 'Quarentena' | 'Alertas';
 
@@ -31,6 +33,7 @@ const ESTOQUE_BAIXO = 5;
 export class EstoquePage {
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
+  protected readonly auth = inject(Auth);
 
   protected readonly tanques = httpResource<Tanque[]>(() => `${API}/tanques`);
   protected readonly filtro = signal<Filtro>('Venda');
@@ -43,6 +46,17 @@ export class EstoquePage {
         if (!ok) return;
         this.tanques.reload();
         this.snack.open('Entrada registrada.', undefined, { duration: 3000 });
+      });
+  }
+
+  protected novoTanque(): void {
+    this.dialog
+      .open<TanqueDialog, unknown, TanqueCriado>(TanqueDialog, { width: '440px', maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((id) => {
+        if (!id) return;
+        this.tanques.reload();
+        this.snack.open('Tanque cadastrado.', undefined, { duration: 3000 });
       });
   }
 

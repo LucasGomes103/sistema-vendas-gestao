@@ -5,6 +5,9 @@
   </div>
   <div class="botoes">
     <button mat-icon-button aria-label="Atualizar" (click)="tanques.reload()"><mat-icon>refresh</mat-icon></button>
+    @if (auth.ehDono()) {
+      <button mat-stroked-button (click)="novoTanque()"><mat-icon>water</mat-icon> Novo tanque</button>
+    }
     <button mat-flat-button (click)="entrada()"><mat-icon>add</mat-icon> Entrada de lote</button>
   </div>
 </header>
@@ -89,6 +92,9 @@
       <div class="sv-vazio">
         <mat-icon>{{ filtro() === 'Alertas' ? 'task_alt' : 'water' }}</mat-icon>
         <p>{{ filtro() === 'Alertas' ? 'Nenhum alerta. Tudo certo nos tanques.' : 'Nenhum tanque aqui.' }}</p>
+        @if (filtro() !== 'Alertas' && auth.ehDono()) {
+          <button mat-stroked-button (click)="novoTanque()"><mat-icon>add</mat-icon> Cadastrar tanque</button>
+        }
       </div>
     }
   </div>

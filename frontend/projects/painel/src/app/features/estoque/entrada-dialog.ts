@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { HttpClient, httpResource } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,6 +9,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { firstValueFrom } from 'rxjs';
 import { API, Especie, Fornecedor, Tanque, mensagemDeErro } from '../../core/api';
+import { Auth } from '../../core/auth';
+import { TanqueDialog, TanqueCriado } from './tanque-dialog';
 
 export interface DadosEntrada {
   /** Tanque já escolhido (quando aberto a partir do detalhe do tanque). */
@@ -50,7 +52,15 @@ export interface DadosEntrada {
             }
           </mat-select>
           <mat-error>Escolha o tanque.</mat-error>
+          @if (tanques.hasValue() && !tanques.value().length) {
+            <mat-hint>Nenhum tanque cadastrado ainda.</mat-hint>
+          }
         </mat-form-field>
+        @if (auth.ehDono()) {
+          <button mat-button type="button" class="inteiro novo" (click)="novoTanque()">
+            <mat-icon>add</mat-icon> Cadastrar novo tanque
+          </button>
+        }
 
         <mat-form-field appearance="outline">
           <mat-label>Quantidade</mat-label>
@@ -100,6 +110,10 @@ export interface DadosEntrada {
     .inteiro {
       grid-column: 1 / -1;
     }
+    .novo {
+      justify-self: start;
+      margin: -4px 0 8px;
+    }
     .erro {
       display: flex;
       align-items: center;
@@ -113,6 +127,8 @@ export class EntradaDialog {
   private readonly http = inject(HttpClient);
   private readonly ref = inject<MatDialogRef<EntradaDialog, boolean>>(MatDialogRef);
   private readonly dados = inject<DadosEntrada | null>(MAT_DIALOG_DATA);
+  private readonly dialog = inject(MatDialog);
+  protected readonly auth = inject(Auth);
 
   protected readonly especies = httpResource<Especie[]>(() => `${API}/especies`);
   protected readonly tanques = httpResource<Tanque[]>(() => `${API}/tanques`);
@@ -129,6 +145,17 @@ export class EntradaDialog {
     fornecedorId: [null as string | null],
     quarentenaDias: [0, Validators.min(0)],
   });
+
+  protected novoTanque(): void {
+    this.dialog
+      .open<TanqueDialog, unknown, TanqueCriado>(TanqueDialog, { width: '440px', maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe((id) => {
+        if (!id) return;
+        this.tanques.reload();
+        this.form.controls.tanqueId.setValue(id);
+      });
+  }
 
   protected async salvar(): Promise<void> {
     if (this.form.invalid) {
