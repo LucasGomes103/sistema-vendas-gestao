@@ -17,6 +17,9 @@
         · {{ total() }} {{ t.tipo === 'Quarentena' ? 'em quarentena' : 'peixes' }}
       </p>
     </div>
+    @if (auth.ehDono()) {
+      <button mat-stroked-button class="excluir" (click)="excluir()"><mat-icon>delete</mat-icon> Excluir tanque</button>
+    }
   </header>
 
   <!-- Ações principais com alvos grandes: estoque se mexe em pé, com o celular na mão. -->

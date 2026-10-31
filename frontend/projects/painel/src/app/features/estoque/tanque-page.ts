@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { HttpClient, httpResource } from '@angular/common/http';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -40,6 +40,7 @@ export class TanquePage {
   private readonly dialog = inject(MatDialog);
   private readonly http = inject(HttpClient);
   private readonly snack = inject(MatSnackBar);
+  private readonly router = inject(Router);
 
   protected readonly tanque = httpResource<TanqueDetalhe>(() => `${API}/tanques/${this.id()}`);
   protected readonly total = computed(() => (this.tanque.value()?.lotes ?? []).reduce((s, l) => s + l.disponivel, 0));
@@ -70,6 +71,18 @@ export class TanquePage {
       this.concluido(`${lote.especie} liberado para venda.`);
     } catch (e) {
       this.snack.open(mensagemDeErro(e), 'OK', { duration: 5000 });
+    }
+  }
+
+  protected async excluir(): Promise<void> {
+    const t = this.tanque.value();
+    if (!t || !confirm(`Excluir o tanque "${t.nome}"? O histórico de movimentações continua guardado.`)) return;
+    try {
+      await firstValueFrom(this.http.delete(`${API}/tanques/${t.id}`));
+      this.snack.open('Tanque excluído.', undefined, { duration: 3000 });
+      this.router.navigate(['/estoque']);
+    } catch (e) {
+      this.snack.open(mensagemDeErro(e), 'OK', { duration: 6000 });
     }
   }
 

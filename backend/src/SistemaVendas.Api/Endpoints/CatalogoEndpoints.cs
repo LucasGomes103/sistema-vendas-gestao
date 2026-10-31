@@ -43,7 +43,7 @@ public static class CatalogoEndpoints
         grupo.MapGet("/", async (AppDbContext db, CancellationToken ct) =>
         {
             var disponivel = Saldos.DisponivelPorEspecie(await Saldos.PorLoteAsync(db, ct));
-            var especies = await db.Especies.AsNoTracking().OrderBy(e => e.NomePopular).ToListAsync(ct);
+            var especies = await db.Especies.AsNoTracking().Where(e => e.Ativo).OrderBy(e => e.NomePopular).ToListAsync(ct);
             return especies.Select(e => Saida(e, disponivel.GetValueOrDefault(e.Id)));
         });
 
@@ -73,6 +73,25 @@ public static class CatalogoEndpoints
                 return Results.NotFound();
 
             Aplicar(especie, entrada);
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        })
+        .RequireAuthorization(AuthEndpoints.PoliticaDono);
+
+        // Excluir só esconde (o histórico de lotes e vendas continua apontando para a espécie).
+        grupo.MapDelete("/{id:guid}", async (Guid id, AppDbContext db, CancellationToken ct) =>
+        {
+            var especie = await db.Especies.FirstOrDefaultAsync(e => e.Id == id && e.Ativo, ct);
+            if (especie is null)
+                return Results.NotFound();
+
+            var noEstoque = (await Saldos.PorLoteAsync(db, ct)).Where(s => s.EspecieId == id).Sum(s => Math.Max(0, s.Disponivel));
+            if (noEstoque > 0)
+                return Results.Problem(
+                    $"Ainda há {noEstoque} {especie.NomePopular} no estoque. Dê baixa ou ajuste o estoque para zero antes de excluir.",
+                    statusCode: StatusCodes.Status409Conflict);
+
+            especie.Ativo = false;
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
         })

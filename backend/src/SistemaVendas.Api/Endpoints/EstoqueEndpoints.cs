@@ -81,6 +81,25 @@ public static class EstoqueEndpoints
         })
         .RequireAuthorization(AuthEndpoints.PoliticaDono);
 
+        // Excluir só desativa: as movimentações antigas continuam no histórico.
+        tanques.MapDelete("/{id:guid}", async (Guid id, AppDbContext db, CancellationToken ct) =>
+        {
+            var tanque = await db.Tanques.FirstOrDefaultAsync(t => t.Id == id && t.Ativo, ct);
+            if (tanque is null)
+                return Results.NotFound();
+
+            var peixes = (await Saldos.PorLoteAsync(db, ct)).Where(s => s.TanqueId == id).Sum(s => Math.Max(0, s.Disponivel));
+            if (peixes > 0)
+                return Results.Problem(
+                    $"O tanque ainda tem {peixes} peixes. Transfira ou dê baixa antes de excluir.",
+                    statusCode: StatusCodes.Status409Conflict);
+
+            tanque.Ativo = false;
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        })
+        .RequireAuthorization(AuthEndpoints.PoliticaDono);
+
         tanques.MapGet("/{id:guid}", async (Guid id, AppDbContext db, CancellationToken ct) =>
         {
             var tanque = await db.Tanques.AsNoTracking().FirstOrDefaultAsync(t => t.Id == id, ct);
@@ -164,7 +183,7 @@ public static class EstoqueEndpoints
             var tanque = await db.Tanques.FirstOrDefaultAsync(t => t.Id == entrada.TanqueId && t.Ativo, ct);
             if (tanque is null)
                 return Problema("Tanque não encontrado.");
-            if (!await db.Especies.AnyAsync(e => e.Id == entrada.EspecieId, ct))
+            if (!await db.Especies.AnyAsync(e => e.Id == entrada.EspecieId && e.Ativo, ct))
                 return Problema("Espécie não encontrada.");
             if (entrada.FornecedorId is { } f && !await db.Fornecedores.AnyAsync(x => x.Id == f, ct))
                 return Problema("Fornecedor não encontrado.");

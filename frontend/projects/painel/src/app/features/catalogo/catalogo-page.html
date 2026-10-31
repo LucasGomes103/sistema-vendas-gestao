@@ -1,7 +1,7 @@
 <header class="sv-cabecalho-pagina">
   <div>
     <h1>Catálogo</h1>
-    <p>Espécies, preços e o que está disponível para venda agora.</p>
+    <p>O que está no estoque e aparece na vitrine. Cadastre peixes pela entrada de lote, no Estoque.</p>
   </div>
   @if (auth.ehDono()) {
     <button mat-flat-button (click)="abrir()"><mat-icon>add</mat-icon> Nova espécie</button>
@@ -19,9 +19,8 @@
     />
   </label>
 
-  <mat-chip-listbox class="chips-rolagem" aria-label="Filtro" [value]="filtro()" (change)="filtro.set($event.value ?? 'todas')">
-    <mat-chip-option value="todas">Todas ({{ contagem().todas }})</mat-chip-option>
-    <mat-chip-option value="disponiveis">Disponíveis ({{ contagem().disponiveis }})</mat-chip-option>
+  <mat-chip-listbox class="chips-rolagem" aria-label="Filtro" hideSingleSelectionIndicator [value]="filtro()" (change)="filtro.set($event.value ?? 'disponiveis')">
+    <mat-chip-option value="disponiveis">Em estoque ({{ contagem().disponiveis }})</mat-chip-option>
     <mat-chip-option value="esgotadas">Sem estoque ({{ contagem().esgotadas }})</mat-chip-option>
   </mat-chip-listbox>
 </div>
@@ -61,7 +60,10 @@
               <span class="sv-selo alerta"><mat-icon>warning</mat-icon>Sem estoque</span>
             }
             @if (auth.ehDono()) {
-              <button mat-icon-button aria-label="Editar espécie" (click)="abrir(e)"><mat-icon>edit</mat-icon></button>
+              <span class="acoes">
+                <button mat-icon-button aria-label="Editar espécie" (click)="abrir(e)"><mat-icon>edit</mat-icon></button>
+                <button mat-icon-button aria-label="Excluir espécie" (click)="excluir(e)"><mat-icon>delete</mat-icon></button>
+              </span>
             }
           </div>
         </div>
@@ -69,7 +71,7 @@
     } @empty {
       <div class="sv-vazio">
         <mat-icon>search_off</mat-icon>
-        <p>Nenhuma espécie encontrada.</p>
+        <p>{{ busca() ? 'Nenhuma espécie encontrada.' : filtro() === 'disponiveis' ? 'Nada no estoque ainda. Faça uma entrada de lote no Estoque.' : 'Nenhuma espécie sem estoque.' }}</p>
       </div>
     }
   </div>
