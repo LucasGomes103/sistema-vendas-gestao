@@ -34,6 +34,17 @@ public static class PedidoCatalogo
 
 public record RespostaAtendente(string Texto, bool ChamarVendedor, string? MotivoVendedor);
 
+/// <summary>Primeira resposta a um cliente: já leva o link da vitrine, para ele ver o que tem e montar o pedido.</summary>
+public static class CatalogoNaPrimeiraResposta
+{
+    public static string Aplicar(string texto, string? link)
+    {
+        if (string.IsNullOrWhiteSpace(link) || texto.Contains(link, StringComparison.OrdinalIgnoreCase))
+            return texto;
+        return $"{texto.TrimEnd()}\n\n🐠 Veja o que temos disponível agora e monte seu pedido: {link}";
+    }
+}
+
 /// <summary>Atendente do WhatsApp. Trocar de provedor de IA é trocar a implementação.</summary>
 public interface IAtendenteIA
 {

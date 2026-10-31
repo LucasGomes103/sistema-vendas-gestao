@@ -106,4 +106,20 @@ public class AtendenteTests
         Assert.True(conversa.RoboPausado);
         Assert.Equal("quer reservar", conversa.MotivoVendedor);
     }
+
+    [Fact]
+    public void Primeira_resposta_leva_o_link_do_catalogo()
+    {
+        var texto = CatalogoNaPrimeiraResposta.Aplicar("Olá! Qual peixe você procura?", "https://loja.test/ecsfish");
+        Assert.StartsWith("Olá! Qual peixe você procura?", texto);
+        Assert.EndsWith("https://loja.test/ecsfish", texto);
+    }
+
+    [Fact]
+    public void Primeira_resposta_nao_repete_o_link_nem_inventa_sem_vitrine()
+    {
+        const string comLink = "Aqui está o catálogo: https://loja.test/ecsfish";
+        Assert.Equal(comLink, CatalogoNaPrimeiraResposta.Aplicar(comLink, "https://loja.test/ecsfish"));
+        Assert.Equal("Olá!", CatalogoNaPrimeiraResposta.Aplicar("Olá!", null));
+    }
 }
