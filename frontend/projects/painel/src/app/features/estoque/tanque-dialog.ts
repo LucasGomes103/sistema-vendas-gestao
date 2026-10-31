@@ -8,10 +8,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { firstValueFrom } from 'rxjs';
-import { API, mensagemDeErro } from '../../core/api';
+import { API, Tanque, mensagemDeErro } from '../../core/api';
 
-/** Id do tanque criado, para quem abriu o diálogo já poder selecioná-lo. */
-export type TanqueCriado = string | undefined;
+/** Tanque criado, para quem abriu o diálogo já poder mostrá-lo e selecioná-lo. */
+export type TanqueCriado = Tanque | undefined;
 
 /** Cadastro de tanque (só o dono). */
 @Component({
@@ -102,14 +102,9 @@ export class TanqueDialog {
 
     const v = this.form.getRawValue();
     try {
-      const criado = await firstValueFrom(
-        this.http.post<{ id: string }>(`${API}/tanques`, {
-          nome: v.nome.trim(),
-          tipo: v.tipo,
-          litros: v.litros ? Number(v.litros) : null,
-        }),
-      );
-      this.ref.close(criado.id);
+      const corpo = { nome: v.nome.trim(), tipo: v.tipo, litros: v.litros ? Number(v.litros) : null };
+      const criado = await firstValueFrom(this.http.post<{ id: string }>(`${API}/tanques`, corpo));
+      this.ref.close({ ...corpo, id: criado.id, total: 0, baixasUltimos7Dias: 0, itens: [] });
     } catch (e) {
       this.erro.set(mensagemDeErro(e));
       this.salvando.set(false);

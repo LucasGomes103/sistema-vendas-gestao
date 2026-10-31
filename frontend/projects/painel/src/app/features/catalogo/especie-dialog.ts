@@ -8,8 +8,8 @@ import { MatInputModule } from '@angular/material/input';
 import { firstValueFrom } from 'rxjs';
 import { API, Especie, EspecieEntrada } from '../../core/api';
 
-/** Id da espécie salva (a nova, quando é cadastro), para quem abriu já poder selecioná-la. */
-export type EspecieSalva = string | undefined;
+/** Espécie salva, para quem abriu já poder mostrá-la e selecioná-la sem recarregar a lista. */
+export type EspecieSalva = Especie | undefined;
 
 @Component({
   selector: 'app-especie-dialog',
@@ -114,10 +114,9 @@ export class EspecieDialog {
     try {
       if (this.especie) {
         await firstValueFrom(this.http.put(`${API}/especies/${this.especie.id}`, corpo));
-        this.ref.close(this.especie.id);
+        this.ref.close({ ...this.especie, ...corpo });
       } else {
-        const criada = await firstValueFrom(this.http.post<{ id: string }>(`${API}/especies`, corpo));
-        this.ref.close(criada.id);
+        this.ref.close(await firstValueFrom(this.http.post<Especie>(`${API}/especies`, corpo)));
       }
     } catch {
       this.erro.set('Não foi possível salvar. Confira os campos e tente de novo.');

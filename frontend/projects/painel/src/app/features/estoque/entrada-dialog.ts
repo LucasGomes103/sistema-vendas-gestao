@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { CurrencyPipe } from '@angular/common';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { HttpClient, httpResource } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -22,6 +24,7 @@ export interface DadosEntrada {
 @Component({
   selector: 'app-entrada-dialog',
   imports: [
+    CurrencyPipe,
     ReactiveFormsModule,
     MatDialogModule,
     MatButtonModule,
@@ -43,7 +46,9 @@ export interface DadosEntrada {
             }
           </mat-select>
           <mat-error>Escolha a espécie.</mat-error>
-          @if (especies.hasValue() && !especies.value().length) {
+          @if (especieEscolhida(); as esp) {
+            <mat-hint>Preço de venda: {{ esp.preco | currency: 'BRL' }} (vem do cadastro da espécie)</mat-hint>
+          } @else if (especies.hasValue() && !especies.value().length) {
             <mat-hint>Nenhuma espécie cadastrada ainda.</mat-hint>
           }
         </mat-form-field>
@@ -78,7 +83,7 @@ export interface DadosEntrada {
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Custo por peixe</mat-label>
+          <mat-label>Custo por peixe (compra)</mat-label>
           <span matTextPrefix>R$&nbsp;</span>
           <input matInput type="number" min="0" step="0.01" inputmode="decimal" formControlName="custoUnitario" />
         </mat-form-field>
@@ -155,14 +160,20 @@ export class EntradaDialog {
     quarentenaDias: [0, Validators.min(0)],
   });
 
+  private readonly especieId = toSignal(this.form.controls.especieId.valueChanges, { initialValue: this.form.controls.especieId.value });
+  protected readonly especieEscolhida = computed(() => (this.especies.value() ?? []).find((e) => e.id === this.especieId()));
+
   protected novaEspecie(): void {
     this.dialog
       .open<EspecieDialog, null, EspecieSalva>(EspecieDialog, { data: null, width: '520px', maxWidth: '95vw', autoFocus: 'first-tabbable' })
       .afterClosed()
-      .subscribe((id) => {
-        if (!id) return;
-        this.especies.reload();
-        this.form.controls.especieId.setValue(id);
+      .subscribe((especie) => {
+        if (!especie) return;
+        // Entra direto na lista (sem esperar recarregar) para o combo já mostrar a espécie selecionada.
+        this.especies.update((lista) =>
+          [...(lista ?? []), especie].sort((a, b) => a.nomePopular.localeCompare(b.nomePopular, 'pt-BR')),
+        );
+        this.form.controls.especieId.setValue(especie.id);
       });
   }
 
@@ -170,10 +181,10 @@ export class EntradaDialog {
     this.dialog
       .open<TanqueDialog, unknown, TanqueCriado>(TanqueDialog, { width: '440px', maxWidth: '95vw' })
       .afterClosed()
-      .subscribe((id) => {
-        if (!id) return;
-        this.tanques.reload();
-        this.form.controls.tanqueId.setValue(id);
+      .subscribe((tanque) => {
+        if (!tanque) return;
+        this.tanques.update((lista) => [...(lista ?? []), tanque].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')));
+        this.form.controls.tanqueId.setValue(tanque.id);
       });
   }
 
