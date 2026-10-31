@@ -11,6 +11,7 @@ import { firstValueFrom } from 'rxjs';
 import { API, Especie, Fornecedor, Tanque, mensagemDeErro } from '../../core/api';
 import { Auth } from '../../core/auth';
 import { TanqueDialog, TanqueCriado } from './tanque-dialog';
+import { EspecieDialog, EspecieSalva } from '../catalogo/especie-dialog';
 
 export interface DadosEntrada {
   /** Tanque já escolhido (quando aberto a partir do detalhe do tanque). */
@@ -42,7 +43,15 @@ export interface DadosEntrada {
             }
           </mat-select>
           <mat-error>Escolha a espécie.</mat-error>
+          @if (especies.hasValue() && !especies.value().length) {
+            <mat-hint>Nenhuma espécie cadastrada ainda.</mat-hint>
+          }
         </mat-form-field>
+        @if (auth.ehDono()) {
+          <button mat-button type="button" class="inteiro novo" (click)="novaEspecie()">
+            <mat-icon>add</mat-icon> Cadastrar nova espécie
+          </button>
+        }
 
         <mat-form-field appearance="outline" class="inteiro">
           <mat-label>Tanque</mat-label>
@@ -145,6 +154,17 @@ export class EntradaDialog {
     fornecedorId: [null as string | null],
     quarentenaDias: [0, Validators.min(0)],
   });
+
+  protected novaEspecie(): void {
+    this.dialog
+      .open<EspecieDialog, null, EspecieSalva>(EspecieDialog, { data: null, width: '520px', maxWidth: '95vw', autoFocus: 'first-tabbable' })
+      .afterClosed()
+      .subscribe((id) => {
+        if (!id) return;
+        this.especies.reload();
+        this.form.controls.especieId.setValue(id);
+      });
+  }
 
   protected novoTanque(): void {
     this.dialog

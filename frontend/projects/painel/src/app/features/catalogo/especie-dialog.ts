@@ -8,6 +8,9 @@ import { MatInputModule } from '@angular/material/input';
 import { firstValueFrom } from 'rxjs';
 import { API, Especie, EspecieEntrada } from '../../core/api';
 
+/** Id da espécie salva (a nova, quando é cadastro), para quem abriu já poder selecioná-la. */
+export type EspecieSalva = string | undefined;
+
 @Component({
   selector: 'app-especie-dialog',
   imports: [ReactiveFormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule],
@@ -77,7 +80,7 @@ import { API, Especie, EspecieEntrada } from '../../core/api';
 })
 export class EspecieDialog {
   private readonly http = inject(HttpClient);
-  private readonly ref = inject<MatDialogRef<EspecieDialog, boolean>>(MatDialogRef);
+  private readonly ref = inject<MatDialogRef<EspecieDialog, EspecieSalva>>(MatDialogRef);
   protected readonly especie = inject<Especie | null>(MAT_DIALOG_DATA);
 
   protected readonly salvando = signal(false);
@@ -109,9 +112,13 @@ export class EspecieDialog {
     };
 
     try {
-      if (this.especie) await firstValueFrom(this.http.put(`${API}/especies/${this.especie.id}`, corpo));
-      else await firstValueFrom(this.http.post(`${API}/especies`, corpo));
-      this.ref.close(true);
+      if (this.especie) {
+        await firstValueFrom(this.http.put(`${API}/especies/${this.especie.id}`, corpo));
+        this.ref.close(this.especie.id);
+      } else {
+        const criada = await firstValueFrom(this.http.post<{ id: string }>(`${API}/especies`, corpo));
+        this.ref.close(criada.id);
+      }
     } catch {
       this.erro.set('Não foi possível salvar. Confira os campos e tente de novo.');
       this.salvando.set(false);
