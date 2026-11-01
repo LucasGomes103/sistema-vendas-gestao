@@ -173,3 +173,9 @@ h3 {
     }
   }
 }
+
+/* Selo "Powered by Netlify" que a hospedagem grátis injeta por cima da página (cobria o menu no celular). */
+#nl-badge-frame,
+#nl-hud-frame {
+  display: none !important;
+}
