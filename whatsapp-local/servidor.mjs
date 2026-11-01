@@ -126,8 +126,13 @@ async function abrirSessao() {
   return { ...sessao, limpar: () => rm(PASTA_SESSAO, { recursive: true, force: true }) };
 }
 
+// A sessão é aberta uma vez e reaproveitada nas reconexões: logo depois do QR o WhatsApp pede para reconectar
+// (515) e reler do banco nesse instante pode pegar as credenciais antes de terminarem de ser gravadas.
+let sessao = null;
+
 async function conectar() {
-  const { state, saveCreds, limpar } = await abrirSessao();
+  sessao ??= await abrirSessao();
+  const { state, saveCreds, limpar } = sessao;
   const { version, isLatest } = await fetchLatestBaileysVersion();
   console.log(`Versão do WhatsApp Web: ${version.join('.')}${isLatest ? '' : ' (não foi possível buscar a mais recente)'}`);
 
@@ -155,6 +160,7 @@ async function conectar() {
       console.log('WhatsApp conectado.');
     }
     if (connection === 'close') {
+      qrAtual = null;
       const codigo = lastDisconnect?.error?.output?.statusCode;
       const motivo = lastDisconnect?.error?.message ?? 'sem detalhe';
       console.warn(`Conexão fechada (código ${codigo}: ${motivo}).`);
@@ -164,6 +170,7 @@ async function conectar() {
         qrAtual = null;
         codigoAtual = null;
         console.warn('Sessão encerrada; gerando um QR code novo.');
+        sessao = null;
         limpar().then(() => setTimeout(conectar, 1000));
       } else {
         // 515 (restartRequired) é normal logo depois de ler o QR: reconecta com a sessão salva.
