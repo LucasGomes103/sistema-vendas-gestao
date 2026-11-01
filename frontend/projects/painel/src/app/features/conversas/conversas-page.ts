@@ -121,12 +121,14 @@ export class ConversasPage {
     this.conversas.reload();
   }
 
-  protected async excluir(c: ConversaResumo): Promise<void> {
+  protected async excluir(c: ConversaResumo, apagar = false): Promise<void> {
     const pergunta = c.simulada
       ? `Excluir a conversa simulada com ${c.cliente}? As mensagens serão apagadas.`
-      : `Arquivar a conversa com ${c.cliente}? Ela sai da lista; se o cliente escrever de novo, abre uma conversa nova.`;
+      : apagar
+        ? `Apagar a conversa com ${c.cliente} do sistema? As mensagens somem do painel e não dá para desfazer. No celular nada muda.`
+        : `Arquivar a conversa com ${c.cliente}? Ela sai da lista; se o cliente escrever de novo, abre uma conversa nova.`;
     if (!confirm(pergunta)) return;
-    await firstValueFrom(this.http.delete(`${API}/conversas/${c.id}`));
+    await firstValueFrom(this.http.delete(`${API}/conversas/${c.id}`, { params: { definitivo: apagar } }));
     this.conversas.reload();
     void this.router.navigate(['/conversas']);
   }

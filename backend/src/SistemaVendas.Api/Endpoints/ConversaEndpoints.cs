@@ -128,15 +128,18 @@ public static class ConversaEndpoints
         });
 
         // Conversa do simulador é apagada de vez; conversa real é só arquivada (o histórico de vendas depende dela).
-        grupo.MapDelete("/{id:guid}", async (Guid id, AppDbContext db, CancellationToken ct) =>
+        // Conversa real: arquiva (some da lista, histórico fica) ou, com definitivo=true, apaga do sistema.
+        // Simulada: sempre apaga. Nada é apagado do celular.
+        grupo.MapDelete("/{id:guid}", async (Guid id, bool? definitivo, AppDbContext db, CancellationToken ct) =>
         {
             var conversa = await db.Conversas.FirstOrDefaultAsync(c => c.Id == id, ct);
             if (conversa is null)
                 return Results.NotFound();
 
-            if (conversa.Simulada)
+            if (conversa.Simulada || definitivo == true)
             {
                 await db.Mensagens.Where(m => m.ConversaId == id).ExecuteDeleteAsync(ct);
+                await db.CardEventos.Where(e => e.ConversaId == id).ExecuteDeleteAsync(ct);
                 db.Conversas.Remove(conversa);
             }
             else

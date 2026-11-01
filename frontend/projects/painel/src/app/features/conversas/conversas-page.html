@@ -107,6 +107,12 @@
               <mat-icon>{{ c.simulada ? 'delete' : 'archive' }}</mat-icon>
               <span>{{ c.simulada ? 'Excluir conversa' : 'Arquivar conversa' }}</span>
             </button>
+            @if (!c.simulada) {
+              <button mat-menu-item (click)="excluir(c, true)">
+                <mat-icon>delete_forever</mat-icon>
+                <span>Apagar conversa</span>
+              </button>
+            }
           </mat-menu>
         }
       </header>
