@@ -79,7 +79,7 @@ export class FunilPage {
   });
 
   constructor() {
-    atualizarACada(15000, () => {
+    atualizarACada(5000, () => {
       this.agora.set(Date.now());
       this.cards.reload();
     });
@@ -134,7 +134,7 @@ export class FunilPage {
 
   /** "Sem dono há 12 min": cliente quente esperando um vendedor. */
   protected semDono(card: CardFunil): string | null {
-    if (card.etapa !== 'Quente' || !card.chamouVendedorEm) return null;
+    if (!card.semDono || !card.chamouVendedorEm) return null;
     const minutos = Math.max(0, Math.floor((this.agora() - new Date(card.chamouVendedorEm).getTime()) / 60000));
     return minutos < 60 ? `há ${minutos} min` : `há ${Math.floor(minutos / 60)} h`;
   }

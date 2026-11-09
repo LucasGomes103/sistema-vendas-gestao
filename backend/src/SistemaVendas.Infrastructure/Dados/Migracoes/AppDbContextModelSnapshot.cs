@@ -94,6 +94,14 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasColumnType("boolean")
                         .HasColumnName("aguardando_robo");
 
+                    b.Property<DateTimeOffset?>("AtendidoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("atendido_em");
+
+                    b.Property<int>("AvisosQuente")
+                        .HasColumnType("integer")
+                        .HasColumnName("avisos_quente");
+
                     b.Property<bool>("ChamouVendedor")
                         .HasColumnType("boolean")
                         .HasColumnName("chamou_vendedor");
