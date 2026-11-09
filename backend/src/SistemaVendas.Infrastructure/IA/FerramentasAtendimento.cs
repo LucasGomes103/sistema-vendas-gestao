@@ -6,6 +6,7 @@ using SistemaVendas.Application.Atendimento;
 using SistemaVendas.Application.Comum;
 using SistemaVendas.Domain.Entregas;
 using SistemaVendas.Infrastructure.Dados;
+using SistemaVendas.Infrastructure.Entregas;
 
 namespace SistemaVendas.Infrastructure.IA;
 
@@ -18,7 +19,7 @@ public class VitrineOptions
 }
 
 /// <summary>Ferramentas da IA sobre o catálogo e o estoque da loja atual.</summary>
-public class FerramentasAtendimento(AppDbContext db, ILojaAtual lojaAtual, IOptions<VitrineOptions> vitrine, ServicoFunil funil) : IFerramentasAtendimento
+public class FerramentasAtendimento(AppDbContext db, ILojaAtual lojaAtual, IOptions<VitrineOptions> vitrine, ServicoFunil funil, ServicoFrete frete) : IFerramentasAtendimento
 {
     public async Task<TextosProntos> TextosAsync(CancellationToken ct)
     {
@@ -53,15 +54,8 @@ public class FerramentasAtendimento(AppDbContext db, ILojaAtual lojaAtual, IOpti
 
     public async Task<FreteCalculado?> CalcularFreteAsync(string cep, CancellationToken ct)
     {
-        if (RegrasFrete.LerCep(cep) is not { } numero)
-            return null;
-        var zonas = await db.ZonasEntrega.AsNoTracking().ToListAsync(ct);
-        if (zonas.Count == 0)
-            return null; // loja sem tabela de frete: o vendedor calcula
-        var zona = RegrasFrete.Calcular(numero, zonas);
-        return zona is null
-            ? new FreteCalculado(RegrasFrete.Formatar(numero), false, null, null, null)
-            : new FreteCalculado(RegrasFrete.Formatar(numero), true, zona.Nome, zona.Valor, zona.Dias);
+        // Sem frete configurado ou CEP que os mapas não acham: null, e o vendedor calcula.
+        return RegrasFrete.LerCep(cep) is { } numero ? await frete.CalcularAsync(numero, ct) : null;
     }
 
     public async Task<int> ConsultarEstoqueAsync(Guid especieId, CancellationToken ct) =>

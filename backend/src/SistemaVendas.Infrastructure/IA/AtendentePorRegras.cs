@@ -44,15 +44,16 @@ public class AtendentePorRegras : IAtendenteIA
                     ChamarVendedor: false, MotivoVendedor: null);
         }
 
-        // Mandou o CEP: calcula pela tabela da loja e chama o vendedor para fechar (cliente quente).
+        // Mandou o CEP: calcula pela distância e chama o vendedor para fechar (cliente quente).
+        // Fora do raio ou CEP que o mapa não acha: não chuta valor, o vendedor calcula.
         if (RegrasFrete.AcharCep(ultima) is { } cep)
         {
             var frete = await ferramentas.CalcularFreteAsync(cep.ToString("00000000"), ct);
-            if (frete is not null)
-            {
-                var textosFrete = await ferramentas.TextosAsync(ct);
-                return new RespostaAtendente($"{frete.ParaCliente} {textosFrete.ChamarVendedor}", ChamarVendedor: true, MotivoVendedor: frete.Resumo);
-            }
+            var textosFrete = await ferramentas.TextosAsync(ct);
+            return frete is not null
+                ? new RespostaAtendente($"{frete.ParaCliente} {textosFrete.ChamarVendedor}", ChamarVendedor: true, MotivoVendedor: frete.Resumo)
+                : new RespostaAtendente($"Anotei o CEP {RegrasFrete.Formatar(cep)}. {textosFrete.ChamarVendedor}", ChamarVendedor: true,
+                    MotivoVendedor: $"Calcular frete à mão: CEP {RegrasFrete.Formatar(cep)}");
         }
 
         var sinal = SinaisQuente.FirstOrDefault(s => $" {texto} ".Contains($" {s}"));

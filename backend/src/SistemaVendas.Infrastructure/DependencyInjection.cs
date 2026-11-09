@@ -1,3 +1,4 @@
+using SistemaVendas.Infrastructure.Entregas;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,6 +40,15 @@ public static class DependencyInjection
         services.Configure<GeminiOptions>(gemini);
         services.Configure<VitrineOptions>(config.GetSection(VitrineOptions.Secao));
         services.AddSingleton<AtendentePorRegras>();
+        services.Configure<GeoOptions>(config.GetSection(GeoOptions.Secao));
+        // Nominatim pede um User-Agent que identifique o aplicativo (política de uso do OpenStreetMap).
+        services.AddHttpClient<MapasGratuitos>(c =>
+        {
+            c.Timeout = TimeSpan.FromSeconds(8);
+            c.DefaultRequestHeaders.UserAgent.ParseAdd("sistema-vendas-gestao/0.2 (frete por km)");
+        });
+        services.AddScoped<IGeolocalizacao, Geolocalizacao>();
+        services.AddScoped<ServicoFrete>();
         services.AddScoped<IFerramentasAtendimento, FerramentasAtendimento>();
         if (string.IsNullOrWhiteSpace(gemini[nameof(GeminiOptions.ApiKey)]))
             services.AddSingleton<IAtendenteIA>(sp => sp.GetRequiredService<AtendentePorRegras>());

@@ -28,8 +28,10 @@ public class AtendenteTests
 
         public Task<FreteCalculado?> CalcularFreteAsync(string cep, CancellationToken ct) =>
             Task.FromResult<FreteCalculado?>(cep.StartsWith("07")
-                ? new FreteCalculado("07010-000", true, "Guarulhos", 15, 1)
-                : new FreteCalculado("99999-999", false, null, null, null));
+                ? new FreteCalculado("07010-000", true, "a 5,3 km da loja", 15, 1)
+                : cep.StartsWith("99")
+                    ? new FreteCalculado("99999-999", false, "a 42,0 km da loja", null, null)
+                    : null);
 
         public Task<string?> LinkCatalogoAsync(CancellationToken ct) => Task.FromResult<string?>("https://loja.test/demo");
 
@@ -135,15 +137,25 @@ public class AtendenteTests
         Assert.Contains("R$ 15,00", r.Texto);
         Assert.Contains("1 dia útil", r.Texto);
         Assert.True(r.ChamarVendedor);
-        Assert.Contains("Guarulhos", r.MotivoVendedor);
+        Assert.Contains("5,3 km", r.MotivoVendedor);
     }
 
     [Fact]
-    public async Task CEP_fora_da_area_oferece_retirada()
+    public async Task CEP_alem_do_raio_passa_para_o_atendente_sem_dar_preco()
     {
         var r = await Perguntar("99999999");
-        Assert.Contains("retirar", r.Texto);
+        Assert.Contains("atendente", r.Texto);
+        Assert.DoesNotContain("R$", r.Texto);
         Assert.True(r.ChamarVendedor);
+        Assert.Contains("42,0 km", r.MotivoVendedor);
+    }
+
+    [Fact]
+    public async Task CEP_que_o_mapa_nao_acha_tambem_chama_o_vendedor()
+    {
+        var r = await Perguntar("meu cep é 01234-567");
+        Assert.True(r.ChamarVendedor);
+        Assert.Contains("01234-567", r.MotivoVendedor);
     }
 
     [Fact]

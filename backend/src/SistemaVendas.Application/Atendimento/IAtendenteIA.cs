@@ -34,12 +34,12 @@ public record FreteCalculado(string Cep, bool Atende, string? Regiao, decimal? V
     /// <summary>Resumo para o vendedor no card: "Frete CEP 07010-000: R$ 15,00 (Guarulhos)".</summary>
     public string Resumo => Atende
         ? $"Frete CEP {Cep}: {Valor!.Value.ToString("C", PtBr)} ({Regiao}, {Prazo})"
-        : $"CEP {Cep} fora da área de entrega";
+        : $"CEP {Cep} além do raio de entrega{(Regiao is null ? "" : $" ({Regiao})")}: combinar a entrega";
 
     /// <summary>Resposta ao cliente.</summary>
     public string ParaCliente => Atende
         ? $"Entregamos no CEP {Cep} ({Regiao}): o frete fica {Valor!.Value.ToString("C", PtBr)}, com prazo de {Prazo}."
-        : $"Ainda não entregamos no CEP {Cep}, mas você pode retirar aqui na loja.";
+        : $"O CEP {Cep} fica fora da área em que calculo o frete sozinho{(Regiao is null ? "" : $" ({Regiao})")}, então um atendente vai ver a entrega para você.";
 }
 
 public record TextosProntos(string Frete, string ChamarVendedor);
