@@ -4,6 +4,7 @@ import { HttpClient, httpResource } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -11,6 +12,7 @@ import { firstValueFrom } from 'rxjs';
 import { API, ConversaResumo, Mensagem, mensagemDeErro } from '../../core/api';
 import { atualizarACada } from '../../core/atualizar';
 import { ReservasConversaComponent } from './reservas-conversa';
+import { PedidoSimuladoDialog } from './pedido-simulado-dialog';
 import { Auth } from '../../core/auth';
 
 /**
@@ -31,6 +33,7 @@ export class ConversasPage {
   protected readonly auth = inject(Auth);
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly conversas = httpResource<ConversaResumo[]>(() => `${API}/conversas`);
   protected readonly mensagens = httpResource<Mensagem[]>(() => (this.id() ? `${API}/conversas/${this.id()}/mensagens` : undefined));
@@ -93,8 +96,16 @@ export class ConversasPage {
     }
   }
 
-  protected async simular(): Promise<void> {
-    const texto = this.simTexto().trim();
+  /** Cliente simulado manda um pedido montado como na vitrine. */
+  protected async pedidoDoCatalogo(): Promise<void> {
+    const texto = await firstValueFrom(
+      this.dialog.open<PedidoSimuladoDialog, unknown, string>(PedidoSimuladoDialog, { width: '480px', maxWidth: '95vw' }).afterClosed(),
+    );
+    if (texto) await this.simular(texto);
+  }
+
+  protected async simular(textoPronto?: string): Promise<void> {
+    const texto = (textoPronto ?? this.simTexto()).trim();
     if (!texto) return;
     const aberta = this.aberta();
     await firstValueFrom(
@@ -104,7 +115,7 @@ export class ConversasPage {
         texto,
       }),
     );
-    this.simTexto.set('');
+    if (!textoPronto) this.simTexto.set('');
     // O worker processa a fila em até ~2 s.
     setTimeout(() => {
       this.conversas.reload();
