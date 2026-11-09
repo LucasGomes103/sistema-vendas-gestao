@@ -19,6 +19,7 @@ public static class DependencyInjection
             .UseNpgsql(conexao)
             .UseSnakeCaseNamingConvention());
         services.AddScoped<ServicoFunil>();
+        services.AddScoped<ServicoReservas>();
 
         // Sem token da Meta, o envio é simulado: dá para desenvolver tudo sem número conectado.
         var whatsApp = config.GetSection(WhatsAppOptions.Secao);

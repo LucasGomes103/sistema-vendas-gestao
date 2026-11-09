@@ -145,4 +145,12 @@ public class AtendenteTests
         Assert.Contains("retirar", r.Texto);
         Assert.True(r.ChamarVendedor);
     }
+
+    [Fact]
+    public async Task Pedido_da_vitrine_vira_pedido_de_reserva_com_as_especies_do_catalogo()
+    {
+        var r = await Perguntar("🛒 *Pedido pelo catálogo*\n\n• 2x Ramirezi (casal) (R$ 60,00 cada) = R$ 120,00\n• 1x Peixe que não existe (R$ 5,00 cada) = R$ 5,00\n\n*Total: R$ 125,00* + frete");
+        var item = Assert.Single(r.Reservar);
+        Assert.Equal(2, item.Quantidade);
+    }
 }

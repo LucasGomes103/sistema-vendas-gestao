@@ -53,7 +53,14 @@ public static class PedidoCatalogo
     public static bool EhPedido(string texto) => texto.Contains(Marcador, StringComparison.OrdinalIgnoreCase);
 }
 
-public record RespostaAtendente(string Texto, bool ChamarVendedor, string? MotivoVendedor);
+/// <summary>
+/// Resposta do atendente. Reservar: o que o cliente quer separar; o robô cria a reserva de 24 h
+/// conferindo o estoque e acrescenta o resultado ao texto.
+/// </summary>
+public record RespostaAtendente(string Texto, bool ChamarVendedor, string? MotivoVendedor)
+{
+    public IReadOnlyList<SistemaVendas.Domain.Vendas.ItemPedido> Reservar { get; init; } = [];
+}
 
 /// <summary>Primeira resposta a um cliente: já leva o link da vitrine, para ele ver o que tem e montar o pedido.</summary>
 public static class CatalogoNaPrimeiraResposta

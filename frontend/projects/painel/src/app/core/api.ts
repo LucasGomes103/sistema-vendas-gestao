@@ -198,6 +198,23 @@ export interface FreteConsulta {
   dias: number | null;
 }
 
+export interface ReservaItem {
+  especie: string;
+  quantidade: number;
+  precoUnitario: number;
+}
+
+export interface Reserva {
+  id: string;
+  conversaId: string;
+  status: 'Ativa' | 'Confirmada' | 'Cancelada' | 'Expirada';
+  criadoEm: string;
+  expiraEm: string;
+  encerradaEm: string | null;
+  total: number;
+  itens: ReservaItem[];
+}
+
 export interface ConfigWhatsApp {
   atenderTodos: boolean;
   numerosPermitidos: string[];

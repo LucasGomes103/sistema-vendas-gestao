@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using SistemaVendas.Application.Comum;
 using SistemaVendas.Domain.Atendimento;
 using SistemaVendas.Domain.Funil;
+using SistemaVendas.Domain.Vendas;
 using SistemaVendas.Infrastructure.Dados;
 using SistemaVendas.Infrastructure.WhatsApp;
 
@@ -26,6 +27,7 @@ public class FunilWorker(IServiceScopeFactory scopes, EstadoWorkers estado, ILog
             try
             {
                 await ProcessarVencidosAsync(stoppingToken);
+                await ExpirarReservasAsync(stoppingToken);
                 estado.UltimoCicloFunil = DateTimeOffset.UtcNow;
             }
             catch (Exception e) when (e is not OperationCanceledException)
@@ -58,6 +60,33 @@ public class FunilWorker(IServiceScopeFactory scopes, EstadoWorkers estado, ILog
             using var scope = scopes.CreateScope();
             scope.ServiceProvider.GetRequiredService<ILojaAtual>().Definir(lojaId);
             await ExecutarAsync(scope.ServiceProvider, id, ct);
+        }
+    }
+
+    /// <summary>Reservas de 24 h vencidas: o peixe volta para o estoque.</summary>
+    private async Task ExpirarReservasAsync(CancellationToken ct)
+    {
+        var agora = DateTimeOffset.UtcNow;
+        List<(Guid Id, Guid Loja)> vencidas;
+        using (var scope = scopes.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            vencidas = (await db.Reservas.IgnoreQueryFilters()
+                    .Where(r => r.Status == StatusReserva.Ativa && r.ExpiraEm <= agora)
+                    .OrderBy(r => r.ExpiraEm)
+                    .Take(50)
+                    .Select(r => new { r.Id, r.LojaId })
+                    .ToListAsync(ct))
+                .Select(r => (r.Id, r.LojaId))
+                .ToList();
+        }
+
+        foreach (var (id, lojaId) in vencidas)
+        {
+            using var scope = scopes.CreateScope();
+            scope.ServiceProvider.GetRequiredService<ILojaAtual>().Definir(lojaId);
+            await scope.ServiceProvider.GetRequiredService<ServicoReservas>().ExpirarAsync(id, agora, ct);
+            logger.LogInformation("Reserva {Id} expirou: peixe de volta ao estoque", id);
         }
     }
 

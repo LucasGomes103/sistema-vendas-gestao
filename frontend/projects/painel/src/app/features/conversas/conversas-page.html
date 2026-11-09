@@ -134,6 +134,8 @@
         }
       </div>
 
+      <app-reservas-conversa [conversaId]="c.id" (alterou)="conversas.reload()" />
+
       <div class="mensagens" #caixaMensagens>
         @for (m of mensagens.value() ?? []; track m.id) {
           <div class="bolha" [class.saida]="m.direcao === 'Saida'" [class.robo]="m.autor === 'Robo'">

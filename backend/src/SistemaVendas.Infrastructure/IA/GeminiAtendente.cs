@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SistemaVendas.Application.Atendimento;
+using SistemaVendas.Domain.Vendas;
 
 namespace SistemaVendas.Infrastructure.IA;
 
@@ -50,6 +51,7 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
             conteudos.Add(Parte(fala.DoCliente ? "user" : "model", new JsonObject { ["text"] = fala.Texto }));
 
         string? motivoVendedor = null;
+        var reservar = new List<ItemPedido>();
         var textos = await ferramentas.TextosAsync(ct);
 
         for (var rodada = 0; rodada < MaximoRodadas; rodada++)
@@ -65,7 +67,7 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
                 var texto = string.Concat(partes.Select(p => p?["text"]?.GetValue<string>())).Trim();
                 if (string.IsNullOrEmpty(texto))
                     texto = motivoVendedor is not null ? "Vou chamar um atendente para falar com você, um instante." : "Pode repetir, por favor?";
-                return new RespostaAtendente(texto, motivoVendedor is not null, motivoVendedor);
+                return new RespostaAtendente(texto, motivoVendedor is not null, motivoVendedor) { Reservar = reservar };
             }
 
             conteudos.Add(conteudo.DeepClone());
@@ -116,6 +118,23 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
                             };
                         break;
 
+                    case "criar_reserva":
+                        foreach (var item in args["itens"]?.AsArray() ?? [])
+                        {
+                            if (Guid.TryParse(item?["especie_id"]?.GetValue<string>(), out var especieId)
+                                && item?["quantidade"] is { } q && int.TryParse(q.ToString(), out var quantidade) && quantidade > 0)
+                                reservar.Add(new ItemPedido(especieId, quantidade));
+                        }
+                        motivoVendedor ??= "Cliente quer reservar";
+                        resultado = reservar.Count == 0
+                            ? new JsonObject { ["erro"] = "informe itens com especie_id (de buscar_especie) e quantidade" }
+                            : new JsonObject
+                            {
+                                ["ok"] = true,
+                                ["instrucao"] = "O sistema separa os peixes por 24 h e acrescenta a confirmação com os itens no fim da sua resposta. Não repita a lista; diga só que vai separar e que um atendente confirma o pagamento."
+                            };
+                        break;
+
                     case "link_catalogo":
                         resultado = new JsonObject { ["link"] = await ferramentas.LinkCatalogoAsync(ct) };
                         break;
@@ -135,7 +154,7 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
             conteudos.Add(new JsonObject { ["role"] = "user", ["parts"] = respostas });
         }
 
-        return new RespostaAtendente("Vou chamar um atendente para te ajudar, um instante.", true, motivoVendedor ?? "IA não concluiu a resposta");
+        return new RespostaAtendente("Vou chamar um atendente para te ajudar, um instante.", true, motivoVendedor ?? "IA não concluiu a resposta") { Reservar = reservar };
     }
 
     private async Task<JsonObject> ChamarAsync(string nomeLoja, TextosProntos textos, JsonArray conteudos, CancellationToken ct)
@@ -177,8 +196,10 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
         - Se pedirem catálogo, lista, fotos ou "o que vocês têm", use link_catalogo e envie o link completo,
           explicando que lá dá para escolher as quantidades e enviar o pedido pelo WhatsApp.
         - Mensagem que contém "{PedidoCatalogo.Marcador}" é um pedido montado na vitrine: confira cada item com
-          buscar_especie, responda com um resumo curto (itens e total), peça o CEP para o frete e use chamar_vendedor
+          buscar_especie, use criar_reserva com os itens e quantidades, peça o CEP para o frete e use chamar_vendedor
           com o motivo "Pedido pelo catálogo".
+        - Quando o cliente disser que quer reservar ou comprar uma quantidade de um peixe com estoque, use criar_reserva
+          (especie_id vindo de buscar_especie) e depois chamar_vendedor. A reserva vale 24 h.
         - Frete e entrega: se o cliente ainda não mandou o CEP, peça o CEP. Quando ele mandar, use calcular_frete,
           informe valor e prazo (ou que ainda não entregamos lá e ele pode retirar na loja) e use chamar_vendedor
           com o resumo_para_vendedor no motivo. Se calcular_frete devolver sem_tabela, responda com este texto da loja:
@@ -206,6 +227,24 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
               "name": "calcular_frete",
               "description": "Valor e prazo do frete para um CEP, pela tabela de faixas de CEP da loja.",
               "parameters": { "type": "object", "properties": { "cep": { "type": "string", "description": "CEP com 8 dígitos" } }, "required": ["cep"] }
+            },
+            {
+              "name": "criar_reserva",
+              "description": "Separa peixes para o cliente por 24 h (sai do disponível até o vendedor confirmar a venda ou a reserva vencer).",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "itens": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": { "especie_id": { "type": "string" }, "quantidade": { "type": "integer" } },
+                      "required": ["especie_id", "quantidade"]
+                    }
+                  }
+                },
+                "required": ["itens"]
+              }
             },
             {
               "name": "link_catalogo",
