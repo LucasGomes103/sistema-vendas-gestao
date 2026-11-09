@@ -39,6 +39,9 @@ infra/docker-compose.yml            PostgreSQL 18 local
 - Catálogo (espécies) e estoque (tanques, fornecedores, lotes, movimentos); o saldo é a soma dos movimentos.
 - Migração inicial e dados de exemplo (loja `demo`) criados ao subir em desenvolvimento.
 - Login por cookie (HttpOnly, SameSite=Strict) com papéis Dono, Vendedor e Entregador; limite de tentativas no login.
+- Usuários (menu da conta → Usuários, só o dono): criar, editar nome, e-mail e papel, bloquear o acesso, definir senha
+  nova e excluir. Qualquer usuário troca a própria senha em "Trocar minha senha". A loja nunca fica sem um dono ativo,
+  e quem é excluído, bloqueado ou tem a senha trocada perde a sessão em até 1 minuto.
 - Endpoints: `GET /health`, `POST /api/v1/auth/login|logout`, `GET /api/v1/auth/eu`, `GET /api/v1/public/{loja}/catalogo`,
   `GET/POST/PUT /api/v1/especies`, `GET /api/v1/tanques` (saldo por tanque e baixas dos últimos 7 dias).
 - Painel no padrão Material 3 das telas de referência: login, Estoque (resumo, alertas, tanques) e Catálogo

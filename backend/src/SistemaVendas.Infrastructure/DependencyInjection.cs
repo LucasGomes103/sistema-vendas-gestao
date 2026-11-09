@@ -24,6 +24,8 @@ public static class DependencyInjection
         var whatsApp = config.GetSection(WhatsAppOptions.Secao);
         services.Configure<WhatsAppOptions>(whatsApp);
         services.AddSingleton<WhatsAppSimulado>();
+        // A tela de conexão do WhatsApp usa IHttpClientFactory mesmo no modo simulado (sem ela a API nem sobe).
+        services.AddHttpClient();
         if (string.Equals(whatsApp[nameof(WhatsAppOptions.Provedor)], "Local", StringComparison.OrdinalIgnoreCase))
             services.AddHttpClient<IWhatsAppCliente, WhatsAppLocalCliente>(c => c.Timeout = TimeSpan.FromSeconds(20));
         else if (string.IsNullOrWhiteSpace(whatsApp[nameof(WhatsAppOptions.AccessToken)]))

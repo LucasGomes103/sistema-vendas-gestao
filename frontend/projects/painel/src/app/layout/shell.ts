@@ -4,9 +4,11 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatDialog } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Auth } from '../core/auth';
+import { SenhaDialog } from '../features/usuarios/senha-dialog';
 
 interface ItemMenu {
   rota: string;
@@ -29,6 +31,7 @@ interface ItemMenu {
 export class Shell {
   protected readonly auth = inject(Auth);
   private readonly router = inject(Router);
+  private readonly dialog = inject(MatDialog);
 
   private readonly url = toSignal(
     this.router.events.pipe(
@@ -53,6 +56,10 @@ export class Shell {
     { rota: '', rotulo: 'Pedidos', icone: 'receipt_long' },
     { rota: '', rotulo: 'Métricas', icone: 'monitoring' },
   ];
+
+  protected trocarSenha(): void {
+    this.dialog.open(SenhaDialog, { data: null, width: '420px', maxWidth: '95vw' });
+  }
 
   protected readonly iniciais = computed(() =>
     (this.auth.usuario()?.nome ?? '?')

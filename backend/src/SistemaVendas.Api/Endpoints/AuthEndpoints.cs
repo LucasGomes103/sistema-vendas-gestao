@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SistemaVendas.Api.Comum;
+using SistemaVendas.Application.Usuarios;
 using SistemaVendas.Domain.Lojas;
 using SistemaVendas.Infrastructure.Dados;
 
@@ -36,20 +37,8 @@ public static class AuthEndpoints
                 return Results.Problem("E-mail ou senha inválidos.", statusCode: StatusCodes.Status401Unauthorized);
 
             var loja = await db.Lojas.AsNoTracking().FirstAsync(l => l.Id == usuario.LojaId, ct);
-
-            var identidade = new ClaimsIdentity(
-            [
-                new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
-                new Claim(ClaimTypes.Name, usuario.Nome),
-                new Claim(ClaimTypes.Email, usuario.Email),
-                new Claim(ClaimTypes.Role, usuario.Papel.ToString()),
-                new Claim(LojaAtualDaRequisicao.ClaimLoja, usuario.LojaId.ToString()),
-                new Claim("loja_nome", loja.Nome),
-                new Claim("loja_slug", loja.Slug)
-            ], CookieAuthenticationDefaults.AuthenticationScheme);
-
-            await http.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identidade));
-            return Results.Ok(DoPrincipal(new ClaimsPrincipal(identidade)));
+            await Sessao.EntrarAsync(http, usuario, loja);
+            return Results.Ok(DoPrincipal(http.User));
         })
         .RequireRateLimiting(LimiteLogin);
 
@@ -61,6 +50,31 @@ public static class AuthEndpoints
 
         grupo.MapGet("/eu", (ClaimsPrincipal user) => Results.Ok(DoPrincipal(user)))
             .RequireAuthorization();
+
+        // Qualquer usuário troca a própria senha, confirmando a atual. A sessão é renovada com o carimbo novo.
+        grupo.MapPost("/senha", async (TrocaDeSenha entrada, AppDbContext db, HttpContext http, CancellationToken ct) =>
+        {
+            var id = Guid.Parse(http.User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var usuario = await db.Usuarios.FirstOrDefaultAsync(u => u.Id == id && u.Ativo, ct);
+            if (usuario is null)
+                return Results.Unauthorized();
+
+            var hasher = new PasswordHasher<Usuario>();
+            if (hasher.VerifyHashedPassword(usuario, usuario.SenhaHash, entrada.SenhaAtual ?? "") == PasswordVerificationResult.Failed)
+                return Results.Problem("A senha atual não confere.", statusCode: StatusCodes.Status422UnprocessableEntity);
+
+            if (RegrasUsuario.ValidarSenha(entrada.NovaSenha) is { } erro)
+                return Results.Problem(erro, statusCode: StatusCodes.Status422UnprocessableEntity);
+
+            usuario.SenhaHash = hasher.HashPassword(usuario, entrada.NovaSenha);
+            await db.SaveChangesAsync(ct);
+
+            var loja = await db.Lojas.AsNoTracking().FirstAsync(l => l.Id == usuario.LojaId, ct);
+            await Sessao.EntrarAsync(http, usuario, loja);
+            return Results.NoContent();
+        })
+        .RequireAuthorization()
+        .RequireRateLimiting(LimiteLogin);
     }
 
     private static UsuarioLogado DoPrincipal(ClaimsPrincipal user) => new(

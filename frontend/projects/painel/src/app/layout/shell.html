@@ -46,7 +46,15 @@
     <span>{{ auth.usuario()?.email }}</span>
     <span class="sv-selo info">{{ auth.usuario()?.papel }} · {{ auth.usuario()?.loja }}</span>
   </div>
+  <button mat-menu-item (click)="trocarSenha()">
+    <mat-icon>password</mat-icon>
+    <span>Trocar minha senha</span>
+  </button>
   @if (auth.ehDono()) {
+    <a mat-menu-item routerLink="/usuarios">
+      <mat-icon>group</mat-icon>
+      <span>Usuários</span>
+    </a>
     <a mat-menu-item routerLink="/config">
       <mat-icon>settings</mat-icon>
       <span>Configuração</span>

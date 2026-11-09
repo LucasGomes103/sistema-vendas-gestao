@@ -39,6 +39,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         // API responde 401/403 em vez de redirecionar para uma página de login.
         o.Events.OnRedirectToLogin = ctx => { ctx.Response.StatusCode = StatusCodes.Status401Unauthorized; return Task.CompletedTask; };
         o.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; return Task.CompletedTask; };
+        // Usuário excluído, desativado ou com senha trocada perde a sessão em até 1 minuto.
+        o.Events.OnValidatePrincipal = Sessao.ValidarAsync;
     });
 
 builder.Services.AddAuthorizationBuilder()
@@ -107,6 +109,7 @@ app.MapPaginasPublicasEndpoints();
 
 var v1 = app.MapGroup("/api/v1");
 v1.MapAuthEndpoints();
+v1.MapUsuarioEndpoints();
 v1.MapCatalogoPublicoEndpoints();
 v1.MapEspecieEndpoints();
 v1.MapEstoqueEndpoints();
