@@ -28,6 +28,7 @@ public class FunilWorker(IServiceScopeFactory scopes, EstadoWorkers estado, ILog
             {
                 await ProcessarVencidosAsync(stoppingToken);
                 await ExpirarReservasAsync(stoppingToken);
+                await AvisarQuentesSemDonoAsync(stoppingToken);
                 estado.UltimoCicloFunil = DateTimeOffset.UtcNow;
             }
             catch (Exception e) when (e is not OperationCanceledException)
@@ -88,6 +89,55 @@ public class FunilWorker(IServiceScopeFactory scopes, EstadoWorkers estado, ILog
             await scope.ServiceProvider.GetRequiredService<ServicoReservas>().ExpirarAsync(id, agora, ct);
             logger.LogInformation("Reserva {Id} expirou: peixe de volta ao estoque", id);
         }
+    }
+
+    /// <summary>
+    /// Cliente quente sem dono: aos 15 min só sobe o aviso no painel; com 1 h o painel avisa o dono e
+    /// o robô diz ao cliente que um atendente já foi chamado.
+    /// </summary>
+    private async Task AvisarQuentesSemDonoAsync(CancellationToken ct)
+    {
+        var agora = DateTimeOffset.UtcNow;
+        var limite = agora - LeadQuente.Lembrete;
+        using var scope = scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var conversas = await db.Conversas.IgnoreQueryFilters()
+            .Where(c => c.Aberta && c.ChamouVendedor && c.AtendidoEm == null && c.AvisosQuente < 2 && c.ChamouVendedorEm <= limite)
+            .Take(50)
+            .ToListAsync(ct);
+        if (conversas.Count == 0)
+            return;
+
+        var lojaIds = conversas.Select(c => c.LojaId).Distinct().ToList();
+        var lojas = await db.Lojas.Where(l => lojaIds.Contains(l.Id)).ToDictionaryAsync(l => l.Id, ct);
+
+        foreach (var conversa in conversas)
+        {
+            var loja = lojas[conversa.LojaId];
+            var fuso = TimeZoneInfo.FindSystemTimeZoneById(loja.Fuso);
+            var antes = conversa.AvisosQuente;
+            var texto = LeadQuente.Avancar(conversa, agora, fuso, loja.HorarioInicio, loja.HorarioFim);
+            if (conversa.AvisosQuente != antes)
+                logger.LogInformation("Cliente quente sem dono na conversa {Id}: aviso nível {Nivel}", conversa.Id, conversa.AvisosQuente);
+
+            if (texto is not null && conversa.DentroDaJanela(agora))
+            {
+                db.Mensagens.Add(new Mensagem
+                {
+                    LojaId = conversa.LojaId,
+                    ConversaId = conversa.Id,
+                    Direcao = DirecaoMensagem.Saida,
+                    Autor = AutorMensagem.Robo,
+                    Conteudo = texto,
+                    Status = StatusMensagem.Pendente,
+                    Categoria = CategoriaMensagem.Servico
+                });
+                conversa.UltimaMensagemEm = agora;
+            }
+        }
+
+        await db.SaveChangesAsync(ct);
     }
 
     private static async Task ExecutarAsync(IServiceProvider sp, Guid conversaId, CancellationToken ct)

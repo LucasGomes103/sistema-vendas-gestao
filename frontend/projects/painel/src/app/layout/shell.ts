@@ -9,6 +9,9 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Auth } from '../core/auth';
 import { SenhaDialog } from '../features/usuarios/senha-dialog';
+import { AlertasQuentes } from '../core/alertas';
+import { atualizarACada } from '../core/atualizar';
+import { SinoAlertas } from './sino-alertas';
 
 interface ItemMenu {
   rota: string;
@@ -22,7 +25,7 @@ interface ItemMenu {
  */
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule, SinoAlertas],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[class.tela-cheia]': 'telaCheia()' },
   templateUrl: './shell.html',
@@ -32,6 +35,12 @@ export class Shell {
   protected readonly auth = inject(Auth);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
+  private readonly alertas = inject(AlertasQuentes);
+
+  constructor() {
+    void this.alertas.atualizar();
+    atualizarACada(8000, () => void this.alertas.atualizar());
+  }
 
   private readonly url = toSignal(
     this.router.events.pipe(

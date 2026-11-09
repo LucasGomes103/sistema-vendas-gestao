@@ -16,6 +16,7 @@
 
   <span class="espaco"></span>
 
+  <app-sino-alertas />
   <button class="avatar" [matMenuTriggerFor]="menuUsuario" aria-label="Conta">{{ iniciais() }}</button>
 </nav>
 
@@ -23,6 +24,7 @@
   <header class="topo-celular">
     <div class="marca pequena">{{ siglaLoja() }}</div>
     <span class="nome-loja">{{ auth.usuario()?.loja }}</span>
+    <app-sino-alertas />
     <button class="avatar" [matMenuTriggerFor]="menuUsuario" aria-label="Conta">{{ iniciais() }}</button>
   </header>
 

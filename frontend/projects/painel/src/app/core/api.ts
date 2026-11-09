@@ -120,6 +120,17 @@ export interface ConversaResumo {
   chamouVendedor: boolean;
   motivoVendedor: string | null;
   chamouVendedorEm: string | null;
+  semDono: boolean;
+}
+
+/** Cliente quente esperando um vendedor. Nível 1 = mais de 15 min, 2 = mais de 1 h. */
+export interface AlertaQuente {
+  conversaId: string;
+  cliente: string;
+  motivo: string | null;
+  chamouVendedorEm: string;
+  nivel: 0 | 1 | 2;
+  simulada: boolean;
 }
 
 export interface Mensagem {
@@ -161,6 +172,7 @@ export interface CardFunil {
   proximaAcaoEm: string | null;
   motivoPerda: MotivoPerda | null;
   naoLidas: number;
+  semDono: boolean;
 }
 
 export interface ConfigFunil {

@@ -25,7 +25,11 @@ public record ConversaResumo(
     bool RoboPausado,
     bool ChamouVendedor,
     string? MotivoVendedor,
-    DateTimeOffset? ChamouVendedorEm);
+    DateTimeOffset? ChamouVendedorEm,
+    bool SemDono);
+
+/// <summary>Cliente quente esperando um vendedor. Nível 1 = mais de 15 min, 2 = mais de 1 h (aviso ao dono).</summary>
+public record AlertaQuente(Guid ConversaId, string Cliente, string? Motivo, DateTimeOffset ChamouVendedorEm, int Nivel, bool Simulada);
 
 public record MensagemSaida(Guid Id, string Direcao, string Autor, string Conteudo, string Status, string? Erro, DateTimeOffset CriadoEm);
 
@@ -65,7 +69,24 @@ public static class ConversaEndpoints
                 x.Conversa.Id, x.Conversa.ClienteId, x.Nome ?? FormatarTelefone(x.Telefone), x.Telefone,
                 x.Ultima?.Conteudo, x.Ultima?.Autor.ToString(), x.Conversa.UltimaMensagemEm, x.Conversa.NaoLidas,
                 x.Conversa.DentroDaJanela(agora), x.Conversa.UltimaMsgClienteEm + Conversa.Janela, x.Conversa.Simulada,
-                x.Conversa.RoboPausado, x.Conversa.ChamouVendedor, x.Conversa.MotivoVendedor, x.Conversa.ChamouVendedorEm));
+                x.Conversa.RoboPausado, x.Conversa.ChamouVendedor, x.Conversa.MotivoVendedor, x.Conversa.ChamouVendedorEm,
+                LeadQuente.SemDono(x.Conversa)));
+        });
+
+        // Clientes quentes sem dono, para o aviso no topo do painel (consultado a cada poucos segundos).
+        grupo.MapGet("/alertas", async (AppDbContext db, CancellationToken ct) =>
+        {
+            var agora = DateTimeOffset.UtcNow;
+            var lista = await db.Conversas.AsNoTracking()
+                .Where(c => c.Aberta && c.ChamouVendedor && c.ChamouVendedorEm != null && c.AtendidoEm == null)
+                .OrderBy(c => c.ChamouVendedorEm)
+                .Take(50)
+                .Join(db.Clientes, c => c.ClienteId, cl => cl.Id, (c, cl) => new { Conversa = c, cl.Nome, cl.Telefone })
+                .ToListAsync(ct);
+
+            return lista.Select(x => new AlertaQuente(
+                x.Conversa.Id, x.Nome ?? FormatarTelefone(x.Telefone), x.Conversa.MotivoVendedor,
+                x.Conversa.ChamouVendedorEm!.Value, LeadQuente.Nivel(x.Conversa, agora), x.Conversa.Simulada));
         });
 
         grupo.MapGet("/{id:guid}/mensagens", async (Guid id, AppDbContext db, CancellationToken ct) =>
@@ -118,7 +139,7 @@ public static class ConversaEndpoints
             };
             db.Mensagens.Add(mensagem);
             conversa.UltimaMensagemEm = agora;
-            conversa.Assumir(); // vendedor respondeu: o robô para de falar nesta conversa
+            conversa.Assumir(agora); // vendedor respondeu: o robô para de falar nesta conversa
             var cfg = await funil.ConfigAsync(conversa.LojaId, ct);
             funil.Registrar(conversa, MotorFunil.AoResponderLoja(conversa, cfg, agora), OrigemEvento.Usuario);
             await db.SaveChangesAsync(ct);
