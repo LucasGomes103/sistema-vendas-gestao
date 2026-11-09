@@ -6,6 +6,7 @@ using SistemaVendas.Application.Atendimento;
 using SistemaVendas.Application.Comum;
 using SistemaVendas.Domain.Atendimento;
 using SistemaVendas.Domain.Funil;
+using SistemaVendas.Domain.Vendas;
 using SistemaVendas.Infrastructure.Dados;
 
 namespace SistemaVendas.Workers;
@@ -101,6 +102,21 @@ public class RoboWorker(IServiceScopeFactory scopes, EstadoWorkers estado, ILogg
         if (conversa.RoboPausado)
             return;
 
+        // Cliente pediu para separar: cria a reserva de 24 h conferindo o estoque de agora.
+        if (resposta.Reservar.Count > 0)
+        {
+            var reservas = sp.GetRequiredService<ServicoReservas>();
+            var r = await reservas.CriarAsync(conversa, resposta.Reservar, agora, ct);
+            resposta = resposta with
+            {
+                Texto = TextoReserva.Acrescentar(resposta.Texto, r),
+                ChamarVendedor = true,
+                MotivoVendedor = r.Reserva is { } nova
+                    ? $"{resposta.MotivoVendedor ?? "Reserva"} · Reservado: {RegrasReserva.Resumo(nova)} ({nova.Total.ToString("C", TextoReserva.PtBr)})"
+                    : resposta.MotivoVendedor ?? "Cliente quer reservar (sem estoque)"
+            };
+        }
+
         db.Mensagens.Add(new Mensagem
         {
             LojaId = conversa.LojaId,
@@ -127,5 +143,29 @@ public class RoboWorker(IServiceScopeFactory scopes, EstadoWorkers estado, ILogg
         }
 
         await db.SaveChangesAsync(ct);
+    }
+}
+
+/// <summary>Confirmação da reserva que vai no fim da resposta do robô.</summary>
+public static class TextoReserva
+{
+    public static readonly System.Globalization.CultureInfo PtBr = System.Globalization.CultureInfo.GetCultureInfo("pt-BR");
+
+    public static string Acrescentar(string texto, ResultadoReserva r)
+    {
+        var linhas = new List<string> { texto.TrimEnd() };
+        if (r.Reserva is { } reserva)
+        {
+            var itens = reserva.Itens.GroupBy(i => (i.Especie, i.PrecoUnitario))
+                .Select(g => $"• {g.Sum(i => i.Quantidade)}x {g.Key.Especie} = {(g.Sum(i => i.Quantidade) * g.Key.PrecoUnitario).ToString("C", PtBr)}");
+            linhas.Add("");
+            linhas.Add($"✅ Separei para você por 24 h:\n{string.Join('\n', itens)}\nTotal: {reserva.Total.ToString("C", PtBr)} + frete");
+        }
+        if (r.Faltas.Count > 0)
+        {
+            linhas.Add("");
+            linhas.Add($"⚠️ {string.Join("; ", r.Faltas)}.");
+        }
+        return string.Join('\n', linhas);
     }
 }

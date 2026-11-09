@@ -1,6 +1,7 @@
 using System.Globalization;
 using SistemaVendas.Application.Atendimento;
 using SistemaVendas.Domain.Entregas;
+using SistemaVendas.Domain.Vendas;
 
 namespace SistemaVendas.Infrastructure.IA;
 
@@ -29,7 +30,10 @@ public class AtendentePorRegras : IAtendenteIA
             return new RespostaAtendente(
                 "Recebi seu pedido! Para calcular o frete, me envie o seu CEP. Um atendente já confere tudo e confirma com você.",
                 ChamarVendedor: true,
-                MotivoVendedor: "Pedido pelo catálogo");
+                MotivoVendedor: "Pedido pelo catálogo")
+            {
+                Reservar = await ItensDoPedidoAsync(ultima, ferramentas, ct)
+            };
 
         if (PalavrasCatalogo.Any(p => $" {texto} ".Contains($" {p}")))
         {
@@ -79,5 +83,20 @@ public class AtendentePorRegras : IAtendenteIA
                 ? $"Olá! Aqui é o atendimento da {nomeLoja}. Me diga qual peixe você procura que eu confiro preço e disponibilidade."
                 : "Não encontrei esse peixe no catálogo. Pode me dizer o nome popular ou científico? Se preferir, peço para um atendente falar com você.",
             ChamarVendedor: false, MotivoVendedor: null);
+    }
+
+    /// <summary>Casa cada linha do pedido da vitrine com a espécie de mesmo nome no catálogo.</summary>
+    public static async Task<IReadOnlyList<ItemPedido>> ItensDoPedidoAsync(string mensagem, IFerramentasAtendimento ferramentas, CancellationToken ct)
+    {
+        var itens = new List<ItemPedido>();
+        foreach (var (nome, quantidade) in LeitorPedidoVitrine.Ler(mensagem))
+        {
+            var alvo = FerramentasAtendimento.Normalizar(nome).Trim();
+            var achada = (await ferramentas.BuscarEspecieAsync(nome, ct))
+                .FirstOrDefault(e => FerramentasAtendimento.Normalizar(e.NomePopular).Trim() == alvo);
+            if (achada is not null)
+                itens.Add(new ItemPedido(achada.Id, quantidade));
+        }
+        return itens;
     }
 }

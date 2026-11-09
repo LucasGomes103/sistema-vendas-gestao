@@ -7,6 +7,7 @@ using SistemaVendas.Domain.Entregas;
 using SistemaVendas.Domain.Estoque;
 using SistemaVendas.Domain.Funil;
 using SistemaVendas.Domain.Lojas;
+using SistemaVendas.Domain.Vendas;
 
 namespace SistemaVendas.Infrastructure.Dados;
 
@@ -15,6 +16,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
     public DbSet<Loja> Lojas => Set<Loja>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<ZonaEntrega> ZonasEntrega => Set<ZonaEntrega>();
+    public DbSet<Reserva> Reservas => Set<Reserva>();
+    public DbSet<ItemReserva> ItensReserva => Set<ItemReserva>();
     public DbSet<Especie> Especies => Set<Especie>();
     public DbSet<Foto> Fotos => Set<Foto>();
     public DbSet<Tanque> Tanques => Set<Tanque>();
@@ -105,6 +108,24 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
             e.HasIndex(x => new { x.LojaId, x.CriadoEm });
         });
 
+        modelBuilder.Entity<Reserva>(e =>
+        {
+            e.ToTable("reserva");
+            e.Property(x => x.Total).HasPrecision(10, 2);
+            e.HasOne<Conversa>().WithMany().HasForeignKey(x => x.ConversaId);
+            e.HasMany(x => x.Itens).WithOne().HasForeignKey(x => x.ReservaId);
+            e.HasIndex(x => new { x.ConversaId, x.Status });
+            // Fila de vencimento: só as ativas.
+            e.HasIndex(x => x.ExpiraEm).HasFilter("status = 'Ativa'");
+        });
+
+        modelBuilder.Entity<ItemReserva>(e =>
+        {
+            e.ToTable("item_reserva");
+            e.Property(x => x.PrecoUnitario).HasPrecision(10, 2);
+            e.HasOne<Lote>().WithMany().HasForeignKey(x => x.LoteId);
+        });
+
         modelBuilder.Entity<ZonaEntrega>(e =>
         {
             e.ToTable("zona_entrega");
@@ -165,6 +186,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
         modelBuilder.Entity<CardEvento>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<ConfigFunil>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<ZonaEntrega>().HasQueryFilter(x => x.LojaId == LojaId);
+        modelBuilder.Entity<Reserva>().HasQueryFilter(x => x.LojaId == LojaId);
+        modelBuilder.Entity<ItemReserva>().HasQueryFilter(x => x.LojaId == LojaId);
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

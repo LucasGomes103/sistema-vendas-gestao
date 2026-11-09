@@ -10,6 +10,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { firstValueFrom } from 'rxjs';
 import { API, ConversaResumo, Mensagem, mensagemDeErro } from '../../core/api';
 import { atualizarACada } from '../../core/atualizar';
+import { ReservasConversaComponent } from './reservas-conversa';
 import { Auth } from '../../core/auth';
 
 /**
@@ -18,7 +19,7 @@ import { Auth } from '../../core/auth';
  */
 @Component({
   selector: 'app-conversas-page',
-  imports: [DatePipe, RouterLink, MatButtonModule, MatMenuModule, MatIconModule, MatProgressBarModule, MatTooltipModule],
+  imports: [ReservasConversaComponent, DatePipe, RouterLink, MatButtonModule, MatMenuModule, MatIconModule, MatProgressBarModule, MatTooltipModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './conversas-page.html',
   styleUrl: './conversas-page.scss',

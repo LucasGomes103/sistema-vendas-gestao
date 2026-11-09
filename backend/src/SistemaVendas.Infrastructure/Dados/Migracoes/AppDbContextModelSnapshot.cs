@@ -894,6 +894,123 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.ToTable("usuario", (string)null);
                 });
 
+            modelBuilder.Entity("SistemaVendas.Domain.Vendas.ItemReserva", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<string>("Especie")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("especie");
+
+                    b.Property<Guid>("EspecieId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("especie_id");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_id");
+
+                    b.Property<Guid>("LoteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("lote_id");
+
+                    b.Property<decimal>("PrecoUnitario")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("preco_unitario");
+
+                    b.Property<int>("Quantidade")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantidade");
+
+                    b.Property<Guid>("ReservaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reserva_id");
+
+                    b.Property<Guid>("TanqueId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tanque_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_item_reserva");
+
+                    b.HasIndex("LojaId")
+                        .HasDatabaseName("ix_item_reserva_loja_id");
+
+                    b.HasIndex("LoteId")
+                        .HasDatabaseName("ix_item_reserva_lote_id");
+
+                    b.HasIndex("ReservaId")
+                        .HasDatabaseName("ix_item_reserva_reserva_id");
+
+                    b.ToTable("item_reserva", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Vendas.Reserva", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ConversaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("conversa_id");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<DateTimeOffset?>("EncerradaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("encerrada_em");
+
+                    b.Property<Guid?>("EncerradaPor")
+                        .HasColumnType("uuid")
+                        .HasColumnName("encerrada_por");
+
+                    b.Property<DateTimeOffset>("ExpiraEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expira_em");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("total");
+
+                    b.HasKey("Id")
+                        .HasName("pk_reserva");
+
+                    b.HasIndex("ExpiraEm")
+                        .HasDatabaseName("ix_reserva_expira_em")
+                        .HasFilter("status = 'Ativa'");
+
+                    b.HasIndex("LojaId")
+                        .HasDatabaseName("ix_reserva_loja_id");
+
+                    b.HasIndex("ConversaId", "Status")
+                        .HasDatabaseName("ix_reserva_conversa_id_status");
+
+                    b.ToTable("reserva", (string)null);
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Atendimento.Cliente", b =>
                 {
                     b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
@@ -1085,9 +1202,55 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasConstraintName("fk_usuario_loja_loja_id");
                 });
 
+            modelBuilder.Entity("SistemaVendas.Domain.Vendas.ItemReserva", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_item_reserva_loja_loja_id");
+
+                    b.HasOne("SistemaVendas.Domain.Estoque.Lote", null)
+                        .WithMany()
+                        .HasForeignKey("LoteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_item_reserva_lote_lote_id");
+
+                    b.HasOne("SistemaVendas.Domain.Vendas.Reserva", null)
+                        .WithMany("Itens")
+                        .HasForeignKey("ReservaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_item_reserva_reserva_reserva_id");
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Vendas.Reserva", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Atendimento.Conversa", null)
+                        .WithMany()
+                        .HasForeignKey("ConversaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_reserva_conversa_conversa_id");
+
+                    b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_reserva_loja_loja_id");
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Catalogo.Especie", b =>
                 {
                     b.Navigation("Fotos");
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Vendas.Reserva", b =>
+                {
+                    b.Navigation("Itens");
                 });
 #pragma warning restore 612, 618
         }
