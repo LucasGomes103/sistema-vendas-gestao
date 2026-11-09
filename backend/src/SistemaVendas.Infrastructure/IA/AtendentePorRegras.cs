@@ -1,5 +1,6 @@
 using System.Globalization;
 using SistemaVendas.Application.Atendimento;
+using SistemaVendas.Domain.Entregas;
 
 namespace SistemaVendas.Infrastructure.IA;
 
@@ -37,6 +38,17 @@ public class AtendentePorRegras : IAtendenteIA
                 return new RespostaAtendente(
                     $"Aqui está o nosso catálogo com o que temos disponível agora: {link}\nÉ só escolher as quantidades e tocar em \"Enviar pedido pelo WhatsApp\".",
                     ChamarVendedor: false, MotivoVendedor: null);
+        }
+
+        // Mandou o CEP: calcula pela tabela da loja e chama o vendedor para fechar (cliente quente).
+        if (RegrasFrete.AcharCep(ultima) is { } cep)
+        {
+            var frete = await ferramentas.CalcularFreteAsync(cep.ToString("00000000"), ct);
+            if (frete is not null)
+            {
+                var textosFrete = await ferramentas.TextosAsync(ct);
+                return new RespostaAtendente($"{frete.ParaCliente} {textosFrete.ChamarVendedor}", ChamarVendedor: true, MotivoVendedor: frete.Resumo);
+            }
         }
 
         var sinal = SinaisQuente.FirstOrDefault(s => $" {texto} ".Contains($" {s}"));

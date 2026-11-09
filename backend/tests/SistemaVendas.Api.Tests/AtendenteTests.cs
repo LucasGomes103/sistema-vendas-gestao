@@ -26,6 +26,11 @@ public class AtendenteTests
         public Task<int> ConsultarEstoqueAsync(Guid especieId, CancellationToken ct) =>
             Task.FromResult(_especies.First(e => e.Id == especieId).Disponivel);
 
+        public Task<FreteCalculado?> CalcularFreteAsync(string cep, CancellationToken ct) =>
+            Task.FromResult<FreteCalculado?>(cep.StartsWith("07")
+                ? new FreteCalculado("07010-000", true, "Guarulhos", 15, 1)
+                : new FreteCalculado("99999-999", false, null, null, null));
+
         public Task<string?> LinkCatalogoAsync(CancellationToken ct) => Task.FromResult<string?>("https://loja.test/demo");
 
         public Task<TextosProntos> TextosAsync(CancellationToken ct) =>
@@ -121,5 +126,23 @@ public class AtendenteTests
         const string comLink = "Aqui está o catálogo: https://loja.test/ecsfish";
         Assert.Equal(comLink, CatalogoNaPrimeiraResposta.Aplicar(comLink, "https://loja.test/ecsfish"));
         Assert.Equal("Olá!", CatalogoNaPrimeiraResposta.Aplicar("Olá!", null));
+    }
+
+    [Fact]
+    public async Task CEP_atendido_recebe_valor_e_prazo_e_chama_o_vendedor()
+    {
+        var r = await Perguntar("meu cep é 07010-000");
+        Assert.Contains("R$ 15,00", r.Texto);
+        Assert.Contains("1 dia útil", r.Texto);
+        Assert.True(r.ChamarVendedor);
+        Assert.Contains("Guarulhos", r.MotivoVendedor);
+    }
+
+    [Fact]
+    public async Task CEP_fora_da_area_oferece_retirada()
+    {
+        var r = await Perguntar("99999999");
+        Assert.Contains("retirar", r.Texto);
+        Assert.True(r.ChamarVendedor);
     }
 }

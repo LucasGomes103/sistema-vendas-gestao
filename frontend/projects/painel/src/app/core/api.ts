@@ -173,6 +173,31 @@ export interface ConfigFunil {
   textoChamarVendedor: string;
 }
 
+export interface ZonaEntrega {
+  id: string;
+  nome: string;
+  cepInicio: string;
+  cepFim: string;
+  valor: number;
+  dias: number;
+}
+
+export interface ZonaEntregaEntrada {
+  nome: string;
+  cepInicio: string;
+  cepFim: string;
+  valor: number;
+  dias: number;
+}
+
+export interface FreteConsulta {
+  cep: string;
+  atende: boolean;
+  regiao: string | null;
+  valor: number | null;
+  dias: number | null;
+}
+
 export interface ConfigWhatsApp {
   atenderTodos: boolean;
   numerosPermitidos: string[];

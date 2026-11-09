@@ -1,12 +1,13 @@
 <header class="sv-cabecalho-pagina">
   <div>
     <h1>Configuração</h1>
-    <p>WhatsApp, prazos do funil e respostas prontas do robô.</p>
+    <p>WhatsApp, frete por CEP, prazos do funil e respostas prontas do robô.</p>
   </div>
 </header>
 
 <app-conexao-whatsapp />
 <app-config-whatsapp />
+<app-config-frete />
 
 @if (config.isLoading() && !config.hasValue()) {
   <mat-progress-bar mode="indeterminate" />
@@ -61,7 +62,7 @@
     <mat-form-field appearance="outline">
       <mat-label>Quando perguntam do frete</mat-label>
       <textarea matInput rows="2" formControlName="textoFrete"></textarea>
-      <mat-hint>O robô pede o CEP e passa para você calcular. Ele nunca inventa valor de frete.</mat-hint>
+      <mat-hint>Usada quando o cliente ainda não mandou o CEP, ou quando não há faixa de frete cadastrada. O robô nunca inventa valor de frete.</mat-hint>
     </mat-form-field>
     <mat-form-field appearance="outline">
       <mat-label>Quando chama um vendedor</mat-label>

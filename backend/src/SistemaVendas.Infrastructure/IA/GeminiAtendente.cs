@@ -100,6 +100,22 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
                             : new JsonObject { ["erro"] = "especie_id inválido; use buscar_especie antes" };
                         break;
 
+                    case "calcular_frete":
+                        var frete = await ferramentas.CalcularFreteAsync(args["cep"]?.GetValue<string>() ?? "", ct);
+                        resultado = frete is null
+                            ? new JsonObject { ["sem_tabela"] = true, ["instrucao"] = $"Responda com o texto da loja: \"{textos.Frete}\"" }
+                            : new JsonObject
+                            {
+                                ["cep"] = frete.Cep,
+                                ["atende"] = frete.Atende,
+                                ["regiao"] = frete.Regiao,
+                                ["valor"] = frete.Valor?.ToString("C", PtBr),
+                                ["prazo"] = frete.Atende ? frete.Prazo : null,
+                                ["resposta_sugerida"] = frete.ParaCliente,
+                                ["resumo_para_vendedor"] = frete.Resumo
+                            };
+                        break;
+
                     case "link_catalogo":
                         resultado = new JsonObject { ["link"] = await ferramentas.LinkCatalogoAsync(ct) };
                         break;
@@ -163,8 +179,10 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
         - Mensagem que contém "{PedidoCatalogo.Marcador}" é um pedido montado na vitrine: confira cada item com
           buscar_especie, responda com um resumo curto (itens e total), peça o CEP para o frete e use chamar_vendedor
           com o motivo "Pedido pelo catálogo".
-        - Frete e entrega: responda com este texto da loja: "{textos.Frete}" e use chamar_vendedor
-          (com o CEP no motivo, se o cliente já tiver mandado). Nunca invente valor de frete ou prazo.
+        - Frete e entrega: se o cliente ainda não mandou o CEP, peça o CEP. Quando ele mandar, use calcular_frete,
+          informe valor e prazo (ou que ainda não entregamos lá e ele pode retirar na loja) e use chamar_vendedor
+          com o resumo_para_vendedor no motivo. Se calcular_frete devolver sem_tabela, responda com este texto da loja:
+          "{textos.Frete}" e use chamar_vendedor com o CEP no motivo. Nunca invente valor de frete ou prazo.
         - Ao chamar o vendedor, use este texto da loja: "{textos.ChamarVendedor}".
         - Use chamar_vendedor quando o cliente quiser reservar, comprar ou pagar, pedir para falar com uma pessoa,
           reclamar, ou quando você não souber responder.
@@ -183,6 +201,11 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
               "name": "consultar_estoque",
               "description": "Quantidade disponível agora de uma espécie, já descontando reservas e quarentena.",
               "parameters": { "type": "object", "properties": { "especie_id": { "type": "string" } }, "required": ["especie_id"] }
+            },
+            {
+              "name": "calcular_frete",
+              "description": "Valor e prazo do frete para um CEP, pela tabela de faixas de CEP da loja.",
+              "parameters": { "type": "object", "properties": { "cep": { "type": "string", "description": "CEP com 8 dígitos" } }, "required": ["cep"] }
             },
             {
               "name": "link_catalogo",
