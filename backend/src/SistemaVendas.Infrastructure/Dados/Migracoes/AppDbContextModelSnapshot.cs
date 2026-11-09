@@ -321,6 +321,41 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.ToTable("webhook_recebido", (string)null);
                 });
 
+            modelBuilder.Entity("SistemaVendas.Domain.Catalogo.ArquivoFoto", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<byte[]>("Conteudo")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("conteudo");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<Guid>("FotoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("foto_id");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("tipo");
+
+                    b.HasKey("Id")
+                        .HasName("pk_arquivo_foto");
+
+                    b.HasIndex("FotoId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_arquivo_foto_foto_id");
+
+                    b.ToTable("arquivo_foto", (string)null);
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Catalogo.Especie", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1053,6 +1088,16 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_mensagem_loja_loja_id");
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Catalogo.ArquivoFoto", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Catalogo.Foto", null)
+                        .WithOne()
+                        .HasForeignKey("SistemaVendas.Domain.Catalogo.ArquivoFoto", "FotoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_arquivo_foto_foto_foto_id");
                 });
 
             modelBuilder.Entity("SistemaVendas.Domain.Catalogo.Especie", b =>

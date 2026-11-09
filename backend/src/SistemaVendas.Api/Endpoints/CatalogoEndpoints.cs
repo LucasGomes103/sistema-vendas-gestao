@@ -34,6 +34,17 @@ public static class CatalogoEndpoints
             return Results.Ok(new { loja = loja.Nome, whatsApp = loja.WhatsAppNumero, itens });
         })
         .WithTags("Catálogo público");
+
+        // Foto pública (vitrine e painel). O id muda a cada troca, então pode ficar em cache para sempre.
+        app.MapGet("/public/fotos/{id:guid}", async (Guid id, AppDbContext db, HttpContext http, CancellationToken ct) =>
+        {
+            var arquivo = await db.ArquivosFoto.AsNoTracking().FirstOrDefaultAsync(a => a.FotoId == id, ct);
+            if (arquivo is null)
+                return Results.NotFound();
+            http.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+            return Results.File(arquivo.Conteudo, arquivo.Tipo);
+        })
+        .WithTags("Catálogo público");
     }
 
     public static void MapEspecieEndpoints(this IEndpointRouteBuilder app)
@@ -43,7 +54,7 @@ public static class CatalogoEndpoints
         grupo.MapGet("/", async (AppDbContext db, CancellationToken ct) =>
         {
             var disponivel = Saldos.DisponivelPorEspecie(await Saldos.PorLoteAsync(db, ct));
-            var especies = await db.Especies.AsNoTracking().Where(e => e.Ativo).OrderBy(e => e.NomePopular).ToListAsync(ct);
+            var especies = await db.Especies.AsNoTracking().Include(e => e.Fotos).Where(e => e.Ativo).OrderBy(e => e.NomePopular).ToListAsync(ct);
             return especies.Select(e => Saida(e, disponivel.GetValueOrDefault(e.Id)));
         });
 
@@ -73,6 +84,36 @@ public static class CatalogoEndpoints
                 return Results.NotFound();
 
             Aplicar(especie, entrada);
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        })
+        .RequireAuthorization(AuthEndpoints.PoliticaDono);
+
+        // Foto da espécie (uma por espécie: enviar de novo troca a anterior). O painel reduz a imagem antes.
+        grupo.MapPut("/{id:guid}/foto", async (Guid id, FotoEntrada entrada, AppDbContext db, CancellationToken ct) =>
+        {
+            var especie = await db.Especies.Include(e => e.Fotos).FirstOrDefaultAsync(e => e.Id == id && e.Ativo, ct);
+            if (especie is null)
+                return Results.NotFound();
+
+            var (bytes, tipo, erro) = RegrasFoto.LerDataUrl(entrada.DataUrl);
+            if (erro is not null)
+                return Results.Problem(erro, statusCode: StatusCodes.Status422UnprocessableEntity);
+
+            db.Fotos.RemoveRange(especie.Fotos);
+            var foto = new Foto { LojaId = especie.LojaId, EspecieId = especie.Id, Url = "", Ordem = 0 };
+            foto.Url = $"/api/v1/public/fotos/{foto.Id}";
+            db.Fotos.Add(foto);
+            db.ArquivosFoto.Add(new ArquivoFoto { FotoId = foto.Id, Conteudo = bytes!, Tipo = tipo! });
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { fotoUrl = foto.Url });
+        })
+        .RequireAuthorization(AuthEndpoints.PoliticaDono);
+
+        grupo.MapDelete("/{id:guid}/foto", async (Guid id, AppDbContext db, CancellationToken ct) =>
+        {
+            var fotos = await db.Fotos.Where(f => f.EspecieId == id).ToListAsync(ct);
+            db.Fotos.RemoveRange(fotos);
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
         })
@@ -108,5 +149,6 @@ public static class CatalogoEndpoints
     }
 
     private static EspecieSaida Saida(Especie e, int disponivel) =>
-        new(e.Id, e.NomePopular, e.NomeCientifico, e.TamanhoCm, e.Preco, e.Observacoes, e.Ativo, disponivel);
+        new(e.Id, e.NomePopular, e.NomeCientifico, e.TamanhoCm, e.Preco, e.Observacoes, e.Ativo, disponivel,
+            e.Fotos.OrderBy(f => f.Ordem).Select(f => f.Url).FirstOrDefault());
 }

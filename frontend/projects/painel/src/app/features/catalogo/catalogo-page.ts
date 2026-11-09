@@ -8,6 +8,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { firstValueFrom } from 'rxjs';
 import { API, Especie, mensagemDeErro } from '../../core/api';
 import { Auth } from '../../core/auth';
@@ -18,7 +19,7 @@ type Filtro = 'disponiveis' | 'esgotadas';
 
 @Component({
   selector: 'app-catalogo-page',
-  imports: [CurrencyPipe, MatButtonModule, MatChipsModule, MatIconModule, MatProgressBarModule],
+  imports: [CurrencyPipe, MatButtonModule, MatChipsModule, MatIconModule, MatProgressBarModule, MatTooltipModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './catalogo-page.html',
   styleUrl: './catalogo-page.scss',
@@ -32,6 +33,7 @@ export class CatalogoPage {
   protected readonly especies = httpResource<Especie[]>(() => `${API}/especies`);
   protected readonly busca = signal('');
   protected readonly filtro = signal<Filtro>('disponiveis');
+  protected readonly enviandoFoto = signal<string | null>(null);
 
   protected readonly contagem = computed(() => {
     const lista = this.especies.value() ?? [];
@@ -57,6 +59,36 @@ export class CatalogoPage {
       .subscribe((salvou) => salvou && this.especies.reload());
   }
 
+  /** Reduz a foto no navegador (lado maior até 1000 px, JPEG) antes de enviar: fica leve para o banco e a vitrine. */
+  protected async enviarFoto(especie: Especie, evento: Event): Promise<void> {
+    const input = evento.target as HTMLInputElement;
+    const arquivo = input.files?.[0];
+    input.value = '';
+    if (!arquivo) return;
+
+    this.enviandoFoto.set(especie.id);
+    try {
+      const dataUrl = await reduzirFoto(arquivo, 1000, 0.82);
+      await firstValueFrom(this.http.put(`${API}/especies/${especie.id}/foto`, { dataUrl }));
+      this.especies.reload();
+      this.snack.open('Foto salva. Ela já aparece na vitrine.', undefined, { duration: 3000 });
+    } catch (e) {
+      this.snack.open(e instanceof Error ? e.message : mensagemDeErro(e), 'OK', { duration: 6000 });
+    } finally {
+      this.enviandoFoto.set(null);
+    }
+  }
+
+  protected async removerFoto(especie: Especie): Promise<void> {
+    if (!confirm(`Remover a foto de "${especie.nomePopular}"?`)) return;
+    try {
+      await firstValueFrom(this.http.delete(`${API}/especies/${especie.id}/foto`));
+      this.especies.reload();
+    } catch (e) {
+      this.snack.open(mensagemDeErro(e), 'OK', { duration: 6000 });
+    }
+  }
+
   protected async excluir(especie: Especie): Promise<void> {
     if (!confirm(`Excluir "${especie.nomePopular}"? Ela sai do catálogo e da entrada de lote.`)) return;
     try {
@@ -75,4 +107,18 @@ function normalizar(texto: string): string {
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .trim();
+}
+
+async function reduzirFoto(arquivo: File, ladoMaximo: number, qualidade: number): Promise<string> {
+  if (!arquivo.type.startsWith('image/')) throw new Error('Escolha um arquivo de imagem.');
+  const bitmap = await createImageBitmap(arquivo).catch(() => {
+    throw new Error('Não foi possível abrir essa imagem. Tente uma foto JPG ou PNG.');
+  });
+  const escala = Math.min(1, ladoMaximo / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(bitmap.width * escala);
+  canvas.height = Math.round(bitmap.height * escala);
+  canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  return canvas.toDataURL('image/jpeg', qualidade);
 }

@@ -38,7 +38,24 @@
     @for (e of visiveis(); track e.id) {
       <article class="sv-card especie" [class.esgotada]="e.disponivel === 0">
         <div class="foto">
-          <mat-icon>set_meal</mat-icon>
+          @if (e.fotoUrl) {
+            <img [src]="e.fotoUrl" [alt]="e.nomePopular" loading="lazy" />
+          } @else {
+            <mat-icon>set_meal</mat-icon>
+          }
+          @if (auth.ehDono()) {
+            <span class="acoes-foto">
+              <label class="botao-foto" [class.enviando]="enviandoFoto() === e.id" [attr.aria-label]="e.fotoUrl ? 'Trocar foto' : 'Adicionar foto'" [matTooltip]="e.fotoUrl ? 'Trocar foto' : 'Adicionar foto'">
+                <mat-icon>{{ enviandoFoto() === e.id ? 'hourglass_top' : 'photo_camera' }}</mat-icon>
+                <input type="file" accept="image/*" (change)="enviarFoto(e, $event)" />
+              </label>
+              @if (e.fotoUrl) {
+                <button class="botao-foto" type="button" matTooltip="Remover foto" aria-label="Remover foto" (click)="removerFoto(e)">
+                  <mat-icon>hide_image</mat-icon>
+                </button>
+              }
+            </span>
+          }
         </div>
         <div class="corpo">
           <div class="nomes">
