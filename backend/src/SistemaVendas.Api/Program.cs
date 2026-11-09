@@ -119,7 +119,9 @@ v1.MapFreteEndpoints();
 v1.MapReservaEndpoints();
 v1.MapConexaoWhatsAppEndpoints();
 v1.MapWebhookEndpoints();
-if (app.Environment.IsDevelopment())
+// Simulador de cliente: as conversas dele nunca saem pelo WhatsApp, então fica ligado também no publicado
+// (para testar sem conectar um número). Desligue com Simulador__Habilitado=false.
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue("Simulador:Habilitado", true))
     v1.MapSimuladorEndpoints();
 
 app.Run();
