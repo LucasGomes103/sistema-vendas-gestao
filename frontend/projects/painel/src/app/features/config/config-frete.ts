@@ -40,7 +40,7 @@ const CEP = /^\d{5}-?\d{3}$/;
           @if (form.controls.cepOrigem.invalid) {
             <mat-error>CEP com 8 dígitos.</mat-error>
           } @else {
-            <mat-hint>Normalmente o CEP da loja.</mat-hint>
+            <mat-hint>{{ config.value()?.origemEndereco ?? 'Normalmente o CEP da loja.' }}</mat-hint>
           }
         </mat-form-field>
         <mat-form-field appearance="outline">
@@ -102,6 +102,10 @@ const CEP = /^\d{5}-?\d{3}$/;
               {{ r.regiao }}: além do raio, o atendente combina
             }
           </span>
+          <p class="detalhe">
+            Achei {{ r.endereco ?? 'o mesmo CEP da loja' }}{{ r.fonte ? ' (' + fonte(r.fonte) + ')' : '' }}.
+            {{ r.porRota ? 'Distância pela rota de carro.' : r.km > 0 ? 'Rota de carro indisponível: linha reta × 1,3.' : '' }}
+          </p>
         }
       </div>
     </section>
@@ -175,6 +179,12 @@ const CEP = /^\d{5}-?\d{3}$/;
       padding-top: 12px;
       border-top: 1px solid var(--mat-sys-outline-variant);
     }
+    .detalhe {
+      flex-basis: 100%;
+      margin: -4px 0 8px;
+      color: var(--mat-sys-on-surface-variant);
+      font: var(--mat-sys-body-small);
+    }
     .resultado {
       display: inline-flex;
       align-items: center;
@@ -237,6 +247,10 @@ export class ConfigFreteComponent {
         dias: c.dias,
       });
     });
+  }
+
+  protected fonte(f: string): string {
+    return f === 'osm-rua' ? 'pela rua' : f === 'osm-bairro' ? 'pelo bairro, aproximado' : 'pela BrasilAPI';
   }
 
   protected prazo(dias: number): string {

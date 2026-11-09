@@ -498,6 +498,10 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasColumnType("uuid")
                         .HasColumnName("loja_id");
 
+                    b.Property<string>("OrigemEndereco")
+                        .HasColumnType("text")
+                        .HasColumnName("origem_endereco");
+
                     b.Property<double>("OrigemLat")
                         .HasColumnType("double precision")
                         .HasColumnName("origem_lat");
@@ -540,6 +544,10 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.Property<DateTimeOffset>("CriadoEm")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("criado_em");
+
+                    b.Property<string>("Endereco")
+                        .HasColumnType("text")
+                        .HasColumnName("endereco");
 
                     b.Property<string>("Fonte")
                         .IsRequired()

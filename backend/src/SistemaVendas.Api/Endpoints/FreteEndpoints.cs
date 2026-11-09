@@ -7,7 +7,7 @@ namespace SistemaVendas.Api.Endpoints;
 
 public record FreteKmEntrada(bool Ativo, string CepOrigem, decimal KmInclusos, decimal ValorBase, decimal ValorPorKm, decimal KmMaximo, int Dias);
 
-public record FreteKmSaida(bool Ativo, string? CepOrigem, decimal KmInclusos, decimal ValorBase, decimal ValorPorKm, decimal KmMaximo, int Dias, bool Configurado);
+public record FreteKmSaida(bool Ativo, string? CepOrigem, decimal KmInclusos, decimal ValorBase, decimal ValorPorKm, decimal KmMaximo, int Dias, bool Configurado, string? OrigemEndereco = null);
 
 /// <summary>Frete por km a partir da loja. O dono configura; o robô e a equipe consultam.</summary>
 public static class FreteEndpoints
@@ -44,8 +44,9 @@ public static class FreteEndpoints
                 if (await geo.LocalizarAsync(cep, ct) is not { } origem)
                     return Erro($"Não encontrei o CEP {RegrasFrete.Formatar(cep)} no mapa. Confira o número ou tente de novo em alguns minutos.");
                 cfg.CepOrigem = cep;
-                cfg.OrigemLat = origem.Lat;
-                cfg.OrigemLon = origem.Lon;
+                cfg.OrigemLat = origem.Ponto.Lat;
+                cfg.OrigemLon = origem.Ponto.Lon;
+                cfg.OrigemEndereco = origem.Endereco;
             }
 
             cfg.Ativo = entrada.Ativo;
@@ -65,9 +66,14 @@ public static class FreteEndpoints
                 return Erro("Informe um CEP com 8 dígitos.");
             if (await frete.ConfigAtivaAsync(ct) is null)
                 return Erro("O frete por km ainda não está ligado. Configure em Configuração → Frete.");
-            if (await frete.CalcularAsync(numero, ct) is not { } r)
-                return Erro($"Não encontrei o CEP {RegrasFrete.Formatar(numero)} no mapa.");
-            return Results.Ok(new { cep = r.Cep, atende = r.Atende, regiao = r.Regiao, valor = r.Valor, dias = r.Dias, resumo = r.Resumo });
+            if (await frete.DetalharAsync(numero, ct) is not { } d)
+                return Erro($"Não achei o CEP {RegrasFrete.Formatar(numero)} no mapa com precisão de rua ou bairro. Nesse caso o robô chama o atendente.");
+            var r = d.Frete;
+            return Results.Ok(new
+            {
+                cep = r.Cep, atende = r.Atende, regiao = r.Regiao, valor = r.Valor, dias = r.Dias, resumo = r.Resumo,
+                km = d.Km, porRota = d.PorRota, endereco = d.Endereco, fonte = d.Fonte, origem = d.Origem
+            });
         })
         .WithTags("Frete")
         .RequireAuthorization(AuthEndpoints.PoliticaEquipe);
@@ -77,5 +83,5 @@ public static class FreteEndpoints
         Results.Problem(mensagem, statusCode: StatusCodes.Status422UnprocessableEntity);
 
     private static FreteKmSaida Saida(FretePorKm c) =>
-        new(c.Ativo, c.CepOrigem == 0 ? null : RegrasFrete.Formatar(c.CepOrigem), c.KmInclusos, c.ValorBase, c.ValorPorKm, c.KmMaximo, c.Dias, true);
+        new(c.Ativo, c.CepOrigem == 0 ? null : RegrasFrete.Formatar(c.CepOrigem), c.KmInclusos, c.ValorBase, c.ValorPorKm, c.KmMaximo, c.Dias, true, c.OrigemEndereco);
 }

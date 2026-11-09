@@ -14,6 +14,7 @@ public class FretePorKm : EntidadeDaLoja
     public int CepOrigem { get; set; }
     public double OrigemLat { get; set; }
     public double OrigemLon { get; set; }
+    public string? OrigemEndereco { get; set; }
 
     public decimal KmInclusos { get; set; } = 2;
     public decimal ValorBase { get; set; } = 10;
@@ -31,6 +32,9 @@ public class LocalCep : Entidade
     public double Lat { get; set; }
     public double Lon { get; set; }
     public required string Fonte { get; set; }
+
+    /// <summary>Endereço que a BrasilAPI deu para o CEP, para o dono conferir se o ponto faz sentido.</summary>
+    public string? Endereco { get; set; }
 }
 
 public static class RegrasFreteKm
