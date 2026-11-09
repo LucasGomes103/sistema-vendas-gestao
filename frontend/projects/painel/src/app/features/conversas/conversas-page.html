@@ -33,6 +33,7 @@
             />
             <button mat-icon-button aria-label="Enviar como cliente" (click)="simular()"><mat-icon>send</mat-icon></button>
           </div>
+          <button mat-stroked-button (click)="pedidoDoCatalogo()"><mat-icon>shopping_cart</mat-icon> Pedido pelo catálogo</button>
         </div>
       }
     }
@@ -186,6 +187,7 @@
             (input)="simTexto.set($any($event.target).value)"
             (keydown.enter)="simular()"
           />
+          <button mat-icon-button aria-label="Pedido pelo catálogo" matTooltip="Pedido pelo catálogo" (click)="pedidoDoCatalogo()"><mat-icon>shopping_cart</mat-icon></button>
           <button mat-button (click)="simular()"><mat-icon>send</mat-icon><span class="rotulo-longo">Enviar como cliente</span></button>
         </div>
       }
