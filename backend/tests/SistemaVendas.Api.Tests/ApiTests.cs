@@ -24,6 +24,7 @@ public class ApiTests(WebApplicationFactory<Program> factory) : IClassFixture<We
     [InlineData("/api/v1/especies")]
     [InlineData("/api/v1/tanques")]
     [InlineData("/api/v1/auth/eu")]
+    [InlineData("/api/v1/usuarios")]
     public async Task Rotas_do_painel_exigem_login(string rota)
     {
         var client = factory.WithWebHostBuilder(b => b

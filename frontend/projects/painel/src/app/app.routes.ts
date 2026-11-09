@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { exigeLogin, somenteVisitante } from './core/guards';
+import { exigeDono, exigeLogin, somenteVisitante } from './core/guards';
 import { Shell } from './layout/shell';
 
 export const routes: Routes = [
@@ -33,6 +33,12 @@ export const routes: Routes = [
         path: 'config',
         title: 'Configuração',
         loadComponent: () => import('./features/config/config-page').then((m) => m.ConfigPage),
+      },
+      {
+        path: 'usuarios',
+        title: 'Usuários',
+        canActivate: [exigeDono],
+        loadComponent: () => import('./features/usuarios/usuarios-page').then((m) => m.UsuariosPage),
       },
       {
         path: 'conversas',

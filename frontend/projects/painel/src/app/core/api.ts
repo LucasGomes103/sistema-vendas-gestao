@@ -13,6 +13,22 @@ export interface UsuarioLogado {
   lojaSlug: string;
 }
 
+export interface UsuarioEquipe {
+  id: string;
+  nome: string;
+  email: string;
+  papel: Papel;
+  ativo: boolean;
+  criadoEm: string;
+  ehVoce: boolean;
+}
+
+export const ROTULO_PAPEL: Record<Papel, string> = {
+  Dono: 'Dono',
+  Vendedor: 'Vendedor',
+  Entregador: 'Entregador',
+};
+
 export interface Especie {
   id: string;
   nomePopular: string;
@@ -166,6 +182,8 @@ export interface ConfigWhatsApp {
 
 /** Mensagem do ProblemDetails da API (regras de negócio voltam como 422). */
 export function mensagemDeErro(erro: unknown, padrao = 'Não foi possível concluir. Tente de novo.'): string {
-  const corpo = (erro as { error?: { detail?: string } } | null)?.error;
-  return corpo?.detail ?? padrao;
+  const corpo = (erro as { error?: { detail?: string; errors?: Record<string, string[]> } } | null)?.error;
+  // Erros de validação (400) vêm por campo; mostra o primeiro.
+  const primeiroCampo = corpo?.errors ? Object.values(corpo.errors).flat()[0] : undefined;
+  return corpo?.detail ?? primeiroCampo ?? padrao;
 }

@@ -43,6 +43,15 @@ export class Auth {
     }
   }
 
+  /** Atualiza nome e e-mail mostrados no menu depois que o próprio usuário se editou. */
+  async recarregar(): Promise<void> {
+    try {
+      this._usuario.set(await firstValueFrom(this.http.get<UsuarioLogado>(`${API}/auth/eu`)));
+    } catch {
+      /* a sessão é conferida de novo na próxima chamada */
+    }
+  }
+
   async sair(): Promise<void> {
     try {
       await firstValueFrom(this.http.post(`${API}/auth/logout`, {}));
