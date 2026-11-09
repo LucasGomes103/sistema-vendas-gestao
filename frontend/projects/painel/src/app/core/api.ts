@@ -196,6 +196,7 @@ export interface FreteKm {
   kmMaximo: number;
   dias: number;
   configurado: boolean;
+  origemEndereco: string | null;
 }
 
 export interface FreteConsulta {
@@ -205,6 +206,11 @@ export interface FreteConsulta {
   valor: number | null;
   dias: number | null;
   resumo: string;
+  km: number;
+  porRota: boolean;
+  endereco: string | null;
+  fonte: string | null;
+  origem: string | null;
 }
 
 export interface ReservaItem {
