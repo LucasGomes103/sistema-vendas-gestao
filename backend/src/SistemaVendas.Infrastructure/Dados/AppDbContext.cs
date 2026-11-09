@@ -20,6 +20,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
     public DbSet<ItemReserva> ItensReserva => Set<ItemReserva>();
     public DbSet<Especie> Especies => Set<Especie>();
     public DbSet<Foto> Fotos => Set<Foto>();
+    public DbSet<ArquivoFoto> ArquivosFoto => Set<ArquivoFoto>();
     public DbSet<Tanque> Tanques => Set<Tanque>();
     public DbSet<Fornecedor> Fornecedores => Set<Fornecedor>();
     public DbSet<Lote> Lotes => Set<Lote>();
@@ -62,6 +63,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
         });
 
         modelBuilder.Entity<Foto>(e => e.ToTable("foto"));
+        modelBuilder.Entity<ArquivoFoto>(e =>
+        {
+            e.ToTable("arquivo_foto");
+            e.HasOne<Foto>().WithOne().HasForeignKey<ArquivoFoto>(x => x.FotoId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.FotoId).IsUnique();
+        });
         modelBuilder.Entity<Tanque>(e => e.ToTable("tanque"));
         modelBuilder.Entity<Fornecedor>(e => e.ToTable("fornecedor"));
 

@@ -17,7 +17,10 @@ public record EspecieSaida(
     decimal Preco,
     string? Observacoes,
     bool Ativo,
-    int Disponivel);
+    int Disponivel,
+    string? FotoUrl = null);
+
+public record FotoEntrada(string DataUrl);
 
 public record ItemCatalogoPublico(
     Guid Id,

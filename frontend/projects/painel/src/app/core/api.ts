@@ -38,6 +38,7 @@ export interface Especie {
   observacoes: string | null;
   ativo: boolean;
   disponivel: number;
+  fotoUrl: string | null;
 }
 
 export interface EspecieEntrada {
