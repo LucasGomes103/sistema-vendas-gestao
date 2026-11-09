@@ -3,6 +3,7 @@ using SistemaVendas.Application.Comum;
 using SistemaVendas.Domain.Atendimento;
 using SistemaVendas.Domain.Catalogo;
 using SistemaVendas.Domain.Comum;
+using SistemaVendas.Domain.Entregas;
 using SistemaVendas.Domain.Estoque;
 using SistemaVendas.Domain.Funil;
 using SistemaVendas.Domain.Lojas;
@@ -13,6 +14,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
 {
     public DbSet<Loja> Lojas => Set<Loja>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
+    public DbSet<ZonaEntrega> ZonasEntrega => Set<ZonaEntrega>();
     public DbSet<Especie> Especies => Set<Especie>();
     public DbSet<Foto> Fotos => Set<Foto>();
     public DbSet<Tanque> Tanques => Set<Tanque>();
@@ -103,6 +105,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
             e.HasIndex(x => new { x.LojaId, x.CriadoEm });
         });
 
+        modelBuilder.Entity<ZonaEntrega>(e =>
+        {
+            e.ToTable("zona_entrega");
+            e.Property(x => x.Valor).HasPrecision(10, 2);
+            e.HasIndex(x => new { x.LojaId, x.CepInicio });
+        });
+
         modelBuilder.Entity<ConfigFunil>(e =>
         {
             e.ToTable("config_funil");
@@ -155,6 +164,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
         modelBuilder.Entity<Mensagem>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<CardEvento>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<ConfigFunil>().HasQueryFilter(x => x.LojaId == LojaId);
+        modelBuilder.Entity<ZonaEntrega>().HasQueryFilter(x => x.LojaId == LojaId);
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

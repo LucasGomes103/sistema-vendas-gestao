@@ -418,6 +418,52 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.ToTable("foto", (string)null);
                 });
 
+            modelBuilder.Entity("SistemaVendas.Domain.Entregas.ZonaEntrega", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("CepFim")
+                        .HasColumnType("integer")
+                        .HasColumnName("cep_fim");
+
+                    b.Property<int>("CepInicio")
+                        .HasColumnType("integer")
+                        .HasColumnName("cep_inicio");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<int>("Dias")
+                        .HasColumnType("integer")
+                        .HasColumnName("dias");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_id");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("nome");
+
+                    b.Property<decimal>("Valor")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("valor");
+
+                    b.HasKey("Id")
+                        .HasName("pk_zona_entrega");
+
+                    b.HasIndex("LojaId", "CepInicio")
+                        .HasDatabaseName("ix_zona_entrega_loja_id_cep_inicio");
+
+                    b.ToTable("zona_entrega", (string)null);
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Estoque.Fornecedor", b =>
                 {
                     b.Property<Guid>("Id")
@@ -917,6 +963,16 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_foto_loja_loja_id");
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Entregas.ZonaEntrega", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_zona_entrega_loja_loja_id");
                 });
 
             modelBuilder.Entity("SistemaVendas.Domain.Estoque.Fornecedor", b =>

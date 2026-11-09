@@ -10,7 +10,9 @@ public class ServicoFunil(AppDbContext db)
     /// <summary>Configuração da loja; cria com os padrões do documento na primeira vez.</summary>
     public async Task<ConfigFunil> ConfigAsync(Guid lojaId, CancellationToken ct)
     {
-        var cfg = await db.ConfigsFunil.IgnoreQueryFilters().FirstOrDefaultAsync(c => c.LojaId == lojaId, ct);
+        // Olha primeiro o que já foi criado nesta mesma operação e ainda não foi salvo (senão cria duas).
+        var cfg = db.ConfigsFunil.Local.FirstOrDefault(c => c.LojaId == lojaId)
+            ?? await db.ConfigsFunil.IgnoreQueryFilters().FirstOrDefaultAsync(c => c.LojaId == lojaId, ct);
         if (cfg is not null)
             return cfg;
 

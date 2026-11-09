@@ -17,8 +17,29 @@ public interface IFerramentasAtendimento
     /// <summary>Link da vitrine pública da loja, onde o cliente vê o que está disponível e monta o pedido.</summary>
     Task<string?> LinkCatalogoAsync(CancellationToken ct);
 
+    /// <summary>Frete pela tabela de faixas de CEP da loja. Null se o CEP for inválido ou a loja ainda não tiver tabela de frete.</summary>
+    Task<FreteCalculado?> CalcularFreteAsync(string cep, CancellationToken ct);
+
     /// <summary>Respostas prontas configuradas pela loja.</summary>
     Task<TextosProntos> TextosAsync(CancellationToken ct);
+}
+
+/// <summary>Resultado do frete: Atende = false quando o CEP está fora de todas as faixas da loja.</summary>
+public record FreteCalculado(string Cep, bool Atende, string? Regiao, decimal? Valor, int? Dias)
+{
+    private static readonly System.Globalization.CultureInfo PtBr = System.Globalization.CultureInfo.GetCultureInfo("pt-BR");
+
+    public string Prazo => Dias switch { 0 => "no mesmo dia", 1 => "1 dia útil", _ => $"{Dias} dias úteis" };
+
+    /// <summary>Resumo para o vendedor no card: "Frete CEP 07010-000: R$ 15,00 (Guarulhos)".</summary>
+    public string Resumo => Atende
+        ? $"Frete CEP {Cep}: {Valor!.Value.ToString("C", PtBr)} ({Regiao}, {Prazo})"
+        : $"CEP {Cep} fora da área de entrega";
+
+    /// <summary>Resposta ao cliente.</summary>
+    public string ParaCliente => Atende
+        ? $"Entregamos no CEP {Cep} ({Regiao}): o frete fica {Valor!.Value.ToString("C", PtBr)}, com prazo de {Prazo}."
+        : $"Ainda não entregamos no CEP {Cep}, mas você pode retirar aqui na loja.";
 }
 
 public record TextosProntos(string Frete, string ChamarVendedor);

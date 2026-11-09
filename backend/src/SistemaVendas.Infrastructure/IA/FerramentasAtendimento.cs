@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using SistemaVendas.Application.Atendimento;
 using SistemaVendas.Application.Comum;
+using SistemaVendas.Domain.Entregas;
 using SistemaVendas.Infrastructure.Dados;
 
 namespace SistemaVendas.Infrastructure.IA;
@@ -48,6 +49,19 @@ public class FerramentasAtendimento(AppDbContext db, ILojaAtual lojaAtual, IOpti
             .Take(5)
             .Select(x => new EspecieEncontrada(x.e.Id, x.e.NomePopular, x.e.NomeCientifico, x.e.TamanhoCm, x.e.Preco, disponivel.GetValueOrDefault(x.e.Id)))
             .ToList();
+    }
+
+    public async Task<FreteCalculado?> CalcularFreteAsync(string cep, CancellationToken ct)
+    {
+        if (RegrasFrete.LerCep(cep) is not { } numero)
+            return null;
+        var zonas = await db.ZonasEntrega.AsNoTracking().ToListAsync(ct);
+        if (zonas.Count == 0)
+            return null; // loja sem tabela de frete: o vendedor calcula
+        var zona = RegrasFrete.Calcular(numero, zonas);
+        return zona is null
+            ? new FreteCalculado(RegrasFrete.Formatar(numero), false, null, null, null)
+            : new FreteCalculado(RegrasFrete.Formatar(numero), true, zona.Nome, zona.Valor, zona.Dias);
     }
 
     public async Task<int> ConsultarEstoqueAsync(Guid especieId, CancellationToken ct) =>
