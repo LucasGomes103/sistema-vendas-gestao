@@ -4,7 +4,12 @@ Sistema de vendas pelo WhatsApp para lojas de peixes ornamentais: catálogo vivo
 atendimento com IA, funil (kanban) com regras de tempo, pedidos e Pix. O piloto é a ECS Fish; depois de
 validado, o sistema atende outras lojas (multi-loja desde o primeiro dia).
 
-Os documentos de origem estão em [docs/iniciacao](docs/iniciacao).
+Os documentos de origem estão em [docs/iniciacao](docs/iniciacao). O que cada fase entregou, e como usar, está em
+[docs/funcionalidades.md](docs/funcionalidades.md).
+
+**Publicado:** painel em https://subtle-faun-9fb444.netlify.app/painel, vitrine em
+https://subtle-faun-9fb444.netlify.app/ecsfish e API em https://sistema-vendas-api-0x0l.onrender.com.
+O merge na `main` publica sozinho (Netlify para o front, Render para a API, migrações aplicadas ao subir).
 
 ## Stack (fase 1, custo zero)
 
@@ -14,7 +19,8 @@ Os documentos de origem estão em [docs/iniciacao](docs/iniciacao).
 | Back | ASP.NET Core / .NET 10 LTS, monólito modular |
 | Dados | EF Core 10 + Npgsql, PostgreSQL 18 |
 | Jobs | BackgroundService do .NET (motor do funil, envio de mensagens) |
-| Infra | Docker Compose no Oracle Cloud Always Free (Arm) |
+| Infra | Render (API + ponte do WhatsApp), Netlify (painel e vitrine), Supabase (PostgreSQL), todos no plano grátis |
+| Mapas (frete) | BrasilAPI, Nominatim (OpenStreetMap) e OSRM, grátis e sem chave |
 
 ## Estrutura
 
@@ -51,6 +57,9 @@ infra/docker-compose.yml            PostgreSQL 18 local
 - Conversas do WhatsApp: webhook da Meta com assinatura validada, fila de processamento, envio por outbox com
   novas tentativas, janela de 24 h e simulador de cliente para desenvolver sem número conectado.
 - Regra de horário comercial do funil, com testes.
+- Fase 1 (robô vendedor): frete por km a partir da loja com raio máximo, reserva de 24 h, fotos das espécies,
+  alerta de cliente quente sem dono, kanban atualizando a cada 5 s e simulador com pedido pelo catálogo.
+  Detalhes em [docs/funcionalidades.md](docs/funcionalidades.md).
 
 ## Pré-requisitos
 
@@ -167,8 +176,8 @@ Para voltar à Meta: `dotnet user-secrets remove "WhatsApp:Provedor"`.
 ## Robô de atendimento (IA)
 
 Com a chave do Gemini (camada gratuita), o robô responde usando só dados das ferramentas do backend
-(buscar espécie, consultar estoque) e chama o vendedor quando o cliente quer reservar, comprar, saber frete
-ou falar com uma pessoa. Nome, telefone e endereço não vão para o modelo. Sem chave, ou se o Gemini falhar,
+(buscar espécie, consultar estoque, calcular frete, criar reserva). Ele separa o pedido por 24 h, pede o CEP,
+responde o frete e então chama o vendedor; também chama quando o cliente quer falar com uma pessoa. Nome, telefone e endereço não vão para o modelo. Sem chave, ou se o Gemini falhar,
 entra um atendente por regras.
 
 ```bash
@@ -176,10 +185,10 @@ cd backend/src/SistemaVendas.Api
 dotnet user-secrets set "IA:Gemini:ApiKey" "<sua chave do AI Studio>"
 ```
 
-## Próximos passos (fase 1)
+## Próximos passos
 
-1. Cards do funil, motor de regras de tempo (follow-ups) e kanban com SignalR.
-3. Pedidos, reserva e Pix.
-4. Deploy no Oracle Cloud Always Free com Caddy e backup diário.
+1. Fase 2: pedidos, Pix com chave comum, caixa e entregas.
+2. Fase 3: métricas e relatórios.
+3. Fase 4: itens restantes do plano em [docs/iniciacao](docs/iniciacao).
 
 Segredos (tokens da Meta, Pix, IA) ficam em variáveis de ambiente ou em `dotnet user-secrets`, nunca no repositório.
