@@ -25,7 +25,8 @@ public record CardFunil(
     string? ProximaAcao,
     DateTimeOffset? ProximaAcaoEm,
     string? MotivoPerda,
-    int NaoLidas);
+    int NaoLidas,
+    bool SemDono);
 
 public record MoverCardEntrada(EtapaCard Etapa, MotivoPerda? MotivoPerda);
 
@@ -68,7 +69,7 @@ public static class FunilEndpoints
                 x.Conversa.Id, x.Nome ?? x.Telefone, x.Conversa.Etapa.ToString(), x.Ultima, x.Conversa.UltimaMensagemEm,
                 x.Conversa.Simulada, x.Conversa.RoboPausado, x.Conversa.ChamouVendedor, x.Conversa.MotivoVendedor,
                 x.Conversa.ChamouVendedorEm, x.Conversa.FollowupsEnviados, x.Conversa.ProximaAcao?.ToString(),
-                x.Conversa.ProximaAcaoEm, x.Conversa.MotivoPerda?.ToString(), x.Conversa.NaoLidas));
+                x.Conversa.ProximaAcaoEm, x.Conversa.MotivoPerda?.ToString(), x.Conversa.NaoLidas, LeadQuente.SemDono(x.Conversa)));
         });
 
         // Mover o card à mão. Etapas de venda pausam o robô; voltar para "Robô atendendo" religa.

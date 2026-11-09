@@ -76,6 +76,12 @@ public class Conversa : EntidadeDaLoja
     public string? MotivoVendedor { get; set; }
     public DateTimeOffset? ChamouVendedorEm { get; set; }
 
+    /// <summary>Quando um vendedor assumiu ou respondeu o cliente quente. Vazio = cliente "sem dono".</summary>
+    public DateTimeOffset? AtendidoEm { get; set; }
+
+    /// <summary>Avisos já dados sobre o cliente quente sem dono: 1 = lembrete de 15 min, 2 = escalada de 1 h.</summary>
+    public int AvisosQuente { get; set; }
+
     // Funil: cada conversa é um card do kanban.
     public EtapaCard Etapa { get; set; } = EtapaCard.Novo;
     public int FollowupsEnviados { get; set; }
@@ -108,8 +114,11 @@ public class Conversa : EntidadeDaLoja
         AguardandoRobo = false;
     }
 
-    public void Assumir()
+    /// <summary>Vendedor assumiu (ou respondeu): o robô para e o cliente quente deixa de estar sem dono.</summary>
+    public void Assumir(DateTimeOffset? em = null)
     {
+        if (ChamouVendedor)
+            AtendidoEm ??= em ?? DateTimeOffset.UtcNow;
         RoboPausado = true;
         AguardandoRobo = false;
     }
@@ -121,6 +130,8 @@ public class Conversa : EntidadeDaLoja
         ChamouVendedor = false;
         MotivoVendedor = null;
         ChamouVendedorEm = null;
+        AtendidoEm = null;
+        AvisosQuente = 0;
     }
 }
 
