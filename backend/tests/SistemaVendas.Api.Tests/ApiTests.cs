@@ -36,4 +36,18 @@ public class ApiTests(WebApplicationFactory<Program> factory) : IClassFixture<We
 
         Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
     }
+
+    [Fact]
+    public async Task Simulador_existe_fora_de_desenvolvimento_e_exige_login()
+    {
+        var client = factory.WithWebHostBuilder(b => b
+                .UseEnvironment("Production")
+                .UseSetting("Banco:MigrarAoIniciar", "false")
+                .UseSetting("ConnectionStrings:Banco", "Host=localhost;Database=nao_usado"))
+            .CreateClient();
+
+        var resposta = await client.PostAsync("/api/v1/dev/simular-mensagem", new StringContent("{}", System.Text.Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
+    }
 }
