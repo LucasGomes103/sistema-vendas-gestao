@@ -40,7 +40,7 @@
           <button mat-icon-button matTooltip="Editar" aria-label="Editar usuário" (click)="abrir(u)"><mat-icon>edit</mat-icon></button>
           @if (u.ehVoce) {
             <button mat-icon-button matTooltip="Trocar minha senha" aria-label="Trocar minha senha" (click)="trocarMinhaSenha()">
-              <mat-icon>password</mat-icon>
+              <mat-icon>lock_reset</mat-icon>
             </button>
           } @else {
             <button mat-icon-button matTooltip="Definir senha nova" aria-label="Definir senha nova" (click)="definirSenha(u)">
