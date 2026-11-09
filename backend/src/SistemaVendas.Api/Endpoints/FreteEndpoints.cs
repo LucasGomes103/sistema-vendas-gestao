@@ -1,90 +1,81 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaVendas.Domain.Entregas;
 using SistemaVendas.Infrastructure.Dados;
+using SistemaVendas.Infrastructure.Entregas;
 
 namespace SistemaVendas.Api.Endpoints;
 
-public record ZonaEntregaEntrada(string Nome, string CepInicio, string CepFim, decimal Valor, int Dias);
+public record FreteKmEntrada(bool Ativo, string CepOrigem, decimal KmInclusos, decimal ValorBase, decimal ValorPorKm, decimal KmMaximo, int Dias);
 
-public record ZonaEntregaSaida(Guid Id, string Nome, string CepInicio, string CepFim, decimal Valor, int Dias);
+public record FreteKmSaida(bool Ativo, string? CepOrigem, decimal KmInclusos, decimal ValorBase, decimal ValorPorKm, decimal KmMaximo, int Dias, bool Configurado);
 
-/// <summary>Tabela de frete por faixa de CEP. O dono cadastra; o robô e a equipe consultam.</summary>
+/// <summary>Frete por km a partir da loja. O dono configura; o robô e a equipe consultam.</summary>
 public static class FreteEndpoints
 {
     public static void MapFreteEndpoints(this IEndpointRouteBuilder app)
     {
-        var zonas = app.MapGroup("/config/frete").WithTags("Frete").RequireAuthorization(AuthEndpoints.PoliticaDono);
+        var config = app.MapGroup("/config/frete").WithTags("Frete").RequireAuthorization(AuthEndpoints.PoliticaDono);
 
-        zonas.MapGet("/", async (AppDbContext db, CancellationToken ct) =>
-            (await db.ZonasEntrega.AsNoTracking().OrderBy(z => z.CepInicio).ToListAsync(ct)).Select(Saida));
-
-        zonas.MapPost("/", async (ZonaEntregaEntrada entrada, AppDbContext db, CancellationToken ct) =>
+        config.MapGet("/", async (AppDbContext db, CancellationToken ct) =>
         {
-            var zona = new ZonaEntrega { Nome = "" };
-            if (Aplicar(zona, entrada) is { } erro)
-                return Results.Problem(erro, statusCode: StatusCodes.Status422UnprocessableEntity);
-            db.ZonasEntrega.Add(zona);
-            await db.SaveChangesAsync(ct);
-            return Results.Created($"/api/v1/config/frete/{zona.Id}", Saida(zona));
+            var cfg = await db.FretesPorKm.AsNoTracking().FirstOrDefaultAsync(ct);
+            return cfg is null
+                ? new FreteKmSaida(false, null, 2, 10, 2, 20, 1, false)
+                : Saida(cfg);
         });
 
-        zonas.MapPut("/{id:guid}", async (Guid id, ZonaEntregaEntrada entrada, AppDbContext db, CancellationToken ct) =>
+        config.MapPut("/", async (FreteKmEntrada entrada, AppDbContext db, IGeolocalizacao geo, CancellationToken ct) =>
         {
-            var zona = await db.ZonasEntrega.FirstOrDefaultAsync(z => z.Id == id, ct);
-            if (zona is null)
-                return Results.NotFound();
-            if (Aplicar(zona, entrada) is { } erro)
-                return Results.Problem(erro, statusCode: StatusCodes.Status422UnprocessableEntity);
+            if (RegrasFrete.LerCep(entrada.CepOrigem) is not { } cep)
+                return Erro("Informe o CEP da loja com 8 dígitos.");
+            if (RegrasFreteKm.Validar(entrada.KmInclusos, entrada.ValorBase, entrada.ValorPorKm, entrada.KmMaximo, entrada.Dias) is { } erro)
+                return Erro(erro);
+
+            var cfg = await db.FretesPorKm.FirstOrDefaultAsync(ct);
+            if (cfg is null)
+            {
+                cfg = new FretePorKm();
+                db.FretesPorKm.Add(cfg);
+            }
+
+            // Só procura a loja no mapa quando o CEP muda.
+            if (cfg.CepOrigem != cep || (cfg.OrigemLat == 0 && cfg.OrigemLon == 0))
+            {
+                if (await geo.LocalizarAsync(cep, ct) is not { } origem)
+                    return Erro($"Não encontrei o CEP {RegrasFrete.Formatar(cep)} no mapa. Confira o número ou tente de novo em alguns minutos.");
+                cfg.CepOrigem = cep;
+                cfg.OrigemLat = origem.Lat;
+                cfg.OrigemLon = origem.Lon;
+            }
+
+            cfg.Ativo = entrada.Ativo;
+            cfg.KmInclusos = entrada.KmInclusos;
+            cfg.ValorBase = entrada.ValorBase;
+            cfg.ValorPorKm = entrada.ValorPorKm;
+            cfg.KmMaximo = entrada.KmMaximo;
+            cfg.Dias = entrada.Dias;
             await db.SaveChangesAsync(ct);
-            return Results.Ok(Saida(zona));
+            return Results.Ok(Saida(cfg));
         });
 
-        zonas.MapDelete("/{id:guid}", async (Guid id, AppDbContext db, CancellationToken ct) =>
-        {
-            var zona = await db.ZonasEntrega.FirstOrDefaultAsync(z => z.Id == id, ct);
-            if (zona is null)
-                return Results.NotFound();
-            db.ZonasEntrega.Remove(zona);
-            await db.SaveChangesAsync(ct);
-            return Results.NoContent();
-        });
-
-        // Consulta rápida para o vendedor, na conversa ou no card.
-        app.MapGet("/frete", async (string cep, AppDbContext db, CancellationToken ct) =>
+        // Consulta para o dono testar a configuração e para o vendedor, na conversa.
+        app.MapGet("/frete", async (string cep, ServicoFrete frete, CancellationToken ct) =>
         {
             if (RegrasFrete.LerCep(cep) is not { } numero)
-                return Results.Problem("Informe um CEP com 8 dígitos.", statusCode: StatusCodes.Status422UnprocessableEntity);
-            var zona = RegrasFrete.Calcular(numero, await db.ZonasEntrega.AsNoTracking().ToListAsync(ct));
-            return Results.Ok(new
-            {
-                cep = RegrasFrete.Formatar(numero),
-                atende = zona is not null,
-                regiao = zona?.Nome,
-                valor = zona?.Valor,
-                dias = zona?.Dias
-            });
+                return Erro("Informe um CEP com 8 dígitos.");
+            if (await frete.ConfigAtivaAsync(ct) is null)
+                return Erro("O frete por km ainda não está ligado. Configure em Configuração → Frete.");
+            if (await frete.CalcularAsync(numero, ct) is not { } r)
+                return Erro($"Não encontrei o CEP {RegrasFrete.Formatar(numero)} no mapa.");
+            return Results.Ok(new { cep = r.Cep, atende = r.Atende, regiao = r.Regiao, valor = r.Valor, dias = r.Dias, resumo = r.Resumo });
         })
         .WithTags("Frete")
         .RequireAuthorization(AuthEndpoints.PoliticaEquipe);
     }
 
-    private static string? Aplicar(ZonaEntrega zona, ZonaEntregaEntrada entrada)
-    {
-        if (string.IsNullOrWhiteSpace(entrada.Nome))
-            return "Dê um nome para a região (ex.: Guarulhos).";
-        var inicio = RegrasFrete.LerCep(entrada.CepInicio);
-        var fim = RegrasFrete.LerCep(entrada.CepFim);
-        if (RegrasFrete.Validar(inicio, fim, entrada.Valor, entrada.Dias) is { } erro)
-            return erro;
+    private static IResult Erro(string mensagem) =>
+        Results.Problem(mensagem, statusCode: StatusCodes.Status422UnprocessableEntity);
 
-        zona.Nome = entrada.Nome.Trim();
-        zona.CepInicio = inicio!.Value;
-        zona.CepFim = fim!.Value;
-        zona.Valor = entrada.Valor;
-        zona.Dias = entrada.Dias;
-        return null;
-    }
-
-    private static ZonaEntregaSaida Saida(ZonaEntrega z) =>
-        new(z.Id, z.Nome, RegrasFrete.Formatar(z.CepInicio), RegrasFrete.Formatar(z.CepFim), z.Valor, z.Dias);
+    private static FreteKmSaida Saida(FretePorKm c) =>
+        new(c.Ativo, c.CepOrigem == 0 ? null : RegrasFrete.Formatar(c.CepOrigem), c.KmInclusos, c.ValorBase, c.ValorPorKm, c.KmMaximo, c.Dias, true);
 }

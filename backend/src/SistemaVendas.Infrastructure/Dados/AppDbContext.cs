@@ -16,6 +16,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
     public DbSet<Loja> Lojas => Set<Loja>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<ZonaEntrega> ZonasEntrega => Set<ZonaEntrega>();
+    public DbSet<FretePorKm> FretesPorKm => Set<FretePorKm>();
+    public DbSet<LocalCep> LocaisCep => Set<LocalCep>();
     public DbSet<Reserva> Reservas => Set<Reserva>();
     public DbSet<ItemReserva> ItensReserva => Set<ItemReserva>();
     public DbSet<Especie> Especies => Set<Especie>();
@@ -140,6 +142,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
             e.HasIndex(x => new { x.LojaId, x.CepInicio });
         });
 
+        modelBuilder.Entity<FretePorKm>(e =>
+        {
+            e.ToTable("frete_por_km");
+            e.HasIndex(x => x.LojaId).IsUnique();
+            e.Property(x => x.KmInclusos).HasPrecision(6, 1);
+            e.Property(x => x.KmMaximo).HasPrecision(6, 1);
+            e.Property(x => x.ValorBase).HasPrecision(10, 2);
+            e.Property(x => x.ValorPorKm).HasPrecision(10, 2);
+        });
+
+        modelBuilder.Entity<LocalCep>(e =>
+        {
+            e.ToTable("local_cep");
+            e.HasIndex(x => x.Cep).IsUnique();
+        });
+
         modelBuilder.Entity<ConfigFunil>(e =>
         {
             e.ToTable("config_funil");
@@ -193,6 +211,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
         modelBuilder.Entity<CardEvento>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<ConfigFunil>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<ZonaEntrega>().HasQueryFilter(x => x.LojaId == LojaId);
+        modelBuilder.Entity<FretePorKm>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<Reserva>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<ItemReserva>().HasQueryFilter(x => x.LojaId == LojaId);
     }

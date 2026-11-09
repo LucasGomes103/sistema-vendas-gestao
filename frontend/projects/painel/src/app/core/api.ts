@@ -186,21 +186,16 @@ export interface ConfigFunil {
   textoChamarVendedor: string;
 }
 
-export interface ZonaEntrega {
-  id: string;
-  nome: string;
-  cepInicio: string;
-  cepFim: string;
-  valor: number;
+/** Frete por km a partir da loja: taxa base até alguns km, depois valor por km, até o raio máximo. */
+export interface FreteKm {
+  ativo: boolean;
+  cepOrigem: string | null;
+  kmInclusos: number;
+  valorBase: number;
+  valorPorKm: number;
+  kmMaximo: number;
   dias: number;
-}
-
-export interface ZonaEntregaEntrada {
-  nome: string;
-  cepInicio: string;
-  cepFim: string;
-  valor: number;
-  dias: number;
+  configurado: boolean;
 }
 
 export interface FreteConsulta {
@@ -209,6 +204,7 @@ export interface FreteConsulta {
   regiao: string | null;
   valor: number | null;
   dias: number | null;
+  resumo: string;
 }
 
 export interface ReservaItem {

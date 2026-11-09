@@ -105,7 +105,7 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
                     case "calcular_frete":
                         var frete = await ferramentas.CalcularFreteAsync(args["cep"]?.GetValue<string>() ?? "", ct);
                         resultado = frete is null
-                            ? new JsonObject { ["sem_tabela"] = true, ["instrucao"] = $"Responda com o texto da loja: \"{textos.Frete}\"" }
+                            ? new JsonObject { ["sem_calculo"] = true, ["instrucao"] = "Não dê valor. Diga que um atendente vai calcular a entrega e use chamar_vendedor com o CEP no motivo." }
                             : new JsonObject
                             {
                                 ["cep"] = frete.Cep,
@@ -201,9 +201,9 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
         - Quando o cliente disser que quer reservar ou comprar uma quantidade de um peixe com estoque, use criar_reserva
           (especie_id vindo de buscar_especie) e depois chamar_vendedor. A reserva vale 24 h.
         - Frete e entrega: se o cliente ainda não mandou o CEP, peça o CEP. Quando ele mandar, use calcular_frete,
-          informe valor e prazo (ou que ainda não entregamos lá e ele pode retirar na loja) e use chamar_vendedor
-          com o resumo_para_vendedor no motivo. Se calcular_frete devolver sem_tabela, responda com este texto da loja:
-          "{textos.Frete}" e use chamar_vendedor com o CEP no motivo. Nunca invente valor de frete ou prazo.
+          informe valor e prazo e use chamar_vendedor com o resumo_para_vendedor no motivo. Se atende vier false
+          (além do raio de entrega da loja) ou vier sem_calculo, não dê valor: diga que um atendente vai ver a entrega
+          e use chamar_vendedor. Nunca invente valor de frete ou prazo.
         - Ao chamar o vendedor, use este texto da loja: "{textos.ChamarVendedor}".
         - Use chamar_vendedor quando o cliente quiser reservar, comprar ou pagar, pedir para falar com uma pessoa,
           reclamar, ou quando você não souber responder.
@@ -225,7 +225,7 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
             },
             {
               "name": "calcular_frete",
-              "description": "Valor e prazo do frete para um CEP, pela tabela de faixas de CEP da loja.",
+              "description": "Valor e prazo do frete para um CEP, pela distância de carro desde a loja (base até alguns km, depois por km, até o raio máximo).",
               "parameters": { "type": "object", "properties": { "cep": { "type": "string", "description": "CEP com 8 dígitos" } }, "required": ["cep"] }
             },
             {

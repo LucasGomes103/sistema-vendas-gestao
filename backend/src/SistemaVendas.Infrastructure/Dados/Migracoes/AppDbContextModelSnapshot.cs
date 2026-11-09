@@ -461,6 +461,109 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.ToTable("foto", (string)null);
                 });
 
+            modelBuilder.Entity("SistemaVendas.Domain.Entregas.FretePorKm", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean")
+                        .HasColumnName("ativo");
+
+                    b.Property<int>("CepOrigem")
+                        .HasColumnType("integer")
+                        .HasColumnName("cep_origem");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<int>("Dias")
+                        .HasColumnType("integer")
+                        .HasColumnName("dias");
+
+                    b.Property<decimal>("KmInclusos")
+                        .HasPrecision(6, 1)
+                        .HasColumnType("numeric(6,1)")
+                        .HasColumnName("km_inclusos");
+
+                    b.Property<decimal>("KmMaximo")
+                        .HasPrecision(6, 1)
+                        .HasColumnType("numeric(6,1)")
+                        .HasColumnName("km_maximo");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_id");
+
+                    b.Property<double>("OrigemLat")
+                        .HasColumnType("double precision")
+                        .HasColumnName("origem_lat");
+
+                    b.Property<double>("OrigemLon")
+                        .HasColumnType("double precision")
+                        .HasColumnName("origem_lon");
+
+                    b.Property<decimal>("ValorBase")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("valor_base");
+
+                    b.Property<decimal>("ValorPorKm")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("valor_por_km");
+
+                    b.HasKey("Id")
+                        .HasName("pk_frete_por_km");
+
+                    b.HasIndex("LojaId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_frete_por_km_loja_id");
+
+                    b.ToTable("frete_por_km", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Entregas.LocalCep", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Cep")
+                        .HasColumnType("integer")
+                        .HasColumnName("cep");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<string>("Fonte")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("fonte");
+
+                    b.Property<double>("Lat")
+                        .HasColumnType("double precision")
+                        .HasColumnName("lat");
+
+                    b.Property<double>("Lon")
+                        .HasColumnType("double precision")
+                        .HasColumnName("lon");
+
+                    b.HasKey("Id")
+                        .HasName("pk_local_cep");
+
+                    b.HasIndex("Cep")
+                        .IsUnique()
+                        .HasDatabaseName("ix_local_cep_cep");
+
+                    b.ToTable("local_cep", (string)null);
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Entregas.ZonaEntrega", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1133,6 +1236,16 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_foto_loja_loja_id");
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Entregas.FretePorKm", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_frete_por_km_loja_loja_id");
                 });
 
             modelBuilder.Entity("SistemaVendas.Domain.Entregas.ZonaEntrega", b =>
