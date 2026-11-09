@@ -171,11 +171,12 @@ public static class ConversaEndpoints
             return Results.NoContent();
         });
 
-        grupo.MapGet("/status-whatsapp", async (IWhatsAppCliente whatsApp, IAtendenteIA atendente, Microsoft.Extensions.Options.IOptions<WhatsAppOptions> opcoesWa, AppDbContext db, ILojaAtual lojaAtual, IHostEnvironment env, CancellationToken ct) =>
+        grupo.MapGet("/status-whatsapp", async (IWhatsAppCliente whatsApp, IAtendenteIA atendente, Microsoft.Extensions.Options.IOptions<WhatsAppOptions> opcoesWa, AppDbContext db, ILojaAtual lojaAtual, IHostEnvironment env, IConfiguration config, CancellationToken ct) =>
         {
             var phoneNumberId = await db.Lojas.Where(l => l.Id == lojaAtual.LojaId).Select(l => l.PhoneNumberId).FirstOrDefaultAsync(ct);
-            // Em desenvolvimento o simulador fica disponível mesmo com o número real ligado.
-            return Results.Ok(new { simulado = whatsApp.Simulado, simuladorDisponivel = env.IsDevelopment(), phoneNumberId, atendente = atendente.Nome, provedor = opcoesWa.Value.UsaPonteLocal ? "Local" : "Meta" });
+            // Simulador disponível mesmo com o número real ligado: as conversas dele nunca saem pelo WhatsApp.
+            var simulador = env.IsDevelopment() || config.GetValue("Simulador:Habilitado", true);
+            return Results.Ok(new { simulado = whatsApp.Simulado, simuladorDisponivel = simulador, phoneNumberId, atendente = atendente.Nome, provedor = opcoesWa.Value.UsaPonteLocal ? "Local" : "Meta" });
         });
 
         // Número do WhatsApp da loja (phone_number_id da Meta). Não é segredo; o token fica fora do banco.
@@ -208,7 +209,7 @@ public static class ConversaEndpoints
     }
 
     /// <summary>
-    /// Simulador de cliente (só em desenvolvimento): monta um webhook igual ao da Meta e coloca na fila,
+    /// Simulador de cliente (desligável com Simulador:Habilitado=false): monta um webhook igual ao da Meta e coloca na fila,
     /// passando pelo mesmo caminho de uma mensagem real.
     /// </summary>
     public static void MapSimuladorEndpoints(this IEndpointRouteBuilder app)
