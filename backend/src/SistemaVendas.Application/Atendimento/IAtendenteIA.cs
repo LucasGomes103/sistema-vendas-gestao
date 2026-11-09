@@ -81,3 +81,14 @@ public interface IAtendenteIA
 
     Task<RespostaAtendente> ResponderAsync(string nomeLoja, IReadOnlyList<FalaConversa> historico, IFerramentasAtendimento ferramentas, CancellationToken ct);
 }
+
+/// <summary>
+/// Cliente quente que ainda não mandou o CEP: o robô pediu o CEP e não deve pausar, senão o cliente
+/// manda o CEP e ninguém responde o frete.
+/// </summary>
+public static class AguardaCep
+{
+    public static bool Aplica(string respostaDoRobo, IReadOnlyList<FalaConversa> historico) =>
+        respostaDoRobo.Contains("CEP", StringComparison.OrdinalIgnoreCase)
+        && !historico.Any(f => f.DoCliente && SistemaVendas.Domain.Entregas.RegrasFrete.AcharCep(f.Texto) is not null);
+}

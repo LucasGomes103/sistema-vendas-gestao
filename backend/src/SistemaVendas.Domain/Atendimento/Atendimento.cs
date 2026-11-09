@@ -104,13 +104,17 @@ public class Conversa : EntidadeDaLoja
         AguardandoRobo = !RoboPausado;
     }
 
-    /// <summary>Robô ou cliente pediram uma pessoa: pausa o robô e marca para o vendedor.</summary>
-    public void ChamarVendedor(string motivo, DateTimeOffset agora)
+    /// <summary>
+    /// Robô ou cliente pediram uma pessoa: marca para o vendedor e pausa o robô. Com pausarRobo falso
+    /// o robô segue respondendo (ex.: pediu o CEP e precisa calcular o frete quando ele chegar).
+    /// </summary>
+    public void ChamarVendedor(string motivo, DateTimeOffset agora, bool pausarRobo = true)
     {
         ChamouVendedor = true;
         MotivoVendedor = motivo;
         ChamouVendedorEm ??= agora;
-        RoboPausado = true;
+        if (pausarRobo)
+            RoboPausado = true;
         AguardandoRobo = false;
     }
 

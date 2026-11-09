@@ -8,6 +8,7 @@ using SistemaVendas.Domain.Atendimento;
 using SistemaVendas.Domain.Funil;
 using SistemaVendas.Domain.Vendas;
 using SistemaVendas.Infrastructure.Dados;
+using SistemaVendas.Infrastructure.Entregas;
 
 namespace SistemaVendas.Workers;
 
@@ -137,7 +138,10 @@ public class RoboWorker(IServiceScopeFactory scopes, EstadoWorkers estado, ILogg
         if (resposta.ChamarVendedor)
         {
             var motivo = resposta.MotivoVendedor ?? "Cliente quer falar com uma pessoa";
-            conversa.ChamarVendedor(motivo, agora);
+            // Robô pediu o CEP e a loja calcula frete por km: ele segue na conversa até o CEP chegar.
+            var aguardarCep = AguardaCep.Aplica(resposta.Texto, falas)
+                && await sp.GetRequiredService<ServicoFrete>().ConfigAtivaAsync(ct) is not null;
+            conversa.ChamarVendedor(motivo, agora, pausarRobo: !aguardarCep);
             funil.Registrar(conversa, MotorFunil.AoChamarVendedor(conversa, motivo), OrigemEvento.Ia);
             logger.LogInformation("Conversa {Id} marcada como quente: {Motivo}", conversa.Id, conversa.MotivoVendedor);
         }
