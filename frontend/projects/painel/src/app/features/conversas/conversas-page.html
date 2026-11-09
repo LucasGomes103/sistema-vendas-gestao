@@ -122,8 +122,13 @@
       <div class="atendimento" [class.quente]="c.chamouVendedor" [class.vendedor]="c.roboPausado && !c.chamouVendedor">
         @if (c.chamouVendedor) {
           <mat-icon>local_fire_department</mat-icon>
-          <span><strong>Cliente quente:</strong> {{ c.motivoVendedor }}. O robô parou de responder.</span>
-          <button mat-flat-button (click)="devolver(c)">Devolver ao robô</button>
+          @if (c.roboPausado) {
+            <span><strong>Cliente quente:</strong> {{ c.motivoVendedor }}. O robô parou de responder.</span>
+            <button mat-flat-button (click)="devolver(c)">Devolver ao robô</button>
+          } @else {
+            <span><strong>Cliente quente:</strong> {{ c.motivoVendedor }}. O robô está esperando o CEP para dar o frete.</span>
+            <button mat-flat-button (click)="assumir(c)">Assumir conversa</button>
+          }
         } @else if (c.roboPausado) {
           <mat-icon>support_agent</mat-icon>
           <span>Você está atendendo. O robô está pausado nesta conversa.</span>

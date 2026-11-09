@@ -165,4 +165,24 @@ public class AtendenteTests
         var item = Assert.Single(r.Reservar);
         Assert.Equal(2, item.Quantidade);
     }
+
+    [Fact]
+    public void Robo_que_pediu_o_CEP_continua_na_conversa_ate_o_CEP_chegar()
+    {
+        var conversa = new Conversa();
+        var pediu = "Recebi seu pedido! Para calcular o frete, me envie o seu CEP.";
+        var semCep = new List<FalaConversa> { new(true, "🛒 Pedido pelo catálogo\n• 2x Betta") };
+
+        Assert.True(AguardaCep.Aplica(pediu, semCep));
+        conversa.ChamarVendedor("Pedido pelo catálogo", DateTimeOffset.UtcNow, pausarRobo: false);
+        Assert.True(conversa.ChamouVendedor);
+        Assert.False(conversa.RoboPausado);
+
+        // O cliente manda o CEP: o robô responde o frete (e só então pausa).
+        conversa.ReceberDoCliente(DateTimeOffset.UtcNow);
+        Assert.True(conversa.AguardandoRobo);
+
+        var comCep = semCep.Append(new FalaConversa(true, "meu cep é 02464100")).ToList();
+        Assert.False(AguardaCep.Aplica("Entregamos no CEP 02464-100 ...", comCep));
+    }
 }
