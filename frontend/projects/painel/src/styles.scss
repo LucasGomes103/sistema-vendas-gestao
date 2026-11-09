@@ -88,8 +88,12 @@ h3 {
   font: var(--mat-sys-label-medium);
   white-space: nowrap;
 
+  // mat-icon tem caixa de 24 px; sem reduzir a caixa, o ícone fica desalinhado do texto.
   .material-symbols-outlined {
+    width: 16px;
+    height: 16px;
     font-size: 16px;
+    line-height: 16px;
   }
 
   &.ok {

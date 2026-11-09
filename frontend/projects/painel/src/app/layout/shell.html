@@ -47,7 +47,7 @@
     <span class="sv-selo info">{{ auth.usuario()?.papel }} · {{ auth.usuario()?.loja }}</span>
   </div>
   <button mat-menu-item (click)="trocarSenha()">
-    <mat-icon>password</mat-icon>
+    <mat-icon>lock_reset</mat-icon>
     <span>Trocar minha senha</span>
   </button>
   @if (auth.ehDono()) {
