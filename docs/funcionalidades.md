@@ -21,7 +21,7 @@ Toda mudança entra por pull request; o merge na `main` publica.
 | --- | --- | --- |
 | 0 | Gerenciamento de usuários | Pronta |
 | 1 | Robô vendedor: frete, reserva, fotos, alerta de cliente quente, kanban ao vivo | Pronta |
-| 2 | Pedidos, Pix com chave comum, caixa e entregas | Próxima |
+| 2 | Pedidos, Pix com chave comum, caixa e entregas | Em andamento |
 | 3 | Métricas e relatórios | A fazer |
 | 4 | Itens restantes do plano em [iniciacao](iniciacao) | A fazer |
 
@@ -103,6 +103,41 @@ próprio banco (tabela `arquivo_foto`), sem custo de armazenamento. Aceita JPG, 
 Em **Conversas → Simular cliente chegando**, inclusive no painel publicado. O botão **Pedido pelo catálogo** monta o
 mesmo texto da vitrine, para testar vitrine → robô → reserva → frete sem WhatsApp. As respostas do simulador nunca saem
 pelo WhatsApp. Para desligar: `Simulador__Habilitado=false` no Render.
+
+## Fase 2: pedidos, Pix, caixa e entregas
+
+### Pedidos e Pix com a chave da loja
+
+Tudo sem custo: não há provedor de pagamento. O sistema gera o **Pix copia e cola** (o mesmo código que vira QR code)
+com a chave comum da loja, o valor do pedido e o número do pedido como identificador.
+
+**Configuração → Pix da loja** (só o dono): chave (CPF, CNPJ, celular com +55, e-mail ou aleatória), nome de quem
+recebe (até 25 letras) e cidade (até 15). Ao salvar, o sistema mostra como leu a chave.
+
+**Na conversa**, a reserva de 24 h ganha o botão **Gerar pedido**:
+
+- Entrega ou retirada na loja. Para entrega, o CEP vem do que o cliente mandou na conversa e o frete por km já vem
+  calculado quando a loja usa o frete por km; o vendedor pode corrigir. Endereço é obrigatório para entrega.
+- Com a opção marcada, o pedido vai para o cliente em duas mensagens: o resumo (itens, frete, total, até quando o peixe
+  fica separado) e o código Pix sozinho, para ele copiar com um toque.
+- O card vai para **Aguardando pagamento** e o peixe continua reservado.
+
+Depois disso o pedido aparece no lugar da reserva, com **Confirmar pagamento**, **Enviar Pix** (reenviar), copiar o
+código e cancelar.
+
+- Quando o cliente escreve "paguei", "segue o comprovante", "fiz o Pix" ou manda foto ou PDF, o pedido vai para
+  **Conferir pagamento**, o card também, e o vendedor recebe o aviso de cliente quente (sino, 15 min, 1 h).
+- **Confirmar pagamento**: escolhe Pix, dinheiro ou cartão. O peixe sai do estoque (a reserva vira venda), o card vai
+  para **Pago** e, se marcado, o cliente recebe "Pagamento do pedido #N confirmado".
+- **Cancelar**: o peixe volta ao estoque e o card vai para Perdido ("desistiu").
+- Reserva que vence (24 h), é cancelada ou trocada por outra cancela o pedido dela junto.
+- Fora da janela de 24 h do WhatsApp a mensagem não sai (regra da Meta); o painel avisa e o código pode ser copiado.
+
+Com pedido, a venda é confirmada pelo pagamento do pedido; o antigo "Confirmar venda" da reserva deu lugar ao
+"Gerar pedido".
+
+**Menu → Pedidos**: contagem do que está para conferir e aguardando, valor em aberto e a lista com filtros
+(em aberto, pagos, cancelados, todos). Atualiza a cada 10 s.
 
 ## Pendências conhecidas
 

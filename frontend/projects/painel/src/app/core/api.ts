@@ -230,6 +230,71 @@ export interface Reserva {
   itens: ReservaItem[];
 }
 
+export type StatusPedido = 'AguardandoPagamento' | 'ConferirPagamento' | 'Pago' | 'Cancelado';
+export type FormaPagamento = 'Pix' | 'Dinheiro' | 'Cartao';
+export type TipoEntrega = 'Entrega' | 'Retirada';
+
+export const ROTULO_STATUS_PEDIDO: Record<StatusPedido, string> = {
+  AguardandoPagamento: 'Aguardando pagamento',
+  ConferirPagamento: 'Conferir pagamento',
+  Pago: 'Pago',
+  Cancelado: 'Cancelado',
+};
+
+export const ROTULO_FORMA: Record<FormaPagamento, string> = { Pix: 'Pix', Dinheiro: 'Dinheiro', Cartao: 'Cartão' };
+
+export interface Pedido {
+  id: string;
+  numero: number;
+  status: StatusPedido;
+  clienteId: string;
+  cliente: string;
+  telefone: string;
+  conversaId: string | null;
+  reservaId: string | null;
+  tipoEntrega: TipoEntrega;
+  cep: string | null;
+  endereco: string | null;
+  subtotal: number;
+  frete: number;
+  total: number;
+  criadoEm: string;
+  expiraEm: string | null;
+  pixCopiaECola: string | null;
+  pixEnviadoEm: string | null;
+  comprovanteEm: string | null;
+  formaPagamento: FormaPagamento | null;
+  pagoEm: string | null;
+  canceladoEm: string | null;
+  motivoCancelamento: string | null;
+  observacao: string | null;
+  itens: ReservaItem[];
+}
+
+/** Ação que pode avisar o cliente: aviso explica quando a mensagem não saiu (janela de 24 h fechada). */
+export interface PedidoAcao {
+  pedido: Pedido;
+  mensagemEnviada: boolean;
+  aviso: string | null;
+}
+
+export interface SugestaoPedido {
+  cliente: string;
+  cep: string | null;
+  endereco: string | null;
+  frete: number | null;
+  freteResumo: string | null;
+  pixConfigurado: boolean;
+}
+
+export interface ConfigPix {
+  chave: string | null;
+  tipoChave: string | null;
+  nome: string | null;
+  cidade: string | null;
+  configurado: boolean;
+}
+
 export interface ConfigWhatsApp {
   atenderTodos: boolean;
   numerosPermitidos: string[];

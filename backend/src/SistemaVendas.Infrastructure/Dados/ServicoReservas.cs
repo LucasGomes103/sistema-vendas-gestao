@@ -23,6 +23,7 @@ public class ServicoReservas(AppDbContext db, ServicoFunil funil)
         foreach (var anterior in anteriores)
         {
             db.Movimentos.AddRange(RegrasReserva.Encerrar(anterior, StatusReserva.Cancelada, agora, null));
+            await CancelarPedidosAsync(anterior.Id, "Cliente fez outra reserva", agora, ct);
             foreach (var item in anterior.Itens)
                 devolvido[item.LoteId] = devolvido.GetValueOrDefault(item.LoteId) + item.Quantidade;
         }
@@ -57,7 +58,12 @@ public class ServicoReservas(AppDbContext db, ServicoFunil funil)
             return null;
 
         var agora = DateTimeOffset.UtcNow;
+        // Com pedido, a venda é confirmada pelo pagamento do pedido (que também lança no caixa).
+        if (status == StatusReserva.Confirmada && await db.Pedidos.AnyAsync(p => p.ReservaId == reserva.Id && p.Status != StatusPedido.Cancelado, ct))
+            throw new RegraException("Esta reserva já virou pedido: confirme o pagamento no pedido.");
         db.Movimentos.AddRange(RegrasReserva.Encerrar(reserva, status, agora, usuarioId));
+        if (status != StatusReserva.Confirmada)
+            await CancelarPedidosAsync(reserva.Id, "Reserva cancelada", agora, ct);
 
         var conversa = await db.Conversas.FirstAsync(c => c.Id == reserva.ConversaId, ct);
         if (status == StatusReserva.Confirmada)
@@ -83,12 +89,23 @@ public class ServicoReservas(AppDbContext db, ServicoFunil funil)
             return;
 
         db.Movimentos.AddRange(RegrasReserva.Encerrar(reserva, StatusReserva.Expirada, agora, null));
+        await CancelarPedidosAsync(reserva.Id, "Não pagou em 24 h", agora, ct);
 
         var conversa = await db.Conversas.FirstAsync(c => c.Id == reserva.ConversaId, ct);
         conversa.ValorEstimado = null;
-        if (conversa.Etapa is EtapaCard.AguardandoPagamento)
+        if (conversa.Etapa is EtapaCard.AguardandoPagamento or EtapaCard.ConferirPagamento)
             funil.Registrar(conversa, MotorFunil.Mover(conversa, EtapaCard.Perdido, MotivoPerda.NaoPagou), OrigemEvento.Regra);
 
         await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Reserva encerrada sem venda: o pedido em aberto dela é cancelado junto.</summary>
+    private async Task CancelarPedidosAsync(Guid reservaId, string motivo, DateTimeOffset agora, CancellationToken ct)
+    {
+        var pedidos = await db.Pedidos
+            .Where(p => p.ReservaId == reservaId && (p.Status == StatusPedido.AguardandoPagamento || p.Status == StatusPedido.ConferirPagamento))
+            .ToListAsync(ct);
+        foreach (var p in pedidos)
+            RegrasPedido.Cancelar(p, motivo, agora);
     }
 }

@@ -25,6 +25,15 @@ public class Loja : Entidade
     public List<string> NumerosPermitidos { get; set; } = [];
 
     public string Fuso { get; set; } = "America/Sao_Paulo";
+
+    /// <summary>Chave Pix comum da loja (sem provedor de pagamento): o sistema gera o copia e cola de cada pedido.</summary>
+    public string? PixChave { get; set; }
+
+    /// <summary>Nome de quem recebe, como aparece no banco do cliente (até 25 letras).</summary>
+    public string? PixNome { get; set; }
+
+    /// <summary>Cidade de quem recebe (até 15 letras).</summary>
+    public string? PixCidade { get; set; }
     public TimeOnly HorarioInicio { get; set; } = new(9, 0);
     public TimeOnly HorarioFim { get; set; } = new(20, 0);
 

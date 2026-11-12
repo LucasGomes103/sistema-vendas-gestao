@@ -118,6 +118,31 @@ public class Conversa : EntidadeDaLoja
         AguardandoRobo = false;
     }
 
+    /// <summary>
+    /// Novo motivo para um vendedor olhar a conversa (ex.: cliente mandou comprovante): o alerta de
+    /// cliente sem dono recomeça, mesmo que alguém já tenha assumido antes.
+    /// </summary>
+    public void AlertarDeNovo(string motivo, DateTimeOffset agora)
+    {
+        ChamouVendedor = true;
+        MotivoVendedor = motivo;
+        ChamouVendedorEm = agora;
+        AtendidoEm = null;
+        AvisosQuente = 0;
+        RoboPausado = true;
+        AguardandoRobo = false;
+    }
+
+    /// <summary>Venda fechada: sai da lista de clientes quentes, mas o robô continua pausado.</summary>
+    public void EncerrarAlerta()
+    {
+        ChamouVendedor = false;
+        MotivoVendedor = null;
+        ChamouVendedorEm = null;
+        AtendidoEm = null;
+        AvisosQuente = 0;
+    }
+
     /// <summary>Vendedor assumiu (ou respondeu): o robô para e o cliente quente deixa de estar sem dono.</summary>
     public void Assumir(DateTimeOffset? em = null)
     {

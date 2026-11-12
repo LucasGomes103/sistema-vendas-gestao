@@ -20,6 +20,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
     public DbSet<LocalCep> LocaisCep => Set<LocalCep>();
     public DbSet<Reserva> Reservas => Set<Reserva>();
     public DbSet<ItemReserva> ItensReserva => Set<ItemReserva>();
+    public DbSet<Pedido> Pedidos => Set<Pedido>();
+    public DbSet<ItemDoPedido> ItensPedido => Set<ItemDoPedido>();
     public DbSet<Especie> Especies => Set<Especie>();
     public DbSet<Foto> Fotos => Set<Foto>();
     public DbSet<ArquivoFoto> ArquivosFoto => Set<ArquivoFoto>();
@@ -135,6 +137,32 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
             e.HasOne<Lote>().WithMany().HasForeignKey(x => x.LoteId);
         });
 
+        modelBuilder.Entity<Pedido>(e =>
+        {
+            e.ToTable("pedido");
+            e.Property(x => x.Subtotal).HasPrecision(10, 2);
+            e.Property(x => x.Frete).HasPrecision(10, 2);
+            e.Property(x => x.Total).HasPrecision(10, 2);
+            e.Property(x => x.Cep).HasMaxLength(8);
+            e.Property(x => x.PixCopiaECola).HasMaxLength(512);
+            e.Ignore(x => x.Aberto);
+            e.HasIndex(x => new { x.LojaId, x.Numero }).IsUnique();
+            e.HasIndex(x => new { x.LojaId, x.Status, x.CriadoEm });
+            e.HasIndex(x => x.ConversaId);
+            e.HasIndex(x => x.ReservaId);
+            e.HasOne<Cliente>().WithMany().HasForeignKey(x => x.ClienteId);
+            e.HasOne<Conversa>().WithMany().HasForeignKey(x => x.ConversaId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne<Reserva>().WithMany().HasForeignKey(x => x.ReservaId).OnDelete(DeleteBehavior.SetNull);
+            e.HasMany(x => x.Itens).WithOne().HasForeignKey(x => x.PedidoId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ItemDoPedido>(e =>
+        {
+            e.ToTable("item_pedido");
+            e.Property(x => x.PrecoUnitario).HasPrecision(10, 2);
+            e.HasOne<Especie>().WithMany().HasForeignKey(x => x.EspecieId);
+        });
+
         modelBuilder.Entity<ZonaEntrega>(e =>
         {
             e.ToTable("zona_entrega");
@@ -214,6 +242,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
         modelBuilder.Entity<FretePorKm>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<Reserva>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<ItemReserva>().HasQueryFilter(x => x.LojaId == LojaId);
+        modelBuilder.Entity<Pedido>().HasQueryFilter(x => x.LojaId == LojaId);
+        modelBuilder.Entity<ItemDoPedido>().HasQueryFilter(x => x.LojaId == LojaId);
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

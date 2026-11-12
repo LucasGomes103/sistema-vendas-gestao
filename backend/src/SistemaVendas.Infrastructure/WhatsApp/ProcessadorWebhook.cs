@@ -18,7 +18,7 @@ public record StatusRecebido(string Wamid, string Status, string? Erro);
 /// Lê o webhook da WhatsApp Cloud API e grava cliente, conversa e mensagem.
 /// Idempotente: o wamid é único, então um reenvio da Meta não duplica nada.
 /// </summary>
-public class ProcessadorWebhook(AppDbContext db, ILojaAtual lojaAtual, ServicoFunil funil, ILogger<ProcessadorWebhook> logger)
+public class ProcessadorWebhook(AppDbContext db, ILojaAtual lojaAtual, ServicoFunil funil, ServicoPedidos pedidos, ILogger<ProcessadorWebhook> logger)
 {
     public static (List<MensagemRecebida> Mensagens, List<StatusRecebido> Status) Ler(string payload)
     {
@@ -124,6 +124,8 @@ public class ProcessadorWebhook(AppDbContext db, ILojaAtual lojaAtual, ServicoFu
 
         conversa.ReceberDoCliente(m.Em);
         funil.Registrar(conversa, MotorFunil.AoReceberDoCliente(conversa), OrigemEvento.Webhook);
+        // Pedido esperando pagamento e o cliente diz que pagou: vai para "Conferir pagamento".
+        await pedidos.AoReceberDoClienteAsync(conversa, m.Tipo, m.Texto, m.Em, ct);
 
         db.Mensagens.Add(new Mensagem
         {

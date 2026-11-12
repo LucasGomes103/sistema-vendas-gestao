@@ -1,13 +1,14 @@
 <header class="sv-cabecalho-pagina">
   <div>
     <h1>Configuração</h1>
-    <p>WhatsApp, frete por CEP, prazos do funil e respostas prontas do robô.</p>
+    <p>WhatsApp, frete, Pix, prazos do funil e respostas prontas do robô.</p>
   </div>
 </header>
 
 <app-conexao-whatsapp />
 <app-config-whatsapp />
 <app-config-frete />
+<app-config-pix />
 
 @if (config.isLoading() && !config.hasValue()) {
   <mat-progress-bar mode="indeterminate" />

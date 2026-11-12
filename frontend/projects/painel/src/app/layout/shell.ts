@@ -56,13 +56,13 @@ export class Shell {
   protected readonly menu: ItemMenu[] = [
     { rota: '/funil', rotulo: 'Funil', icone: 'view_kanban' },
     { rota: '/conversas', rotulo: 'Conversas', icone: 'chat' },
+    { rota: '/pedidos', rotulo: 'Pedidos', icone: 'receipt_long' },
     { rota: '/estoque', rotulo: 'Estoque', icone: 'water' },
     { rota: '/catalogo', rotulo: 'Catálogo', icone: 'set_meal' },
   ];
 
   /** Itens que ainda vão entrar na fase 1, mostrados desabilitados para dar a visão do todo. */
   protected readonly emBreve: ItemMenu[] = [
-    { rota: '', rotulo: 'Pedidos', icone: 'receipt_long' },
     { rota: '', rotulo: 'Métricas', icone: 'monitoring' },
   ];
 
