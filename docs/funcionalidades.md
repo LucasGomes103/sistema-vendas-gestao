@@ -139,6 +139,19 @@ Com pedido, a venda é confirmada pelo pagamento do pedido; o antigo "Confirmar 
 **Menu → Pedidos**: contagem do que está para conferir e aguardando, valor em aberto e a lista com filtros
 (em aberto, pagos, cancelados, todos). Atualiza a cada 10 s.
 
+### Caixa do dia
+
+**Menu → Caixa** (só o dono).
+
+- Todo pedido pago entra sozinho como **Venda**, no dia do pagamento (fuso da loja) e na forma em que foi pago. Os
+  pedidos pagos antes do caixa existir entraram na migração.
+- **Despesa** (compra de peixes, ração e insumos, energia e água, aluguel, embalagem e entrega, manutenção, outras) e
+  **Entrada** (venda no balcão, outras), com Pix, dinheiro ou cartão.
+- Totais do dia: entradas, saídas, saldo, dinheiro que deveria estar na gaveta e saldo por forma.
+- **Fechar o caixa do dia**: informa o dinheiro contado e o sistema mostra sobra ou falta. Dia fechado não aceita
+  lançamento manual nem exclusão; venda paga continua entrando e o painel avisa. Dá para **Reabrir**.
+- Setas para ver os dias anteriores.
+
 ## Pendências conhecidas
 
 - Trocar a senha do banco do Supabase (vazou no chat) e atualizar `ConnectionStrings__Banco` no Render.

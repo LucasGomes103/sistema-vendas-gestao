@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaVendas.Application.Comum;
 using SistemaVendas.Domain.Atendimento;
+using SistemaVendas.Domain.Caixa;
 using SistemaVendas.Domain.Catalogo;
 using SistemaVendas.Domain.Comum;
 using SistemaVendas.Domain.Entregas;
@@ -22,6 +23,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
     public DbSet<ItemReserva> ItensReserva => Set<ItemReserva>();
     public DbSet<Pedido> Pedidos => Set<Pedido>();
     public DbSet<ItemDoPedido> ItensPedido => Set<ItemDoPedido>();
+    public DbSet<LancamentoCaixa> LancamentosCaixa => Set<LancamentoCaixa>();
+    public DbSet<FechamentoCaixa> FechamentosCaixa => Set<FechamentoCaixa>();
     public DbSet<Especie> Especies => Set<Especie>();
     public DbSet<Foto> Fotos => Set<Foto>();
     public DbSet<ArquivoFoto> ArquivosFoto => Set<ArquivoFoto>();
@@ -163,6 +166,29 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
             e.HasOne<Especie>().WithMany().HasForeignKey(x => x.EspecieId);
         });
 
+        modelBuilder.Entity<LancamentoCaixa>(e =>
+        {
+            e.ToTable("lancamento_caixa");
+            e.Property(x => x.Valor).HasPrecision(12, 2);
+            e.Property(x => x.Categoria).HasMaxLength(60);
+            e.HasIndex(x => new { x.LojaId, x.Data });
+            // Um pedido entra no caixa uma vez só.
+            e.HasIndex(x => x.PedidoId).IsUnique().HasFilter("pedido_id IS NOT NULL");
+            e.HasOne<Pedido>().WithMany().HasForeignKey(x => x.PedidoId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<FechamentoCaixa>(e =>
+        {
+            e.ToTable("fechamento_caixa");
+            e.Property(x => x.Entradas).HasPrecision(12, 2);
+            e.Property(x => x.Saidas).HasPrecision(12, 2);
+            e.Property(x => x.Saldo).HasPrecision(12, 2);
+            e.Property(x => x.DinheiroEsperado).HasPrecision(12, 2);
+            e.Property(x => x.DinheiroContado).HasPrecision(12, 2);
+            e.Property(x => x.Diferenca).HasPrecision(12, 2);
+            e.HasIndex(x => new { x.LojaId, x.Data }).IsUnique();
+        });
+
         modelBuilder.Entity<ZonaEntrega>(e =>
         {
             e.ToTable("zona_entrega");
@@ -244,6 +270,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
         modelBuilder.Entity<ItemReserva>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<Pedido>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<ItemDoPedido>().HasQueryFilter(x => x.LojaId == LojaId);
+        modelBuilder.Entity<LancamentoCaixa>().HasQueryFilter(x => x.LojaId == LojaId);
+        modelBuilder.Entity<FechamentoCaixa>().HasQueryFilter(x => x.LojaId == LojaId);
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

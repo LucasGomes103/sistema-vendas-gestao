@@ -35,6 +35,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/pedidos/pedidos-page').then((m) => m.PedidosPage),
       },
       {
+        path: 'caixa',
+        title: 'Caixa',
+        canActivate: [exigeDono],
+        loadComponent: () => import('./features/caixa/caixa-page').then((m) => m.CaixaPage),
+      },
+      {
         path: 'config',
         title: 'Configuração',
         loadComponent: () => import('./features/config/config-page').then((m) => m.ConfigPage),

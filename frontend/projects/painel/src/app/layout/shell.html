@@ -1,7 +1,7 @@
 <nav class="trilho" aria-label="Menu principal">
   <div class="marca" [matTooltip]="auth.usuario()?.loja ?? ''" matTooltipPosition="right">{{ siglaLoja() }}</div>
 
-  @for (item of menu; track item.rota) {
+  @for (item of menu(); track item.rota) {
     <a class="destino" [routerLink]="item.rota" routerLinkActive="ativo">
       <span class="pilula"><mat-icon>{{ item.icone }}</mat-icon></span>
       <span class="rotulo">{{ item.rotulo }}</span>
@@ -34,7 +34,7 @@
 </div>
 
 <nav class="barra-inferior" aria-label="Menu principal">
-  @for (item of menu; track item.rota) {
+  @for (item of menu(); track item.rota) {
     <a class="destino" [routerLink]="item.rota" routerLinkActive="ativo">
       <span class="pilula"><mat-icon>{{ item.icone }}</mat-icon></span>
       <span class="rotulo">{{ item.rotulo }}</span>
