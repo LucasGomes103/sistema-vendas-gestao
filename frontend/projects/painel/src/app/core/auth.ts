@@ -16,6 +16,8 @@ export class Auth {
   readonly usuario = this._usuario.asReadonly();
   readonly logado = computed(() => this._usuario() !== null);
   readonly ehDono = computed(() => this._usuario()?.papel === 'Dono');
+  /** Entregador só usa a agenda de entregas. */
+  readonly ehEntregador = computed(() => this._usuario()?.papel === 'Entregador');
 
   /** Consulta a sessão atual uma vez (ao abrir o painel). */
   async carregar(): Promise<boolean> {

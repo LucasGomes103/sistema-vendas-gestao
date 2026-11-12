@@ -7,7 +7,7 @@
       <span class="rotulo">{{ item.rotulo }}</span>
     </a>
   }
-  @for (item of emBreve; track item.rotulo) {
+  @for (item of auth.ehEntregador() ? [] : emBreve; track item.rotulo) {
     <span class="destino desabilitado" matTooltip="Em breve" matTooltipPosition="right">
       <span class="pilula"><mat-icon>{{ item.icone }}</mat-icon></span>
       <span class="rotulo">{{ item.rotulo }}</span>
@@ -16,7 +16,9 @@
 
   <span class="espaco"></span>
 
-  <app-sino-alertas />
+  @if (!auth.ehEntregador()) {
+    <app-sino-alertas />
+  }
   <button class="avatar" [matMenuTriggerFor]="menuUsuario" aria-label="Conta">{{ iniciais() }}</button>
 </nav>
 
@@ -24,7 +26,9 @@
   <header class="topo-celular">
     <div class="marca pequena">{{ siglaLoja() }}</div>
     <span class="nome-loja">{{ auth.usuario()?.loja }}</span>
-    <app-sino-alertas />
+    @if (!auth.ehEntregador()) {
+      <app-sino-alertas />
+    }
     <button class="avatar" [matMenuTriggerFor]="menuUsuario" aria-label="Conta">{{ iniciais() }}</button>
   </header>
 
@@ -34,7 +38,7 @@
 </div>
 
 <nav class="barra-inferior" aria-label="Menu principal">
-  @for (item of menu(); track item.rota) {
+  @for (item of barra(); track item.rota) {
     <a class="destino" [routerLink]="item.rota" routerLinkActive="ativo">
       <span class="pilula"><mat-icon>{{ item.icone }}</mat-icon></span>
       <span class="rotulo">{{ item.rotulo }}</span>
@@ -48,6 +52,12 @@
     <span>{{ auth.usuario()?.email }}</span>
     <span class="sv-selo info">{{ auth.usuario()?.papel }} · {{ auth.usuario()?.loja }}</span>
   </div>
+  @for (item of noMenuDaConta(); track item.rota) {
+    <a mat-menu-item class="so-celular" [routerLink]="item.rota">
+      <mat-icon>{{ item.icone }}</mat-icon>
+      <span>{{ item.rotulo }}</span>
+    </a>
+  }
   <button mat-menu-item (click)="trocarSenha()">
     <mat-icon>lock_reset</mat-icon>
     <span>Trocar minha senha</span>

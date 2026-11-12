@@ -45,7 +45,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(AuthEndpoints.PoliticaEquipe, p => p.RequireRole(nameof(Papel.Dono), nameof(Papel.Vendedor)))
-    .AddPolicy(AuthEndpoints.PoliticaDono, p => p.RequireRole(nameof(Papel.Dono)));
+    .AddPolicy(AuthEndpoints.PoliticaDono, p => p.RequireRole(nameof(Papel.Dono)))
+    .AddPolicy(AuthEndpoints.PoliticaEntregas, p => p.RequireRole(nameof(Papel.Dono), nameof(Papel.Vendedor), nameof(Papel.Entregador)));
 
 builder.Services.AddRateLimiter(o =>
 {
@@ -119,6 +120,7 @@ v1.MapFreteEndpoints();
 v1.MapReservaEndpoints();
 v1.MapPedidoEndpoints();
 v1.MapCaixaEndpoints();
+v1.MapEntregaEndpoints();
 v1.MapConexaoWhatsAppEndpoints();
 v1.MapWebhookEndpoints();
 // Simulador de cliente: as conversas dele nunca saem pelo WhatsApp, então fica ligado também no publicado

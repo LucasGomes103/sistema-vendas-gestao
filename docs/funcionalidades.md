@@ -21,7 +21,7 @@ Toda mudança entra por pull request; o merge na `main` publica.
 | --- | --- | --- |
 | 0 | Gerenciamento de usuários | Pronta |
 | 1 | Robô vendedor: frete, reserva, fotos, alerta de cliente quente, kanban ao vivo | Pronta |
-| 2 | Pedidos, Pix com chave comum, caixa e entregas | Em andamento |
+| 2 | Pedidos, Pix com chave comum, caixa e entregas | Pronta |
 | 3 | Métricas e relatórios | A fazer |
 | 4 | Itens restantes do plano em [iniciacao](iniciacao) | A fazer |
 
@@ -106,7 +106,7 @@ pelo WhatsApp. Para desligar: `Simulador__Habilitado=false` no Render.
 
 ## Fase 2: pedidos, Pix, caixa e entregas
 
-### Pedidos e Pix com a chave da loja
+### Pedidos e Pix com a chave da loja (PR #14)
 
 Tudo sem custo: não há provedor de pagamento. O sistema gera o **Pix copia e cola** (o mesmo código que vira QR code)
 com a chave comum da loja, o valor do pedido e o número do pedido como identificador.
@@ -139,7 +139,7 @@ Com pedido, a venda é confirmada pelo pagamento do pedido; o antigo "Confirmar 
 **Menu → Pedidos**: contagem do que está para conferir e aguardando, valor em aberto e a lista com filtros
 (em aberto, pagos, cancelados, todos). Atualiza a cada 10 s.
 
-### Caixa do dia
+### Caixa do dia (PR #15)
 
 **Menu → Caixa** (só o dono).
 
@@ -152,7 +152,28 @@ Com pedido, a venda é confirmada pelo pagamento do pedido; o antigo "Confirmar 
   lançamento manual nem exclusão; venda paga continua entrando e o painel avisa. Dá para **Reabrir**.
 - Setas para ver os dias anteriores.
 
+### Entregas e retiradas
+
+**Menu → Entregas** (equipe e entregador). Todo pedido pago entra na agenda como "a agendar" (os pagos antes da
+agenda existir entraram na migração).
+
+- Grupos: a agendar, atrasadas, hoje, próximos dias e as feitas nos últimos 7 dias. Atualiza a cada 15 s.
+- **Agendar / Remarcar**: dia, horário (texto livre, com atalhos como "14h às 18h") e, para entrega, quem leva.
+  O cliente recebe "A entrega do pedido #N ficou para..." no WhatsApp.
+- **Saiu para entrega**: o cliente recebe o aviso com a dica de aclimatação (saquinho boiando 20 min).
+- **Entregue / Retirado**: o card vai para **Entregue** e o cliente recebe o agradecimento.
+- Endereço abre no Google Maps; telefone liga direto.
+- Fora da janela de 24 h o aviso ao cliente não sai e o painel diz isso.
+
+**Entregador**: entra direto em Entregas e só vê as entregas (não retiradas) de hoje ou atrasadas que são dele ou
+estão sem ninguém. Pode marcar saída e entrega; não agenda. Não vê conversas nem os alertas de cliente quente.
+
+No celular a barra inferior tem Funil, Conversas, Pedidos, Entregas e Estoque; Caixa e Catálogo ficam no menu da conta.
+
 ## Pendências conhecidas
+
+- Fase 2 sem: aviso automático de Pix pago (exige provedor pago), lembrete de pagamento em 12 h e mensagens fora da
+  janela de 24 h (exigem modelos aprovados na Meta), alerta de entrega atrasada há 48 h e QR code na tela.
 
 - Trocar a senha do banco do Supabase (vazou no chat) e atualizar `ConnectionStrings__Banco` no Render.
 - Gerar tokens novos da Meta quando for usá-la.

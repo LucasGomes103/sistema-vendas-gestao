@@ -18,6 +18,8 @@ public static class AuthEndpoints
 {
     public const string PoliticaEquipe = "Equipe";
     public const string PoliticaDono = "Dono";
+    /// <summary>Equipe e entregador: a agenda de entregas.</summary>
+    public const string PoliticaEntregas = "Entregas";
     public const string LimiteLogin = "login";
 
     public static void MapAuthEndpoints(this IEndpointRouteBuilder app)

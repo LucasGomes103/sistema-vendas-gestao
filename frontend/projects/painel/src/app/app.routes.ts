@@ -1,4 +1,6 @@
+import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
+import { Auth } from './core/auth';
 import { exigeDono, exigeLogin, somenteVisitante } from './core/guards';
 import { Shell } from './layout/shell';
 
@@ -13,7 +15,8 @@ export const routes: Routes = [
     component: Shell,
     canActivate: [exigeLogin],
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'estoque' },
+      // Entregador só usa a agenda de entregas (o Shell também garante isso depois de carregar a sessão).
+      { path: '', pathMatch: 'full', redirectTo: () => (inject(Auth).ehEntregador() ? 'entregas' : 'estoque') },
       {
         path: 'catalogo',
         title: 'Catálogo',
@@ -33,6 +36,11 @@ export const routes: Routes = [
         path: 'pedidos',
         title: 'Pedidos',
         loadComponent: () => import('./features/pedidos/pedidos-page').then((m) => m.PedidosPage),
+      },
+      {
+        path: 'entregas',
+        title: 'Entregas',
+        loadComponent: () => import('./features/entregas/entregas-page').then((m) => m.EntregasPage),
       },
       {
         path: 'caixa',

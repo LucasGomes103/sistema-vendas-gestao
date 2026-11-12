@@ -336,6 +336,43 @@ export interface CaixaDia {
   categoriasSaida: string[];
 }
 
+export type StatusEntrega = 'AAgendar' | 'Agendada' | 'SaiuParaEntrega' | 'Entregue';
+
+export interface Entrega {
+  id: string;
+  pedidoId: string;
+  numeroPedido: number;
+  status: StatusEntrega;
+  tipo: TipoEntrega;
+  cliente: string;
+  telefone: string;
+  conversaId: string | null;
+  cep: string | null;
+  endereco: string | null;
+  data: string | null;
+  janela: string | null;
+  entregadorId: string | null;
+  entregador: string | null;
+  saiuEm: string | null;
+  entregueEm: string | null;
+  observacao: string | null;
+  total: number;
+  itens: string;
+  criadoEm: string;
+}
+
+export interface EntregaAcao {
+  entrega: Entrega;
+  mensagemEnviada: boolean;
+  aviso: string | null;
+}
+
+export interface PessoaEntrega {
+  id: string;
+  nome: string;
+  papel: Papel;
+}
+
 export interface ConfigWhatsApp {
   atenderTodos: boolean;
   numerosPermitidos: string[];

@@ -25,6 +25,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
     public DbSet<ItemDoPedido> ItensPedido => Set<ItemDoPedido>();
     public DbSet<LancamentoCaixa> LancamentosCaixa => Set<LancamentoCaixa>();
     public DbSet<FechamentoCaixa> FechamentosCaixa => Set<FechamentoCaixa>();
+    public DbSet<Entrega> Entregas => Set<Entrega>();
     public DbSet<Especie> Especies => Set<Especie>();
     public DbSet<Foto> Fotos => Set<Foto>();
     public DbSet<ArquivoFoto> ArquivosFoto => Set<ArquivoFoto>();
@@ -41,6 +42,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
 
     // Lido pelo filtro global a cada consulta.
     private Guid? LojaId => lojaAtual.LojaId;
+
+    /// <summary>Loja da requisição (ou do worker) atual.</summary>
+    public Guid? LojaAtualId => lojaAtual.LojaId;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -189,6 +193,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
             e.HasIndex(x => new { x.LojaId, x.Data }).IsUnique();
         });
 
+        modelBuilder.Entity<Entrega>(e =>
+        {
+            e.ToTable("entrega");
+            e.Property(x => x.Janela).HasMaxLength(40);
+            e.Property(x => x.Cep).HasMaxLength(8);
+            e.Ignore(x => x.Aberta);
+            e.HasIndex(x => x.PedidoId).IsUnique();
+            e.HasIndex(x => new { x.LojaId, x.Status, x.Data });
+            e.HasOne<Pedido>().WithMany().HasForeignKey(x => x.PedidoId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Usuario>().WithMany().HasForeignKey(x => x.EntregadorId).OnDelete(DeleteBehavior.SetNull);
+        });
+
         modelBuilder.Entity<ZonaEntrega>(e =>
         {
             e.ToTable("zona_entrega");
@@ -272,6 +288,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
         modelBuilder.Entity<ItemDoPedido>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<LancamentoCaixa>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<FechamentoCaixa>().HasQueryFilter(x => x.LojaId == LojaId);
+        modelBuilder.Entity<Entrega>().HasQueryFilter(x => x.LojaId == LojaId);
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

@@ -22,6 +22,7 @@ public static class DependencyInjection
         services.AddScoped<ServicoFunil>();
         services.AddScoped<ServicoReservas>();
         services.AddScoped<ServicoPedidos>();
+        services.AddScoped<ServicoEntregas>();
 
         // Sem token da Meta, o envio é simulado: dá para desenvolver tudo sem número conectado.
         var whatsApp = config.GetSection(WhatsAppOptions.Secao);
