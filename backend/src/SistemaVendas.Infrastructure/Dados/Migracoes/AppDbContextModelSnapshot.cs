@@ -976,6 +976,18 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasColumnType("text")
                         .HasColumnName("phone_number_id");
 
+                    b.Property<string>("PixChave")
+                        .HasColumnType("text")
+                        .HasColumnName("pix_chave");
+
+                    b.Property<string>("PixCidade")
+                        .HasColumnType("text")
+                        .HasColumnName("pix_cidade");
+
+                    b.Property<string>("PixNome")
+                        .HasColumnType("text")
+                        .HasColumnName("pix_nome");
+
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(60)
@@ -1048,6 +1060,58 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.ToTable("usuario", (string)null);
                 });
 
+            modelBuilder.Entity("SistemaVendas.Domain.Vendas.ItemDoPedido", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<string>("Especie")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("especie");
+
+                    b.Property<Guid>("EspecieId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("especie_id");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_id");
+
+                    b.Property<Guid>("PedidoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pedido_id");
+
+                    b.Property<decimal>("PrecoUnitario")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("preco_unitario");
+
+                    b.Property<int>("Quantidade")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantidade");
+
+                    b.HasKey("Id")
+                        .HasName("pk_item_pedido");
+
+                    b.HasIndex("EspecieId")
+                        .HasDatabaseName("ix_item_pedido_especie_id");
+
+                    b.HasIndex("LojaId")
+                        .HasDatabaseName("ix_item_pedido_loja_id");
+
+                    b.HasIndex("PedidoId")
+                        .HasDatabaseName("ix_item_pedido_pedido_id");
+
+                    b.ToTable("item_pedido", (string)null);
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Vendas.ItemReserva", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1106,6 +1170,138 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasDatabaseName("ix_item_reserva_reserva_id");
 
                     b.ToTable("item_reserva", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Vendas.Pedido", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("CanceladoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelado_em");
+
+                    b.Property<string>("Cep")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("cep");
+
+                    b.Property<Guid>("ClienteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cliente_id");
+
+                    b.Property<DateTimeOffset?>("ComprovanteEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("comprovante_em");
+
+                    b.Property<Guid?>("ConfirmadoPor")
+                        .HasColumnType("uuid")
+                        .HasColumnName("confirmado_por");
+
+                    b.Property<Guid?>("ConversaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("conversa_id");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<Guid?>("CriadoPor")
+                        .HasColumnType("uuid")
+                        .HasColumnName("criado_por");
+
+                    b.Property<string>("Endereco")
+                        .HasColumnType("text")
+                        .HasColumnName("endereco");
+
+                    b.Property<DateTimeOffset?>("ExpiraEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expira_em");
+
+                    b.Property<int?>("FormaPagamento")
+                        .HasColumnType("integer")
+                        .HasColumnName("forma_pagamento");
+
+                    b.Property<decimal>("Frete")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("frete");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_id");
+
+                    b.Property<string>("MotivoCancelamento")
+                        .HasColumnType("text")
+                        .HasColumnName("motivo_cancelamento");
+
+                    b.Property<int>("Numero")
+                        .HasColumnType("integer")
+                        .HasColumnName("numero");
+
+                    b.Property<string>("Observacao")
+                        .HasColumnType("text")
+                        .HasColumnName("observacao");
+
+                    b.Property<DateTimeOffset?>("PagoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("pago_em");
+
+                    b.Property<string>("PixCopiaECola")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("pix_copia_e_cola");
+
+                    b.Property<DateTimeOffset?>("PixEnviadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("pix_enviado_em");
+
+                    b.Property<Guid?>("ReservaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reserva_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("subtotal");
+
+                    b.Property<string>("TipoEntrega")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("tipo_entrega");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("total");
+
+                    b.HasKey("Id")
+                        .HasName("pk_pedido");
+
+                    b.HasIndex("ClienteId")
+                        .HasDatabaseName("ix_pedido_cliente_id");
+
+                    b.HasIndex("ConversaId")
+                        .HasDatabaseName("ix_pedido_conversa_id");
+
+                    b.HasIndex("ReservaId")
+                        .HasDatabaseName("ix_pedido_reserva_id");
+
+                    b.HasIndex("LojaId", "Numero")
+                        .IsUnique()
+                        .HasDatabaseName("ix_pedido_loja_id_numero");
+
+                    b.HasIndex("LojaId", "Status", "CriadoEm")
+                        .HasDatabaseName("ix_pedido_loja_id_status_criado_em");
+
+                    b.ToTable("pedido", (string)null);
                 });
 
             modelBuilder.Entity("SistemaVendas.Domain.Vendas.Reserva", b =>
@@ -1376,6 +1572,30 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasConstraintName("fk_usuario_loja_loja_id");
                 });
 
+            modelBuilder.Entity("SistemaVendas.Domain.Vendas.ItemDoPedido", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Catalogo.Especie", null)
+                        .WithMany()
+                        .HasForeignKey("EspecieId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_item_pedido_especie_especie_id");
+
+                    b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_item_pedido_loja_loja_id");
+
+                    b.HasOne("SistemaVendas.Domain.Vendas.Pedido", null)
+                        .WithMany("Itens")
+                        .HasForeignKey("PedidoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_item_pedido_pedido_pedido_id");
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Vendas.ItemReserva", b =>
                 {
                     b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
@@ -1400,6 +1620,35 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasConstraintName("fk_item_reserva_reserva_reserva_id");
                 });
 
+            modelBuilder.Entity("SistemaVendas.Domain.Vendas.Pedido", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Atendimento.Cliente", null)
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_pedido_cliente_cliente_id");
+
+                    b.HasOne("SistemaVendas.Domain.Atendimento.Conversa", null)
+                        .WithMany()
+                        .HasForeignKey("ConversaId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_pedido_conversa_conversa_id");
+
+                    b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_pedido_loja_loja_id");
+
+                    b.HasOne("SistemaVendas.Domain.Vendas.Reserva", null)
+                        .WithMany()
+                        .HasForeignKey("ReservaId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_pedido_reserva_reserva_id");
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Vendas.Reserva", b =>
                 {
                     b.HasOne("SistemaVendas.Domain.Atendimento.Conversa", null)
@@ -1420,6 +1669,11 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
             modelBuilder.Entity("SistemaVendas.Domain.Catalogo.Especie", b =>
                 {
                     b.Navigation("Fotos");
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Vendas.Pedido", b =>
+                {
+                    b.Navigation("Itens");
                 });
 
             modelBuilder.Entity("SistemaVendas.Domain.Vendas.Reserva", b =>

@@ -30,6 +30,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/funil/funil-page').then((m) => m.FunilPage),
       },
       {
+        path: 'pedidos',
+        title: 'Pedidos',
+        loadComponent: () => import('./features/pedidos/pedidos-page').then((m) => m.PedidosPage),
+      },
+      {
         path: 'config',
         title: 'Configuração',
         loadComponent: () => import('./features/config/config-page').then((m) => m.ConfigPage),
