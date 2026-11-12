@@ -125,6 +125,8 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
         // Entra no caixa do dia (fuso da loja) na forma em que foi pago.
         var loja = await db.Lojas.AsNoTracking().FirstAsync(l => l.Id == pedido.LojaId, ct);
         db.LancamentosCaixa.Add(RegrasCaixa.DaVenda(pedido, RegrasCaixa.Hoje(agora, TimeZoneInfo.FindSystemTimeZoneById(loja.Fuso))));
+        // Pago: entra na agenda de entregas (ou retiradas) para combinar o dia.
+        db.Entregas.Add(RegrasEntrega.DoPedido(pedido));
 
         var resultado = new ResultadoAviso(pedido, false, null);
         if (pedido.ConversaId is { } conversaId)
@@ -204,26 +206,7 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
 
     private ResultadoAviso Avisar(Pedido pedido, Conversa conversa, IEnumerable<string> textos, DateTimeOffset agora, Guid? usuarioId)
     {
-        if (!conversa.DentroDaJanela(agora))
-            return new ResultadoAviso(pedido, false,
-                "A janela de 24 h do WhatsApp fechou, então a mensagem não foi enviada. Copie o texto e mande quando o cliente escrever de novo.");
-
-        // Um milissegundo entre elas garante a ordem na conversa e no envio.
-        var i = 0;
-        foreach (var texto in textos)
-            db.Mensagens.Add(new Mensagem
-            {
-                LojaId = conversa.LojaId,
-                ConversaId = conversa.Id,
-                Direcao = DirecaoMensagem.Saida,
-                Autor = AutorMensagem.Vendedor,
-                Conteudo = texto,
-                Status = StatusMensagem.Pendente,
-                Categoria = CategoriaMensagem.Servico,
-                UsuarioId = usuarioId,
-                CriadoEm = agora.AddMilliseconds(i++)
-            });
-        conversa.UltimaMensagemEm = agora;
-        return new ResultadoAviso(pedido, true, null);
+        var aviso = AvisoCliente.Enfileirar(db, conversa, textos, agora, usuarioId);
+        return new ResultadoAviso(pedido, aviso is null, aviso);
     }
 }

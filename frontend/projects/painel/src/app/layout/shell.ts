@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map } from 'rxjs';
@@ -19,6 +19,10 @@ interface ItemMenu {
   icone: string;
   /** Só aparece para o dono. */
   dono?: boolean;
+  /** Aparece também para o entregador (que só vê estes). */
+  entregador?: boolean;
+  /** No celular fica no menu da conta, não na barra inferior (que só cabe 5). */
+  foraDaBarra?: boolean;
 }
 
 /**
@@ -40,8 +44,14 @@ export class Shell {
   private readonly alertas = inject(AlertasQuentes);
 
   constructor() {
-    void this.alertas.atualizar();
-    atualizarACada(8000, () => void this.alertas.atualizar());
+    // Entregador não atende conversas: sem alertas de cliente quente, e o painel dele é só a agenda de entregas.
+    if (!this.auth.ehEntregador()) {
+      void this.alertas.atualizar();
+      atualizarACada(8000, () => void this.alertas.atualizar());
+    }
+    effect(() => {
+      if (this.auth.ehEntregador() && !this.url().startsWith('/entregas')) void this.router.navigateByUrl('/entregas');
+    });
   }
 
   private readonly url = toSignal(
@@ -59,12 +69,18 @@ export class Shell {
     { rota: '/funil', rotulo: 'Funil', icone: 'view_kanban' },
     { rota: '/conversas', rotulo: 'Conversas', icone: 'chat' },
     { rota: '/pedidos', rotulo: 'Pedidos', icone: 'receipt_long' },
-    { rota: '/caixa', rotulo: 'Caixa', icone: 'point_of_sale', dono: true },
+    { rota: '/entregas', rotulo: 'Entregas', icone: 'local_shipping', entregador: true },
+    { rota: '/caixa', rotulo: 'Caixa', icone: 'point_of_sale', dono: true, foraDaBarra: true },
     { rota: '/estoque', rotulo: 'Estoque', icone: 'water' },
-    { rota: '/catalogo', rotulo: 'Catálogo', icone: 'set_meal' },
+    { rota: '/catalogo', rotulo: 'Catálogo', icone: 'set_meal', foraDaBarra: true },
   ];
 
-  protected readonly menu = computed(() => this.todos.filter((i) => !i.dono || this.auth.ehDono()));
+  protected readonly menu = computed(() =>
+    this.auth.ehEntregador() ? this.todos.filter((i) => i.entregador) : this.todos.filter((i) => !i.dono || this.auth.ehDono()),
+  );
+
+  protected readonly barra = computed(() => this.menu().filter((i) => !i.foraDaBarra));
+  protected readonly noMenuDaConta = computed(() => this.menu().filter((i) => i.foraDaBarra));
 
   /** Itens que ainda vão entrar na fase 1, mostrados desabilitados para dar a visão do todo. */
   protected readonly emBreve: ItemMenu[] = [

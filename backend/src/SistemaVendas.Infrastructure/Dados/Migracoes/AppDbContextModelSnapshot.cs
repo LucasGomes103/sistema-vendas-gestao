@@ -594,6 +594,101 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.ToTable("foto", (string)null);
                 });
 
+            modelBuilder.Entity("SistemaVendas.Domain.Entregas.Entrega", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Cep")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("cep");
+
+                    b.Property<Guid>("ClienteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cliente_id");
+
+                    b.Property<Guid?>("ConversaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("conversa_id");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<DateOnly?>("Data")
+                        .HasColumnType("date")
+                        .HasColumnName("data");
+
+                    b.Property<string>("Endereco")
+                        .HasColumnType("text")
+                        .HasColumnName("endereco");
+
+                    b.Property<Guid?>("EntregadorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("entregador_id");
+
+                    b.Property<DateTimeOffset?>("EntregueEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("entregue_em");
+
+                    b.Property<Guid?>("EntreguePor")
+                        .HasColumnType("uuid")
+                        .HasColumnName("entregue_por");
+
+                    b.Property<string>("Janela")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("janela");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_id");
+
+                    b.Property<int>("NumeroPedido")
+                        .HasColumnType("integer")
+                        .HasColumnName("numero_pedido");
+
+                    b.Property<string>("Observacao")
+                        .HasColumnType("text")
+                        .HasColumnName("observacao");
+
+                    b.Property<Guid>("PedidoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pedido_id");
+
+                    b.Property<DateTimeOffset?>("SaiuEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("saiu_em");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("tipo");
+
+                    b.HasKey("Id")
+                        .HasName("pk_entrega");
+
+                    b.HasIndex("EntregadorId")
+                        .HasDatabaseName("ix_entrega_entregador_id");
+
+                    b.HasIndex("PedidoId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_entrega_pedido_id");
+
+                    b.HasIndex("LojaId", "Status", "Data")
+                        .HasDatabaseName("ix_entrega_loja_id_status_data");
+
+                    b.ToTable("entrega", (string)null);
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Entregas.FretePorKm", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1599,6 +1694,29 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_foto_loja_loja_id");
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Entregas.Entrega", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Lojas.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("EntregadorId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_entrega_usuario_entregador_id");
+
+                    b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_entrega_loja_loja_id");
+
+                    b.HasOne("SistemaVendas.Domain.Vendas.Pedido", null)
+                        .WithMany()
+                        .HasForeignKey("PedidoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_entrega_pedido_pedido_id");
                 });
 
             modelBuilder.Entity("SistemaVendas.Domain.Entregas.FretePorKm", b =>
