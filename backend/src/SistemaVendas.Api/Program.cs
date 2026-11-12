@@ -118,6 +118,7 @@ v1.MapFunilEndpoints();
 v1.MapFreteEndpoints();
 v1.MapReservaEndpoints();
 v1.MapPedidoEndpoints();
+v1.MapCaixaEndpoints();
 v1.MapConexaoWhatsAppEndpoints();
 v1.MapWebhookEndpoints();
 // Simulador de cliente: as conversas dele nunca saem pelo WhatsApp, então fica ligado também no publicado

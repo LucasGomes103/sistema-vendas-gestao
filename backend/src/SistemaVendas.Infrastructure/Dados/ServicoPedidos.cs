@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaVendas.Domain.Atendimento;
+using SistemaVendas.Domain.Caixa;
 using SistemaVendas.Domain.Entregas;
 using SistemaVendas.Domain.Estoque;
 using SistemaVendas.Domain.Funil;
@@ -120,6 +121,10 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
             throw new RegraException("A reserva deste pedido já foi encerrada, então o peixe pode ter voltado ao estoque. Separe de novo e monte outro pedido.");
         // A reserva vira venda: o peixe sai do estoque.
         db.Movimentos.AddRange(RegrasReserva.Encerrar(reserva, StatusReserva.Confirmada, agora, usuarioId));
+
+        // Entra no caixa do dia (fuso da loja) na forma em que foi pago.
+        var loja = await db.Lojas.AsNoTracking().FirstAsync(l => l.Id == pedido.LojaId, ct);
+        db.LancamentosCaixa.Add(RegrasCaixa.DaVenda(pedido, RegrasCaixa.Hoje(agora, TimeZoneInfo.FindSystemTimeZoneById(loja.Fuso))));
 
         var resultado = new ResultadoAviso(pedido, false, null);
         if (pedido.ConversaId is { } conversaId)

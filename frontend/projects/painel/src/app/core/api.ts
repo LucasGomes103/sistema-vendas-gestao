@@ -295,6 +295,47 @@ export interface ConfigPix {
   configurado: boolean;
 }
 
+export type TipoLancamento = 'Entrada' | 'Saida';
+
+export interface LancamentoCaixa {
+  id: string;
+  tipo: TipoLancamento;
+  categoria: string;
+  valor: number;
+  descricao: string | null;
+  forma: FormaPagamento;
+  data: string;
+  pedidoId: string | null;
+  criadoEm: string;
+  usuario: string | null;
+}
+
+export interface CaixaDia {
+  data: string;
+  hoje: string;
+  lancamentos: LancamentoCaixa[];
+  resumo: {
+    entradas: number;
+    saidas: number;
+    saldo: number;
+    dinheiroEsperado: number;
+    porForma: { forma: FormaPagamento; entradas: number; saidas: number }[];
+  };
+  fechamento: {
+    entradas: number;
+    saidas: number;
+    saldo: number;
+    dinheiroEsperado: number;
+    dinheiroContado: number | null;
+    diferenca: number | null;
+    observacao: string | null;
+    fechadoEm: string;
+    fechadoPor: string | null;
+  } | null;
+  categoriasEntrada: string[];
+  categoriasSaida: string[];
+}
+
 export interface ConfigWhatsApp {
   atenderTodos: boolean;
   numerosPermitidos: string[];

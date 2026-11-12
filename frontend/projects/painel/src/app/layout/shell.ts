@@ -17,6 +17,8 @@ interface ItemMenu {
   rota: string;
   rotulo: string;
   icone: string;
+  /** Só aparece para o dono. */
+  dono?: boolean;
 }
 
 /**
@@ -53,13 +55,16 @@ export class Shell {
   /** Chat aberto no celular ocupa a tela toda, como no WhatsApp. */
   protected readonly telaCheia = computed(() => /^\/conversas\/[^/]+/.test(this.url()));
 
-  protected readonly menu: ItemMenu[] = [
+  private readonly todos: ItemMenu[] = [
     { rota: '/funil', rotulo: 'Funil', icone: 'view_kanban' },
     { rota: '/conversas', rotulo: 'Conversas', icone: 'chat' },
     { rota: '/pedidos', rotulo: 'Pedidos', icone: 'receipt_long' },
+    { rota: '/caixa', rotulo: 'Caixa', icone: 'point_of_sale', dono: true },
     { rota: '/estoque', rotulo: 'Estoque', icone: 'water' },
     { rota: '/catalogo', rotulo: 'Catálogo', icone: 'set_meal' },
   ];
+
+  protected readonly menu = computed(() => this.todos.filter((i) => !i.dono || this.auth.ehDono()));
 
   /** Itens que ainda vão entrar na fase 1, mostrados desabilitados para dar a visão do todo. */
   protected readonly emBreve: ItemMenu[] = [

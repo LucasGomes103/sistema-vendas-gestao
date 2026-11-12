@@ -329,6 +329,139 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.ToTable("webhook_recebido", (string)null);
                 });
 
+            modelBuilder.Entity("SistemaVendas.Domain.Caixa.FechamentoCaixa", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<DateOnly>("Data")
+                        .HasColumnType("date")
+                        .HasColumnName("data");
+
+                    b.Property<decimal?>("Diferenca")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("diferenca");
+
+                    b.Property<decimal?>("DinheiroContado")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("dinheiro_contado");
+
+                    b.Property<decimal>("DinheiroEsperado")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("dinheiro_esperado");
+
+                    b.Property<decimal>("Entradas")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("entradas");
+
+                    b.Property<Guid?>("FechadoPor")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fechado_por");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_id");
+
+                    b.Property<string>("Observacao")
+                        .HasColumnType("text")
+                        .HasColumnName("observacao");
+
+                    b.Property<decimal>("Saidas")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("saidas");
+
+                    b.Property<decimal>("Saldo")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("saldo");
+
+                    b.HasKey("Id")
+                        .HasName("pk_fechamento_caixa");
+
+                    b.HasIndex("LojaId", "Data")
+                        .IsUnique()
+                        .HasDatabaseName("ix_fechamento_caixa_loja_id_data");
+
+                    b.ToTable("fechamento_caixa", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Caixa.LancamentoCaixa", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Categoria")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("categoria");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<DateOnly>("Data")
+                        .HasColumnType("date")
+                        .HasColumnName("data");
+
+                    b.Property<string>("Descricao")
+                        .HasColumnType("text")
+                        .HasColumnName("descricao");
+
+                    b.Property<string>("Forma")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("forma");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_id");
+
+                    b.Property<Guid?>("PedidoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pedido_id");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("tipo");
+
+                    b.Property<Guid?>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.Property<decimal>("Valor")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("valor");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lancamento_caixa");
+
+                    b.HasIndex("PedidoId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_lancamento_caixa_pedido_id")
+                        .HasFilter("pedido_id IS NOT NULL");
+
+                    b.HasIndex("LojaId", "Data")
+                        .HasDatabaseName("ix_lancamento_caixa_loja_id_data");
+
+                    b.ToTable("lancamento_caixa", (string)null);
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Catalogo.ArquivoFoto", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1403,6 +1536,32 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_mensagem_loja_loja_id");
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Caixa.FechamentoCaixa", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_fechamento_caixa_loja_loja_id");
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Caixa.LancamentoCaixa", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_lancamento_caixa_loja_loja_id");
+
+                    b.HasOne("SistemaVendas.Domain.Vendas.Pedido", null)
+                        .WithMany()
+                        .HasForeignKey("PedidoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_lancamento_caixa_pedido_pedido_id");
                 });
 
             modelBuilder.Entity("SistemaVendas.Domain.Catalogo.ArquivoFoto", b =>
