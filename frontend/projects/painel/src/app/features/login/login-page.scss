@@ -14,15 +14,12 @@
   color: #fff;
 
   .marca {
-    display: grid;
-    place-items: center;
+    display: block;
     width: 56px;
     height: 56px;
-    border-radius: 16px;
-    background: #9cf1f0;
-    color: #002020;
-    font: var(--mat-sys-title-medium);
-    font-weight: 700;
+    border-radius: 12px;
+    // Contorno claro para o ícone não sumir no fundo azul-petróleo.
+    box-shadow: 0 0 0 2px rgb(255 255 255 / 0.35);
   }
 
   h1 {

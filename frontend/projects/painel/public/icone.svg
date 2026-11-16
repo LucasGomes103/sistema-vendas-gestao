@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Sistema de Vendas">
+  <defs>
+    <linearGradient id="fundo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00807f"/>
+      <stop offset="1" stop-color="#004f4f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#fundo)"/>
+  <path fill="#ffffff" d="M404 262C362 190 268 166 198 214L128 166C114 157 98 170 104 186L132 262L104 338C98 354 114 367 128 358L198 310C268 358 362 334 404 262Z"/>
+  <path fill="none" stroke="#006a6a" stroke-width="16" stroke-linecap="round" d="M266 214Q290 262 266 310"/>
+  <circle cx="338" cy="244" r="17" fill="#006a6a"/>
+  <circle cx="392" cy="150" r="28" fill="#ffb05c"/>
+  <circle cx="436" cy="98" r="15" fill="#ffb05c"/>
+</svg>

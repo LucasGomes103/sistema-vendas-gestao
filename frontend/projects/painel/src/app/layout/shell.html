@@ -1,5 +1,5 @@
 <nav class="trilho" aria-label="Menu principal">
-  <div class="marca" [matTooltip]="auth.usuario()?.loja ?? ''" matTooltipPosition="right">{{ siglaLoja() }}</div>
+  <img class="marca" src="icone.svg" alt="Sistema de Vendas" [matTooltip]="auth.usuario()?.loja ?? ''" matTooltipPosition="right" />
 
   @for (item of menu(); track item.rota) {
     <a class="destino" [routerLink]="item.rota" routerLinkActive="ativo">
@@ -24,7 +24,7 @@
 
 <div class="conteudo">
   <header class="topo-celular">
-    <div class="marca pequena">{{ siglaLoja() }}</div>
+    <img class="marca pequena" src="icone.svg" alt="" />
     <span class="nome-loja">{{ auth.usuario()?.loja }}</span>
     @if (!auth.ehEntregador()) {
       <app-sino-alertas />

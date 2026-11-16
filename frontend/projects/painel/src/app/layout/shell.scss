@@ -4,23 +4,16 @@
   background: var(--mat-sys-surface-container-low);
 }
 
+// Ícone do sistema (public/icone.svg); o nome da loja aparece na dica e no topo do celular.
 .marca {
-  display: grid;
-  place-items: center;
+  display: block;
+  flex-shrink: 0;
   width: 48px;
   height: 48px;
-  border-radius: 14px;
-  background: var(--mat-sys-primary);
-  color: var(--mat-sys-on-primary);
-  font: var(--mat-sys-title-small);
-  font-weight: 700;
-  letter-spacing: 0.5px;
 
   &.pequena {
     width: 36px;
     height: 36px;
-    border-radius: 10px;
-    font-size: 13px;
   }
 }
 
