@@ -7,9 +7,9 @@ validado, o sistema atende outras lojas (multi-loja desde o primeiro dia).
 Os documentos de origem estão em [docs/iniciacao](docs/iniciacao). O que cada fase entregou, e como usar, está em
 [docs/funcionalidades.md](docs/funcionalidades.md).
 
-**Publicado:** painel em https://subtle-faun-9fb444.netlify.app/painel, vitrine em
-https://subtle-faun-9fb444.netlify.app/ecsfish e API em https://sistema-vendas-api-0x0l.onrender.com.
-O merge na `main` publica sozinho (Netlify para o front, Render para a API, migrações aplicadas ao subir).
+**Publicado:** painel em https://sistema-vendas-gestao.pages.dev/painel, vitrine em
+https://sistema-vendas-gestao.pages.dev/ecsfish e API em https://sistema-vendas-api-0x0l.onrender.com.
+O merge na `main` publica sozinho (Cloudflare Pages para o front, Render para a API, migrações aplicadas ao subir).
 
 ## Stack (fase 1, custo zero)
 
@@ -19,7 +19,7 @@ O merge na `main` publica sozinho (Netlify para o front, Render para a API, migr
 | Back | ASP.NET Core / .NET 10 LTS, monólito modular |
 | Dados | EF Core 10 + Npgsql, PostgreSQL 18 |
 | Jobs | BackgroundService do .NET (motor do funil, envio de mensagens) |
-| Infra | Render (API + ponte do WhatsApp), Netlify (painel e vitrine), Supabase (PostgreSQL), todos no plano grátis |
+| Infra | Render (API + ponte do WhatsApp), Cloudflare Pages (painel e vitrine), Supabase (PostgreSQL), todos no plano grátis |
 | Mapas (frete) | BrasilAPI, Nominatim (OpenStreetMap) e OSRM, grátis e sem chave |
 
 ## Estrutura

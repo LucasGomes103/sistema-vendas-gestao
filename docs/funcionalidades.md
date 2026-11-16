@@ -8,8 +8,8 @@ O sistema atual é um **projeto teste**: serve para validar o fluxo com a ECS Fi
 
 | Parte | Endereço | Deploy |
 | --- | --- | --- |
-| Painel | https://subtle-faun-9fb444.netlify.app/painel | Netlify, automático a cada push na `main` |
-| Vitrine | https://subtle-faun-9fb444.netlify.app/ecsfish | Netlify |
+| Painel | https://sistema-vendas-gestao.pages.dev/painel | Cloudflare Pages, automático a cada push na `main` |
+| Vitrine | https://sistema-vendas-gestao.pages.dev/ecsfish | Cloudflare Pages |
 | API + ponte do WhatsApp | https://sistema-vendas-api-0x0l.onrender.com | Render (plano grátis), automático a cada push na `main` |
 | Banco | Supabase (PostgreSQL, East US) | migrações aplicadas sozinhas quando a API sobe |
 

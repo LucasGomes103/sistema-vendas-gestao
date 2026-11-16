@@ -57,3 +57,19 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+
+## Publicação (Cloudflare Pages)
+
+O Cloudflare Pages publica sozinho a cada push na `main`. Configuração do projeto no painel do Cloudflare:
+
+| Campo | Valor |
+| --- | --- |
+| Diretório raiz | `frontend` |
+| Comando de build | `bash build-publicacao.sh` |
+| Pasta de saída | `publicar` |
+| Node | 24 (lido de `frontend/.node-version`) |
+| Variável opcional | `API_URL` (padrão: `https://sistema-vendas-api-0x0l.onrender.com`) |
+
+`frontend/functions` repassa `/api`, `/health`, `/privacidade` e `/termos` para a API no Render
+(mesmo domínio, então o cookie de login funciona) e serve as rotas do painel em `/painel/*`.
+Os previews de branch ficam desligados no painel do Cloudflare para não gastar cota.
