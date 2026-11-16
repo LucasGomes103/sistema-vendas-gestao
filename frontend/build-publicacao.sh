@@ -22,4 +22,9 @@ cat > publicar/_routes.json <<'JSON'
 }
 JSON
 
+# A raiz abre o login do painel; a vitrine de cada loja continua em /<loja> (ex.: /ecsfish).
+cat > publicar/_redirects <<'TXT'
+/  /painel/  302
+TXT
+
 echo "Publicação montada em publicar/"
