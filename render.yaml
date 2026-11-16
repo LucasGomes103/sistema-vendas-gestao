@@ -10,7 +10,7 @@ services:
     # Contexto = raiz do repositório (a imagem junta backend/ e whatsapp-local/).
     dockerfilePath: ./infra/render/Dockerfile
     dockerContext: .
-    # Só recompila quando muda algo da API ou da ponte (mudança no front fica com o Netlify).
+    # Só recompila quando muda algo da API ou da ponte (mudança no front fica com o Cloudflare Pages).
     buildFilter:
       paths:
         - backend/**
@@ -28,7 +28,7 @@ services:
       # Host=...pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.xxxx;Password=...;SSL Mode=Require
       - key: ConnectionStrings__Banco
         sync: false
-      # Endereço público do Netlify (ex.: https://ecsfish.netlify.app): usado no link do catálogo que o robô envia
+      # Endereço público do Cloudflare Pages (ex.: https://ecsfish.pages.dev): usado no link do catálogo que o robô envia
       - key: Vitrine__UrlBase
         sync: false
       - key: IA__Gemini__ApiKey

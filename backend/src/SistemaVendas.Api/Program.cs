@@ -63,7 +63,7 @@ builder.Services.AddRateLimiter(o =>
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
 {
     o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    // Netlify -> Render: dois saltos até o IP real do cliente (usado no limite de tentativas de login).
+    // Cloudflare Pages -> Render: dois saltos até o IP real do cliente (usado no limite de tentativas de login).
     o.ForwardLimit = 2;
     o.KnownIPNetworks.Clear();
     o.KnownProxies.Clear();
