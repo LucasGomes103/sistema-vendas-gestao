@@ -1,0 +1,374 @@
+<header class="sv-cabecalho-pagina">
+  <div>
+    <h1>Métricas</h1>
+    <p>Vendas, funil, estoque, caixa e entregas do período. Os relatórios saem em planilha (CSV, abre no Excel).</p>
+  </div>
+  <button mat-stroked-button [matMenuTriggerFor]="menuExportar"><mat-icon>download</mat-icon> Exportar</button>
+  <mat-menu #menuExportar="matMenu">
+    @for (r of relatorios; track r.id) {
+      <a mat-menu-item [href]="exportar(r.id)" download>
+        <mat-icon>{{ r.icone }}</mat-icon>
+        <span>{{ r.nome }}</span>
+      </a>
+    }
+  </mat-menu>
+</header>
+
+<section class="filtros">
+  <mat-button-toggle-group hideSingleSelectionIndicator [value]="atalho()" (change)="escolher($event.value)" aria-label="Período">
+    <mat-button-toggle value="7">7 dias</mat-button-toggle>
+    <mat-button-toggle value="30">30 dias</mat-button-toggle>
+    <mat-button-toggle value="mes">Este mês</mat-button-toggle>
+    <mat-button-toggle value="mesAnterior">Mês anterior</mat-button-toggle>
+    <mat-button-toggle value="90">90 dias</mat-button-toggle>
+    <mat-button-toggle value="personalizado">Escolher</mat-button-toggle>
+  </mat-button-toggle-group>
+  @if (atalho() === 'personalizado') {
+    <span class="datas">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>De</mat-label>
+        <input matInput type="date" [ngModel]="de()" (ngModelChange)="de.set($event)" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Até</mat-label>
+        <input matInput type="date" [ngModel]="ate()" (ngModelChange)="ate.set($event)" />
+      </mat-form-field>
+    </span>
+  }
+  <mat-checkbox [checked]="simuladas()" (change)="simuladas.set($event.checked)" matTooltip="Conversas e pedidos feitos pelo simulador do painel">
+    Incluir simulações
+  </mat-checkbox>
+</section>
+
+@if (dados.isLoading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (erro(); as e) {
+  <div class="sv-vazio">
+    <mat-icon>cloud_off</mat-icon>
+    <p>{{ e }}</p>
+    <button mat-stroked-button (click)="dados.reload()">Tentar de novo</button>
+  </div>
+} @else if (dados.value(); as r) {
+  <p class="periodo">
+    {{ dataLocal(r.de) | date: "dd/MM/yyyy" }} a {{ dataLocal(r.ate) | date: "dd/MM/yyyy" }} · comparado com
+    {{ dataLocal(r.anteriorDe) | date: "dd/MM" }} a {{ dataLocal(r.anteriorAte) | date: "dd/MM" }}
+  </p>
+
+  <!-- Números do período -->
+  <div class="kpis">
+    <ng-template #delta let-atual="atual" let-anterior="anterior">
+      @let v = variacao(atual, anterior);
+      @if (v !== null) {
+        <small class="delta" [class.sobe]="v > 0" [class.desce]="v < 0">
+          <mat-icon>{{ v > 0 ? 'trending_up' : v < 0 ? 'trending_down' : 'trending_flat' }}</mat-icon>
+          {{ v > 0 ? '+' : '' }}{{ v | number: '1.0-0' }}% vs anterior
+        </small>
+      } @else {
+        <small class="delta">sem base para comparar</small>
+      }
+    </ng-template>
+
+    <div class="sv-card kpi">
+      <span>Conversas novas</span>
+      <strong>{{ r.atual.conversas | number }}</strong>
+      <ng-container *ngTemplateOutlet="delta; context: { atual: r.atual.conversas, anterior: r.anterior.conversas }" />
+    </div>
+    <div class="sv-card kpi">
+      <span>Vendas pagas</span>
+      <strong>{{ r.atual.vendasPagas | number }}</strong>
+      <ng-container *ngTemplateOutlet="delta; context: { atual: r.atual.vendasPagas, anterior: r.anterior.vendasPagas }" />
+    </div>
+    <div class="sv-card kpi">
+      <span>Conversão</span>
+      <strong>{{ r.atual.conversao | number: '1.0-1' }}%</strong>
+      <small>vendas ÷ conversas</small>
+    </div>
+    <div class="sv-card kpi">
+      <span>Receita</span>
+      <strong>{{ r.atual.receita | currency: 'BRL' }}</strong>
+      <ng-container *ngTemplateOutlet="delta; context: { atual: r.atual.receita, anterior: r.anterior.receita }" />
+    </div>
+    <div class="sv-card kpi">
+      <span>Ticket médio</span>
+      <strong>{{ r.atual.ticketMedio | currency: 'BRL' }}</strong>
+      <ng-container *ngTemplateOutlet="delta; context: { atual: r.atual.ticketMedio, anterior: r.anterior.ticketMedio }" />
+    </div>
+    <div class="sv-card kpi">
+      <span>Peixes vendidos</span>
+      <strong>{{ r.atual.itensVendidos | number }}</strong>
+      <small>
+        {{ r.atual.pedidosCancelados }} pedido{{ r.atual.pedidosCancelados === 1 ? '' : 's' }} cancelado{{ r.atual.pedidosCancelados === 1 ? '' : 's' }}
+        @if (r.atual.valorCancelado) {
+          ({{ r.atual.valorCancelado | currency: 'BRL' }})
+        }
+      </small>
+    </div>
+  </div>
+
+  <!-- Vendas no tempo -->
+  <section class="sv-card bloco">
+    <h2>Receita por {{ r.agrupamento === 'Dia' ? 'dia' : r.agrupamento === 'Semana' ? 'semana' : 'mês' }}</h2>
+    @if (maiorReceita() > 0) {
+      <div class="grafico" role="img" [attr.aria-label]="'Receita por ' + r.agrupamento">
+        <span class="escala">{{ maiorReceita() | currency: 'BRL' : 'symbol' : '1.0-0' }}</span>
+        <div class="barras">
+          @for (b of barras(); track b.inicio; let i = $index) {
+            <div
+              class="coluna"
+              [matTooltip]="(dataLocal(b.inicio) | date: (r.agrupamento === 'Mes' ? 'MMMM/yyyy' : 'dd/MM/yyyy')) + (r.agrupamento === 'Semana' ? ' (semana)' : '') + ': ' + (b.receita | currency: 'BRL') + ' · ' + b.pedidos + ' pedido(s)'"
+            >
+              <span class="barra" [style.height.%]="b.altura"></span>
+              <span class="rotulo">{{ mostrarRotulo(i, barras().length) ? (dataLocal(b.inicio) | date: formatoGrupo(r)) : '' }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    } @else {
+      <p class="vazio">Nenhuma venda paga no período.</p>
+    }
+  </section>
+
+  <div class="grade">
+    <!-- Funil -->
+    <section class="sv-card bloco">
+      <h2>Funil das conversas novas</h2>
+      @let topo = r.funil[0]?.conversas ?? 0;
+      @if (topo > 0) {
+        <ul class="linhas">
+          @for (f of r.funil; track f.etapa) {
+            <li>
+              <span class="nome">{{ etapas[f.etapa] ?? f.etapa }}</span>
+              <span class="trilho"><span class="preenchido" [style.width.%]="largura(f.conversas, topo)"></span></span>
+              <span class="valor">{{ f.conversas }} <small>({{ percentual(f.conversas, topo) | number: '1.0-0' }}%)</small></span>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="vazio">Nenhuma conversa nova no período.</p>
+      }
+    </section>
+
+    <!-- Motivos de perda -->
+    <section class="sv-card bloco">
+      <h2>Motivos de perda</h2>
+      @let maxPerda = r.motivosPerda[0]?.conversas ?? 0;
+      @if (r.motivosPerda.length) {
+        <ul class="linhas">
+          @for (m of r.motivosPerda; track m.motivo) {
+            <li>
+              <span class="nome">{{ motivos[m.motivo] ?? m.motivo }}</span>
+              <span class="trilho"><span class="preenchido perda" [style.width.%]="largura(m.conversas, maxPerda)"></span></span>
+              <span class="valor">{{ m.conversas }}</span>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="vazio">Nenhum cliente perdido no período.</p>
+      }
+    </section>
+
+    <!-- Origem das vendas -->
+    <section class="sv-card bloco">
+      <h2>De onde vieram as vendas</h2>
+      @if (r.origens.length) {
+        <table>
+          <thead>
+            <tr><th>Origem</th><th class="num">Vendas</th><th class="num">Receita</th></tr>
+          </thead>
+          <tbody>
+            @for (o of r.origens; track o.origem) {
+              <tr><td>{{ o.origem }}</td><td class="num">{{ o.vendas }}</td><td class="num">{{ o.receita | currency: 'BRL' }}</td></tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="vazio">Sem vendas no período.</p>
+      }
+    </section>
+
+    <!-- Formas de pagamento -->
+    <section class="sv-card bloco">
+      <h2>Formas de pagamento</h2>
+      @if (r.formas.length) {
+        <table>
+          <thead>
+            <tr><th>Forma</th><th class="num">Pedidos</th><th class="num">Valor</th></tr>
+          </thead>
+          <tbody>
+            @for (f of r.formas; track f.forma) {
+              <tr><td>{{ f.forma }}</td><td class="num">{{ f.pedidos }}</td><td class="num">{{ f.valor | currency: 'BRL' }}</td></tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="vazio">Sem vendas no período.</p>
+      }
+    </section>
+  </div>
+
+  <!-- Espécies -->
+  <section class="sv-card bloco">
+    <h2>Mais vendidos e margem por espécie</h2>
+    @if (especiesVendidas().length) {
+      <div class="rolagem">
+        <table>
+          <thead>
+            <tr>
+              <th>Espécie</th>
+              <th class="num">Vendidos</th>
+              <th class="num">Receita</th>
+              <th class="num">Custo</th>
+              <th class="num">Margem</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (e of especiesVendidas(); track e.especieId) {
+              <tr>
+                <td>{{ e.especie }}</td>
+                <td class="num">{{ e.quantidade }}</td>
+                <td class="num">{{ e.receita | currency: 'BRL' }}</td>
+                <td class="num">{{ e.custo === null ? '—' : (e.custo | currency: 'BRL') }}</td>
+                <td class="num">
+                  @if (e.margem !== null) {
+                    {{ e.margem | currency: 'BRL' }} <small>({{ e.margemPercentual | number: '1.0-1' }}%)</small>
+                  } @else {
+                    —
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (algumaSemCusto()) {
+        <p class="nota">Margem com "—": algum lote vendido não tem custo cadastrado. Informe o custo por peixe na entrada do lote.</p>
+      }
+    } @else {
+      <p class="vazio">Nenhuma espécie vendida no período.</p>
+    }
+  </section>
+
+  <!-- Estoque -->
+  <section class="sv-card bloco">
+    <h2>Giro do estoque por tanque</h2>
+    <div class="rolagem">
+      <table>
+        <thead>
+          <tr>
+            <th>Tanque</th>
+            <th class="num">No início</th>
+            <th class="num">Entradas</th>
+            <th class="num">Vendidos</th>
+            <th class="num">Mortes</th>
+            <th class="num" matTooltip="Vendidos ÷ estoque médio do período">Giro</th>
+            <th class="num">Hoje</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of r.tanques; track t.tanqueId) {
+            <tr>
+              <td>{{ t.tanque }} @if (t.tipo === 'Quarentena') {<small class="sv-selo alerta">quarentena</small>}</td>
+              <td class="num">{{ t.saldoInicio }}</td>
+              <td class="num">{{ t.entradas }}</td>
+              <td class="num">{{ t.vendidos }}</td>
+              <td class="num" [class.ruim]="t.mortes > 0">{{ t.mortes }}</td>
+              <td class="num">{{ t.giro === null ? '—' : (t.giro | number: '1.1-2') + '×' }}</td>
+              <td class="num">{{ t.saldoAtual }}</td>
+            </tr>
+          } @empty {
+            <tr><td colspan="7" class="vazio">Nenhum tanque cadastrado.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <p class="nota">Giro = peixes vendidos ÷ estoque médio do período. Giro 2× quer dizer que o tanque "girou" duas vezes.</p>
+  </section>
+
+  <div class="grade">
+    <!-- Fornecedores -->
+    <section class="sv-card bloco">
+      <h2>Mortalidade por fornecedor</h2>
+      <p class="nota topo">Lotes recebidos no período e quanto desse peixe morreu até hoje.</p>
+      @if (r.fornecedores.length) {
+        <table>
+          <thead>
+            <tr><th>Fornecedor</th><th class="num">Recebidos</th><th class="num">Mortes</th><th class="num">Compras</th></tr>
+          </thead>
+          <tbody>
+            @for (f of r.fornecedores; track f.fornecedor) {
+              <tr>
+                <td>{{ f.fornecedor }} <small>({{ f.lotes }} lote{{ f.lotes === 1 ? '' : 's' }})</small></td>
+                <td class="num">{{ f.recebidos }}</td>
+                <td class="num" [class.ruim]="f.mortalidade >= 10">{{ f.mortes }} <small>({{ f.mortalidade | number: '1.0-1' }}%)</small></td>
+                <td class="num">{{ f.custoCompras === null ? '—' : (f.custoCompras | currency: 'BRL') }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="vazio">Nenhum lote recebido no período.</p>
+      }
+      @if (especiesComMorte().length) {
+        <h3>Mortes no período por espécie</h3>
+        <p class="lista-curta">
+          @for (e of especiesComMorte(); track e.especieId) {
+            <span class="sv-selo alerta">{{ e.especie }}: {{ e.mortes }}</span>
+          }
+        </p>
+      }
+    </section>
+
+    <!-- Caixa e entregas -->
+    <section class="sv-card bloco">
+      <h2>Caixa do período</h2>
+      <dl class="totais">
+        <div><dt>Entradas</dt><dd class="entrada">{{ r.caixa.entradas | currency: 'BRL' }}</dd></div>
+        <div><dt>Saídas</dt><dd class="saida">{{ r.caixa.saidas | currency: 'BRL' }}</dd></div>
+        <div><dt>Saldo</dt><dd>{{ r.caixa.saldo | currency: 'BRL' }}</dd></div>
+      </dl>
+      @if (r.caixa.despesas.length) {
+        <h3>Despesas por categoria</h3>
+        <ul class="linhas">
+          @let maxDespesa = r.caixa.despesas[0].valor;
+          @for (d of r.caixa.despesas; track d.categoria) {
+            <li>
+              <span class="nome">{{ d.categoria }}</span>
+              <span class="trilho"><span class="preenchido perda" [style.width.%]="largura(d.valor, maxDespesa)"></span></span>
+              <span class="valor">{{ d.valor | currency: 'BRL' }}</span>
+            </li>
+          }
+        </ul>
+      }
+      <p class="nota">
+        {{ r.caixa.diasFechados }} dia{{ r.caixa.diasFechados === 1 ? '' : 's' }} fechado{{ r.caixa.diasFechados === 1 ? '' : 's' }}
+        @if (r.caixa.diferencaGaveta) {
+          · {{ r.caixa.diferencaGaveta > 0 ? 'sobra' : 'falta' }} de {{ (r.caixa.diferencaGaveta < 0 ? -r.caixa.diferencaGaveta : r.caixa.diferencaGaveta) | currency: 'BRL' }} na gaveta
+        }
+      </p>
+
+      <h2 class="segundo">Entregas e retiradas</h2>
+      <dl class="totais">
+        <div><dt>Entregues</dt><dd>{{ r.entregas.entregues }}</dd></div>
+        <div><dt>Retiradas</dt><dd>{{ r.entregas.retiradas }}</dd></div>
+        <div>
+          <dt>Pago → entregue</dt>
+          <dd>{{ r.entregas.diasAteEntregar === null ? '—' : (r.entregas.diasAteEntregar | number: '1.0-1') + ' dia(s)' }}</dd>
+        </div>
+      </dl>
+      <p class="nota">
+        Agora: {{ r.entregas.emAberto }} em aberto
+        @if (r.entregas.atrasadas) {
+          · <strong class="ruim">{{ r.entregas.atrasadas }} atrasada{{ r.entregas.atrasadas === 1 ? '' : 's' }}</strong>
+        }
+      </p>
+    </section>
+  </div>
+
+  @if (!r.incluiSimuladas) {
+    <p class="nota rodape">
+      Conversas e pedidos do simulador ficam de fora (marque "Incluir simulações" para ver). Estoque e caixa mostram tudo o que foi lançado.
+    </p>
+  }
+}

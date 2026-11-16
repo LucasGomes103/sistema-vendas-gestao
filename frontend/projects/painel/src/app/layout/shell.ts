@@ -71,6 +71,7 @@ export class Shell {
     { rota: '/pedidos', rotulo: 'Pedidos', icone: 'receipt_long' },
     { rota: '/entregas', rotulo: 'Entregas', icone: 'local_shipping', entregador: true },
     { rota: '/caixa', rotulo: 'Caixa', icone: 'point_of_sale', dono: true, foraDaBarra: true },
+    { rota: '/metricas', rotulo: 'Métricas', icone: 'monitoring', dono: true, foraDaBarra: true },
     { rota: '/estoque', rotulo: 'Estoque', icone: 'water' },
     { rota: '/catalogo', rotulo: 'Catálogo', icone: 'set_meal', foraDaBarra: true },
   ];
@@ -82,10 +83,8 @@ export class Shell {
   protected readonly barra = computed(() => this.menu().filter((i) => !i.foraDaBarra));
   protected readonly noMenuDaConta = computed(() => this.menu().filter((i) => i.foraDaBarra));
 
-  /** Itens que ainda vão entrar na fase 1, mostrados desabilitados para dar a visão do todo. */
-  protected readonly emBreve: ItemMenu[] = [
-    { rota: '', rotulo: 'Métricas', icone: 'monitoring' },
-  ];
+  /** Itens que ainda vão entrar, mostrados desabilitados para dar a visão do todo. */
+  protected readonly emBreve: ItemMenu[] = [];
 
   protected trocarSenha(): void {
     this.dialog.open(SenhaDialog, { data: null, width: '420px', maxWidth: '95vw' });

@@ -171,23 +171,46 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
     }
 
     /// <summary>
-    /// Mensagem nova do cliente com pedido em aberto: se parece comprovante ("paguei", foto, PDF), o pedido
-    /// vai para "Conferir pagamento" e o vendedor é avisado. Não salva: quem chama salva junto.
+    /// Mensagem nova do cliente com pedido em aberto. Se parece comprovante ("paguei", foto, PDF), o pedido vai
+    /// para "Conferir pagamento" e o vendedor é avisado; a confirmação do pagamento é sempre manual, no painel.
+    /// O cliente recebe uma resposta automática: só texto ("paguei") pede o comprovante; foto ou PDF
+    /// confirma o recebimento. Não salva: quem chama salva junto.
     /// </summary>
     public async Task AoReceberDoClienteAsync(Conversa conversa, string tipo, string texto, DateTimeOffset agora, CancellationToken ct)
     {
         if (!RegrasPedido.PareceComprovante(tipo, texto))
             return;
         var pedido = await db.Pedidos
-            .Where(p => p.ConversaId == conversa.Id && p.Status == StatusPedido.AguardandoPagamento)
+            .Where(p => p.ConversaId == conversa.Id && (p.Status == StatusPedido.AguardandoPagamento || p.Status == StatusPedido.ConferirPagamento))
             .OrderByDescending(p => p.CriadoEm).FirstOrDefaultAsync(ct);
-        if (pedido is null || !RegrasPedido.ComprovanteRecebido(pedido, agora))
+        if (pedido is null)
             return;
+        var arquivo = RegrasPedido.EhArquivo(tipo);
 
-        var motivo = $"Cliente diz que pagou o pedido #{pedido.Numero}: conferir na conta";
+        if (pedido.Status == StatusPedido.ConferirPagamento)
+        {
+            // Já avisou que pagou por texto e agora manda o arquivo: agradece uma vez só.
+            if (arquivo && pedido.ComprovanteEm is { } desde && !await ArquivoDesdeAsync(conversa.Id, desde, ct))
+                Responder(conversa, RegrasPedido.MensagemComprovanteRecebido(pedido), agora);
+            return;
+        }
+
+        RegrasPedido.ComprovanteRecebido(pedido, agora);
+        var motivo = arquivo
+            ? $"Cliente mandou o comprovante do pedido #{pedido.Numero}: conferir na conta"
+            : $"Cliente diz que pagou o pedido #{pedido.Numero}: conferir na conta";
         conversa.AlertarDeNovo(motivo, agora);
         funil.Registrar(conversa, MotorFunil.Mover(conversa, EtapaCard.ConferirPagamento, null), OrigemEvento.Webhook);
+        Responder(conversa, arquivo ? RegrasPedido.MensagemComprovanteRecebido(pedido) : RegrasPedido.MensagemPedirComprovante(pedido), agora);
     }
+
+    private Task<bool> ArquivoDesdeAsync(Guid conversaId, DateTimeOffset desde, CancellationToken ct) =>
+        db.Mensagens.AnyAsync(m => m.ConversaId == conversaId && m.Direcao == DirecaoMensagem.Entrada && m.CriadoEm >= desde
+                                   && (m.Tipo == "image" || m.Tipo == "document"), ct);
+
+    /// <summary>Resposta automática ao cliente, depois da mensagem dele (um segundo à frente garante a ordem).</summary>
+    private void Responder(Conversa conversa, string texto, DateTimeOffset agora) =>
+        AvisoCliente.Enfileirar(db, conversa, [texto], agora.AddSeconds(1), null, AutorMensagem.Robo);
 
     public static bool PixPronto(Domain.Lojas.Loja loja) =>
         !string.IsNullOrWhiteSpace(loja.PixChave) && !string.IsNullOrWhiteSpace(loja.PixNome) && !string.IsNullOrWhiteSpace(loja.PixCidade);

@@ -9,7 +9,8 @@ public static class AvisoCliente
         "A janela de 24 h do WhatsApp fechou, então a mensagem não foi enviada. Copie o texto e mande quando o cliente escrever de novo.";
 
     /// <summary>Coloca as mensagens na fila. Devolve null se enviou, ou o motivo de não ter enviado. Não salva.</summary>
-    public static string? Enfileirar(AppDbContext db, Conversa conversa, IEnumerable<string> textos, DateTimeOffset agora, Guid? usuarioId)
+    public static string? Enfileirar(AppDbContext db, Conversa conversa, IEnumerable<string> textos, DateTimeOffset agora, Guid? usuarioId,
+        AutorMensagem autor = AutorMensagem.Vendedor)
     {
         // Fora da janela, a Meta só aceita modelo aprovado.
         if (!conversa.DentroDaJanela(agora))
@@ -23,7 +24,7 @@ public static class AvisoCliente
                 LojaId = conversa.LojaId,
                 ConversaId = conversa.Id,
                 Direcao = DirecaoMensagem.Saida,
-                Autor = AutorMensagem.Vendedor,
+                Autor = autor,
                 Conteudo = texto,
                 Status = StatusMensagem.Pendente,
                 Categoria = CategoriaMensagem.Servico,

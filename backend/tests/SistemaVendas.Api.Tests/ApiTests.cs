@@ -28,6 +28,8 @@ public class ApiTests(WebApplicationFactory<Program> factory) : IClassFixture<We
     [InlineData("/api/v1/pedidos")]
     [InlineData("/api/v1/caixa")]
     [InlineData("/api/v1/entregas")]
+    [InlineData("/api/v1/metricas")]
+    [InlineData("/api/v1/metricas/exportar/pedidos")]
     [InlineData("/api/v1/config/pix")]
     public async Task Rotas_do_painel_exigem_login(string rota)
     {
