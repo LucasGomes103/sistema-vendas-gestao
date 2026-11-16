@@ -22,7 +22,7 @@ Toda mudança entra por pull request; o merge na `main` publica.
 | 0 | Gerenciamento de usuários | Pronta |
 | 1 | Robô vendedor: frete, reserva, fotos, alerta de cliente quente, kanban ao vivo | Pronta |
 | 2 | Pedidos, Pix com chave comum, caixa e entregas | Pronta |
-| 3 | Métricas e relatórios | A fazer |
+| 3 | Métricas e relatórios | Pronta |
 | 4 | Itens restantes do plano em [iniciacao](iniciacao) | A fazer |
 
 ## Base (antes das fases)
@@ -127,6 +127,9 @@ código e cancelar.
 
 - Quando o cliente escreve "paguei", "segue o comprovante", "fiz o Pix" ou manda foto ou PDF, o pedido vai para
   **Conferir pagamento**, o card também, e o vendedor recebe o aviso de cliente quente (sino, 15 min, 1 h).
+- Não há aviso automático de Pix pago: **a confirmação é sempre manual**. A cobrança já pede o comprovante, e o robô
+  responde sozinho: se o cliente só escreveu "paguei", pede o comprovante (print ou PDF); quando chega a foto ou o PDF,
+  diz que recebeu e que um atendente vai conferir. Essa resposta sai uma vez só por pedido.
 - **Confirmar pagamento**: escolhe Pix, dinheiro ou cartão. O peixe sai do estoque (a reserva vira venda), o card vai
   para **Pago** e, se marcado, o cliente recebe "Pagamento do pedido #N confirmado".
 - **Cancelar**: o peixe volta ao estoque e o card vai para Perdido ("desistiu").
@@ -169,6 +172,36 @@ agenda existir entraram na migração).
 estão sem ninguém. Pode marcar saída e entrega; não agenda. Não vê conversas nem os alertas de cliente quente.
 
 No celular a barra inferior tem Funil, Conversas, Pedidos, Entregas e Estoque; Caixa e Catálogo ficam no menu da conta.
+
+## Fase 3: métricas e relatórios
+
+**Menu → Métricas** (só o dono). Período: 7 dias, 30 dias, este mês, mês anterior, 90 dias ou datas escolhidas (até
+um ano). Os números comparam com o período anterior de mesmo tamanho.
+
+- **Resumo**: conversas novas, vendas pagas, conversão (vendas ÷ conversas), receita, ticket médio, peixes vendidos e
+  pedidos cancelados.
+- **Receita no tempo**: por dia até 31 dias, por semana até ~4 meses, por mês acima disso. Passe o mouse na coluna para
+  ver valor e pedidos.
+- **Funil das conversas novas**: quantas chegaram a robô atendeu, quente, recebeu o Pix, pago e entregue (sai do
+  histórico de etapas dos cards).
+- **Motivos de perda**, **de onde vieram as vendas** (pedido pela vitrine, recuperada por follow-up, atendimento
+  direto) e **formas de pagamento**.
+- **Mais vendidos e margem por espécie**: receita, custo e margem. O custo vem do lote de onde o peixe saiu; se algum
+  lote não tem custo cadastrado, a margem fica em branco.
+- **Giro do estoque por tanque**: saldo no início, entradas, vendidos, mortes, giro (vendidos ÷ estoque médio) e o
+  saldo de hoje.
+- **Mortalidade por fornecedor**: dos lotes recebidos no período, quanto morreu até hoje, e as mortes por espécie.
+- **Caixa do período** (entradas, saídas, despesas por categoria, sobra ou falta na gaveta) e **entregas** (feitas,
+  retiradas, tempo médio do pagamento à entrega, em aberto e atrasadas).
+
+Conversas e pedidos do simulador ficam de fora; a opção **Incluir simulações** traz de volta. Estoque e caixa sempre
+mostram tudo o que foi lançado.
+
+**Exportar** baixa planilhas CSV que abrem direto no Excel (separador ";", vírgula decimal): pedidos pagos, vendas por
+período, espécies, estoque por tanque, mortalidade por fornecedor e lançamentos do caixa. A API é
+`GET /api/v1/metricas?de=&ate=` e `GET /api/v1/metricas/exportar/{relatorio}?de=&ate=`.
+
+Ficou de fora: custo do WhatsApp (a ponte por QR não cobra; volta quando usar a API oficial da Meta).
 
 ## Pendências conhecidas
 
