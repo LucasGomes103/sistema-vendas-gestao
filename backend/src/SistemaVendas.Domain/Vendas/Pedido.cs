@@ -167,7 +167,19 @@ public static partial class RegrasPedido
 
     /// <summary>Foto ou PDF (o comprovante) ou frase como "paguei", "segue o comprovante", "fiz o pix".</summary>
     public static bool PareceComprovante(string tipo, string texto) =>
-        tipo is "image" or "document" || FalaDePagamento().IsMatch(SemAcento(texto));
+        EhArquivo(tipo) || FalaDePagamento().IsMatch(SemAcento(texto));
+
+    /// <summary>Foto ou PDF: o próprio comprovante.</summary>
+    public static bool EhArquivo(string tipo) => tipo is "image" or "document";
+
+    /// <summary>Cliente disse que pagou, mas não mandou o arquivo: pede o comprovante.</summary>
+    public static string MensagemPedirComprovante(Pedido pedido) =>
+        $"Obrigado! 🙌 Para confirmarmos o pedido #{pedido.Numero}, envie o *comprovante do Pix* aqui na conversa (print da tela ou PDF). " +
+        "Um atendente confere na conta e confirma o pagamento por aqui.";
+
+    /// <summary>Chegou foto ou PDF: avisa que um atendente vai conferir (a confirmação é manual).</summary>
+    public static string MensagemComprovanteRecebido(Pedido pedido) =>
+        $"Recebemos o seu comprovante do pedido #{pedido.Numero}! 🙌 Um atendente confere na conta e confirma o pagamento por aqui em instantes.";
 
     /// <summary>
     /// Mensagem de cobrança: itens, frete e total. O código Pix vai sozinho na mensagem seguinte,
@@ -184,10 +196,14 @@ public static partial class RegrasPedido
         linhas.Add("");
         linhas.Add($"Para pagar, copie o código da próxima mensagem e cole no app do seu banco em *Pix copia e cola*{(nomeRecebedor is { Length: > 0 } n ? $" (recebedor: {n})" : "")}.");
         linhas.Add(pedido.ExpiraEm is { } expira
-            ? $"O peixe fica separado até {TimeZoneInfo.ConvertTime(expira, fuso):dd/MM 'às' HH:mm}. Depois de pagar, mande o comprovante aqui. 🐠"
-            : "Depois de pagar, mande o comprovante aqui. 🐠");
+            ? $"O peixe fica separado até {TimeZoneInfo.ConvertTime(expira, fuso):dd/MM 'às' HH:mm}. {PedidoDoComprovante}"
+            : PedidoDoComprovante);
         return string.Join('\n', linhas);
     }
+
+    /// <summary>Sem aviso automático de Pix: o cliente manda o comprovante e um atendente confirma.</summary>
+    public const string PedidoDoComprovante =
+        "Depois de pagar, envie o *comprovante* aqui na conversa (print ou PDF). Um atendente confere e confirma o seu pagamento. 🐠";
 
     public static string MensagemPago(Pedido pedido) =>
         pedido.TipoEntrega == TipoEntrega.Entrega

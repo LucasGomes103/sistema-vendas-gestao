@@ -139,6 +139,19 @@ public class RegrasPedidoTests
         Assert.Equal(esperado, RegrasPedido.PareceComprovante(tipo, texto));
 
     [Fact]
+    public void Robo_pede_o_comprovante_e_avisa_que_a_confirmacao_e_manual()
+    {
+        var p = RegrasPedido.CriarDaReserva(ReservaDe(1, 0), Guid.NewGuid(), 7, new DadosEntrega(TipoEntrega.Retirada, 0, null, null, null), null);
+
+        Assert.Contains("comprovante", RegrasPedido.MensagemPedirComprovante(p));
+        Assert.Contains("#7", RegrasPedido.MensagemPedirComprovante(p));
+        Assert.Contains("atendente confere", RegrasPedido.MensagemComprovanteRecebido(p));
+        Assert.Contains("comprovante", RegrasPedido.MensagemCobranca(p, null, TimeZoneInfo.Utc));
+        Assert.True(RegrasPedido.EhArquivo("image"));
+        Assert.False(RegrasPedido.EhArquivo("text"));
+    }
+
+    [Fact]
     public void Cobranca_mostra_itens_total_e_o_codigo()
     {
         var p = RegrasPedido.CriarDaReserva(ReservaDe(2, 0), Guid.NewGuid(), 3, new DadosEntrega(TipoEntrega.Entrega, 12.5m, null, "Rua B", null), null);
