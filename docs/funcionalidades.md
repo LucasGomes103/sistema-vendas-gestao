@@ -208,13 +208,14 @@ Ficou de fora: custo do WhatsApp (a ponte por QR não cobra; volta quando usar a
 Opcional e sem mensalidade: o Mercado Pago cobra uma taxa por venda no cartão. Liga sozinho quando a variável
 `MercadoPago__AccessToken` existe no Render; sem ela, tudo segue só com Pix, como antes.
 
-- Ao criar o pedido (ou tocar em **Enviar cobrança**), o sistema cria um link do **Checkout Pro** com o total do
-  pedido. A cobrança no WhatsApp passa a oferecer as duas formas: o Pix copia e cola (comprovante e confirmação
+- Ao criar o pedido (ou tocar em **Enviar cobrança**), o sistema cria uma order do **Checkout Pro** (API de Orders,
+  `POST /v1/orders`) com o total do pedido e manda o `checkout_url`. A cobrança no WhatsApp passa a oferecer as duas formas: o Pix copia e cola (comprovante e confirmação
   manual, sem mudança) e o link do cartão de crédito (até 12 parcelas) ou débito. Boleto e o Pix do Mercado Pago
   ficam fora do link: o Pix continua pela chave da loja, sem taxa.
 - O link vence junto com a reserva de 24 h.
-- Quando o cliente paga pelo link, o Mercado Pago avisa a API em `POST /api/v1/webhooks/mercadopago`. A API busca o
-  pagamento no Mercado Pago com o próprio token (o aviso sozinho não confirma nada) e, aprovado com o valor certo,
+- Quando o cliente paga pelo link, o Mercado Pago avisa a API em `POST /api/v1/webhooks/mercadopago` (evento **Order**,
+  cadastrado no painel do Mercado Pago em Configuração de webhooks). A API busca a order com o próprio token (o aviso
+  sozinho não confirma nada) e, com status `processed` e o valor certo,
   confirma o pedido sozinho: o peixe sai do estoque, entra no caixa como **Cartão**, o card vai para **Pago**, entra
   na agenda de entregas e o cliente recebe a confirmação. Aviso repetido é ignorado.
 - Se o pagamento chega depois que a reserva venceu (ou o valor não bate), o estoque não é mexido: o pedido vai para
@@ -226,7 +227,7 @@ Opcional e sem mensalidade: o Mercado Pago cobra uma taxa por venda no cartão. 
 Variáveis no Render: `MercadoPago__AccessToken` (obrigatória), `MercadoPago__WebhookSecret` (assinatura secreta dos
 avisos; com ela, aviso com assinatura errada é recusado), `MercadoPago__ModoTeste=true` enquanto usar a conta de
 teste (só muda o selo no painel). O endereço público vem do `RENDER_EXTERNAL_URL`, que o Render preenche sozinho
-(ou `MercadoPago__UrlPublicaApi`).
+(ou `MercadoPago__UrlPublicaApi`); serve só para o painel mostrar a URL a cadastrar no Mercado Pago.
 
 ## Pendências conhecidas
 

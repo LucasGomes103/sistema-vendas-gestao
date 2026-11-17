@@ -153,8 +153,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
             e.Property(x => x.Cep).HasMaxLength(8);
             e.Property(x => x.PixCopiaECola).HasMaxLength(512);
             e.Property(x => x.LinkCartao).HasMaxLength(512);
-            e.Property(x => x.MpPreferenciaId).HasMaxLength(80);
-            e.Property(x => x.MpPagamentoId).HasMaxLength(40);
+            e.Property(x => x.MpOrderId).HasMaxLength(64);
+            e.Property(x => x.MpPagamentoId).HasMaxLength(64);
             e.Ignore(x => x.Aberto);
             e.HasIndex(x => new { x.LojaId, x.Numero }).IsUnique();
             e.HasIndex(x => new { x.LojaId, x.Status, x.CriadoEm });

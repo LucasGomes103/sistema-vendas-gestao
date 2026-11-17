@@ -18,17 +18,17 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                 nullable: true);
 
             migrationBuilder.AddColumn<string>(
-                name: "mp_pagamento_id",
+                name: "mp_order_id",
                 table: "pedido",
-                type: "character varying(40)",
-                maxLength: 40,
+                type: "character varying(64)",
+                maxLength: 64,
                 nullable: true);
 
             migrationBuilder.AddColumn<string>(
-                name: "mp_preferencia_id",
+                name: "mp_pagamento_id",
                 table: "pedido",
-                type: "character varying(80)",
-                maxLength: 80,
+                type: "character varying(64)",
+                maxLength: 64,
                 nullable: true);
         }
 
@@ -40,11 +40,11 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                 table: "pedido");
 
             migrationBuilder.DropColumn(
-                name: "mp_pagamento_id",
+                name: "mp_order_id",
                 table: "pedido");
 
             migrationBuilder.DropColumn(
-                name: "mp_preferencia_id",
+                name: "mp_pagamento_id",
                 table: "pedido");
         }
     }

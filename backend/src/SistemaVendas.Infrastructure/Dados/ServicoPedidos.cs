@@ -254,7 +254,7 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
         {
             var link = await mercadoPago.CriarLinkAsync(pedido, loja.Nome, ct);
             pedido.LinkCartao = link.Url;
-            pedido.MpPreferenciaId = link.PreferenciaId;
+            pedido.MpOrderId = link.OrderId;
             return null;
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException or RegraException)
@@ -266,7 +266,7 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
     }
 
     /// <summary>
-    /// Aviso do Mercado Pago (pagamento já buscado na API com o nosso token). Aprovado e com valor certo:
+    /// Aviso do Mercado Pago (order já buscada na API com o nosso token). Paga ("processed") e com valor certo:
     /// confirma o pedido sozinho (cartão), tira do estoque, lança no caixa e avisa o cliente. Se a reserva
     /// venceu, não mexe no estoque: deixa em "Conferir pagamento" e chama o vendedor. Devolve o que fez (para o log).
     /// </summary>
@@ -276,8 +276,8 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
         if (pedido is null)
             return "pedido não encontrado";
         if (!pagamento.Aprovado)
-            return $"pagamento {pagamento.Status}: nada a fazer";
-        if (pedido.MpPagamentoId == pagamento.Id || pedido.Status == StatusPedido.Pago)
+            return $"order {pagamento.Status}/{pagamento.StatusDetalhe}: nada a fazer";
+        if (pedido.Status == StatusPedido.Pago || (pedido.MpPagamentoId is { } ja && ja == (pagamento.PagamentoId ?? pagamento.Id)))
             return "já estava pago";
 
         var agora = DateTimeOffset.UtcNow;
@@ -288,10 +288,10 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
         if (pedido.Status == StatusPedido.Cancelado || reserva is not { Status: StatusReserva.Ativa } || !valorCerto)
         {
             // Dinheiro entrou, mas o sistema não pode fechar sozinho: o vendedor decide (separar de novo ou estornar).
-            pedido.MpPagamentoId = pagamento.Id;
+            pedido.MpPagamentoId = pagamento.PagamentoId ?? pagamento.Id;
             var motivo = !valorCerto
                 ? $"Pedido #{pedido.Numero}: Mercado Pago aprovou {pagamento.Valor.ToString("C", PtBr)} mas o total é {pedido.Total.ToString("C", PtBr)}. Conferir"
-                : $"Pedido #{pedido.Numero} pago no cartão (Mercado Pago {pagamento.Id}), mas a reserva já tinha encerrado. Separar de novo ou estornar";
+                : $"Pedido #{pedido.Numero} pago no cartão (Mercado Pago {pagamento.PagamentoId ?? pagamento.Id}), mas a reserva já tinha encerrado. Separar de novo ou estornar";
             if (pedido.Status == StatusPedido.AguardandoPagamento)
                 RegrasPedido.ComprovanteRecebido(pedido, agora);
             if (conversa is not null)
@@ -305,7 +305,7 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
             return motivo;
         }
 
-        pedido.MpPagamentoId = pagamento.Id;
+        pedido.MpPagamentoId = pagamento.PagamentoId ?? pagamento.Id;
         await ConfirmarPagamentoAsync(pedido.Id, FormaPagamento.Cartao, avisarCliente: true, usuarioId: null, ct, OrigemEvento.Webhook);
         return $"pedido #{pedido.Numero} pago no cartão";
     }

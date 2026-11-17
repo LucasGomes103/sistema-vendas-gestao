@@ -58,8 +58,8 @@ public class Pedido : EntidadeDaLoja
 
     /// <summary>Link do Mercado Pago (Checkout Pro) para o cliente pagar no cartão; vence junto com a reserva.</summary>
     public string? LinkCartao { get; set; }
-    /// <summary>Id da preferência no Mercado Pago (o link acima).</summary>
-    public string? MpPreferenciaId { get; set; }
+    /// <summary>Id da order no Mercado Pago (o link acima).</summary>
+    public string? MpOrderId { get; set; }
     /// <summary>Id do pagamento aprovado no Mercado Pago: quando preenchido, o pagamento foi confirmado sozinho.</summary>
     public string? MpPagamentoId { get; set; }
 

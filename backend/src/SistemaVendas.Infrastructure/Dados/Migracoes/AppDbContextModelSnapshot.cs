@@ -1470,15 +1470,15 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasColumnType("text")
                         .HasColumnName("motivo_cancelamento");
 
-                    b.Property<string>("MpPagamentoId")
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("mp_pagamento_id");
+                    b.Property<string>("MpOrderId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("mp_order_id");
 
-                    b.Property<string>("MpPreferenciaId")
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)")
-                        .HasColumnName("mp_preferencia_id");
+                    b.Property<string>("MpPagamentoId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("mp_pagamento_id");
 
                     b.Property<int>("Numero")
                         .HasColumnType("integer")

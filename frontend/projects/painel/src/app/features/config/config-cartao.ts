@@ -35,7 +35,7 @@ import { API, ConfigCartao } from '../../core/api';
         <ul>
           <li>
             <mat-icon>{{ c?.webhookPronto ? 'check' : 'warning' }}</mat-icon>
-            {{ c?.webhookPronto ? 'Aviso de pagamento: ' + c?.urlWebhook : 'Sem endereço público para o aviso de pagamento: o pedido não confirma sozinho.' }}
+            {{ c?.webhookPronto ? 'No Mercado Pago (Configuração de webhooks, evento Order), a URL deve ser: ' + c?.urlWebhook : 'Sem endereço público para o aviso de pagamento: o pedido não confirma sozinho.' }}
           </li>
           <li>
             <mat-icon>{{ c?.assinaturaConferida ? 'check' : 'warning' }}</mat-icon>

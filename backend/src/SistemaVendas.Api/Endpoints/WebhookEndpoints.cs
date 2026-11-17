@@ -60,12 +60,11 @@ public static class WebhookEndpoints
             return Results.Ok();
         });
 
-        // Aviso de pagamento do Mercado Pago (cartão). Aceita os dois formatos que ele manda: Webhooks
-        // (?type=payment&data.id=123, com x-signature) e IPN (?topic=payment&id=123). O aviso só diz "olhe o
-        // pagamento 123": o status e o pedido vêm da API do Mercado Pago com o nosso token, então um aviso falso
-        // não confirma nada. Com a assinatura secreta configurada, aviso com x-signature inválida é recusado.
+        // Aviso do Mercado Pago (API de Orders, cartão): ?type=order&data.id=ORD..., com x-signature. O aviso só
+        // diz "olhe a order X": status, valor e pedido vêm da API do Mercado Pago com o nosso token, então um aviso
+        // falso não confirma nada. Com a assinatura secreta configurada, aviso com x-signature inválida é recusado.
         grupo.MapPost("/mercadopago", async (HttpRequest req, IOptions<MercadoPagoOptions> opcoes, IMercadoPago mp,
-            ILojaAtual lojaAtual, ServicoPedidos pedidos, ILoggerFactory logs, CancellationToken ct) =>
+            ILojaAtual lojaAtual, AppDbContext db, ServicoPedidos pedidos, ILoggerFactory logs, CancellationToken ct) =>
         {
             if (!mp.Configurado)
                 return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
@@ -77,19 +76,24 @@ public static class WebhookEndpoints
             if (!string.IsNullOrEmpty(segredo) && assinatura.Length > 0
                 && !AssinaturaMercadoPago.Valida(assinatura, req.Headers["x-request-id"], req.Query["data.id"].FirstOrDefault() ?? id, segredo))
             {
-                log.LogWarning("Aviso do Mercado Pago com assinatura inválida (pagamento {Id})", id);
+                log.LogWarning("Aviso do Mercado Pago com assinatura inválida (order {Id})", id);
                 return Results.Unauthorized();
             }
-            if (tipo != "payment" || string.IsNullOrEmpty(id))
-                return Results.Ok(); // merchant_order e outros: o pagamento chega em aviso próprio
+            // "order" (e "orders_v2", nome que aparece em parte da documentação). Outros tópicos não interessam.
+            if (tipo is not ("order" or "orders_v2") || string.IsNullOrEmpty(id))
+                return Results.Ok();
 
-            var pagamento = await mp.BuscarPagamentoAsync(id, ct);
-            if (pagamento?.Pedido is not { } ref_)
-                return Results.Ok(); // pagamento de fora do sistema (ou de teste do painel do MP)
+            var order = await mp.BuscarOrderAsync(id, ct);
+            if (order?.PedidoId is not { } pedidoId)
+                return Results.Ok(); // order de fora do sistema (ou o teste do painel do MP)
 
-            lojaAtual.Definir(ref_.LojaId);
-            var resultado = await pedidos.AoPagarNoCartaoAsync(ref_.PedidoId, pagamento, ct);
-            log.LogInformation("Mercado Pago {Id} ({Status}): {Resultado}", pagamento.Id, pagamento.Status, resultado);
+            // A order não diz a loja: acha pelo pedido (id único entre lojas).
+            var lojaId = await db.Pedidos.IgnoreQueryFilters().Where(p => p.Id == pedidoId).Select(p => (Guid?)p.LojaId).FirstOrDefaultAsync(ct);
+            if (lojaId is not { } loja)
+                return Results.Ok();
+            lojaAtual.Definir(loja);
+            var resultado = await pedidos.AoPagarNoCartaoAsync(pedidoId, order, ct);
+            log.LogInformation("Mercado Pago order {Id} ({Status}): {Resultado}", order.Id, order.Status, resultado);
             return Results.Ok();
         });
 
@@ -148,7 +152,7 @@ public static class WebhookEndpoints
         });
     }
 
-    /// <summary>Tipo ("payment") e id do aviso, da URL ou do corpo JSON.</summary>
+    /// <summary>Tipo ("order") e id do aviso, da URL ou do corpo JSON.</summary>
     private static async Task<(string? Tipo, string? Id)> LerAvisoMercadoPagoAsync(HttpRequest req, CancellationToken ct)
     {
         string? tipo = req.Query["type"].FirstOrDefault() ?? req.Query["topic"].FirstOrDefault();
