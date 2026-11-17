@@ -177,6 +177,8 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
             conversa.ValorEstimado = null;
             if (conversa.Etapa is EtapaCard.AguardandoPagamento or EtapaCard.ConferirPagamento)
                 funil.Registrar(conversa, MotorFunil.Mover(conversa, EtapaCard.Perdido, MotivoPerda.Desistiu), OrigemEvento.Usuario, usuarioId);
+            // Pedido cancelado pelo vendedor: não tem mais cliente quente esperando alguém.
+            conversa.EncerrarAlerta();
         }
 
         await db.SaveChangesAsync(ct);

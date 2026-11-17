@@ -10,6 +10,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { firstValueFrom } from 'rxjs';
 import { API, ConfigWhatsApp, mensagemDeErro } from '../../core/api';
+import { Confirmar } from '../../core/confirmar';
 
 /**
  * Trava de segurança da conexão do WhatsApp: com "atender todos" desligado, o sistema só lê e
@@ -158,6 +159,7 @@ import { API, ConfigWhatsApp, mensagemDeErro } from '../../core/api';
   `,
 })
 export class ConfigWhatsAppComponent {
+  private readonly confirmar = inject(Confirmar);
   private readonly http = inject(HttpClient);
   private readonly snack = inject(MatSnackBar);
 
@@ -209,7 +211,7 @@ export class ConfigWhatsAppComponent {
   protected async salvar(): Promise<void> {
     // Número digitado e não adicionado ainda também entra.
     if (!this.adicionar()) return;
-    if (this.atenderTodos() && !confirm('Atender TODOS os contatos? Só confirme se o número conectado for exclusivo da loja.')) return;
+    if (this.atenderTodos() && !await this.confirmar.perguntar('Só confirme se o número conectado for exclusivo da loja.', { titulo: 'Atender TODOS os contatos?', botao: 'Atender todos', perigo: true })) return;
 
     this.salvando.set(true);
     try {

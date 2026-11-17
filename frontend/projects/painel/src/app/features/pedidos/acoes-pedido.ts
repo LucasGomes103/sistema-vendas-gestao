@@ -10,6 +10,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { API, FormaPagamento, Pedido, PedidoAcao, mensagemDeErro } from '../../core/api';
+import { Confirmar } from '../../core/confirmar';
 
 interface Confirmacao {
   forma: FormaPagamento;
@@ -73,6 +74,7 @@ export class AcoesPedido {
   private readonly http = inject(HttpClient);
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
+  private readonly confirmar = inject(Confirmar);
 
   async confirmarPagamento(p: Pedido): Promise<Pedido | null> {
     const escolha = await firstValueFrom(
@@ -87,7 +89,11 @@ export class AcoesPedido {
   }
 
   async cancelar(p: Pedido): Promise<Pedido | null> {
-    const motivo = prompt(`Cancelar o pedido #${p.numero}? O peixe volta para o estoque.\n\nMotivo (opcional):`, '');
+    const motivo = await this.confirmar.pedirTexto('O peixe volta para o estoque e o card vai para Perdido.', 'Motivo (opcional)', {
+      titulo: `Cancelar o pedido #${p.numero}?`,
+      botao: 'Cancelar pedido',
+      perigo: true,
+    });
     if (motivo === null) return null;
     try {
       const r = await firstValueFrom(this.http.post<Pedido>(`${API}/pedidos/${p.id}/cancelar`, { motivo }));

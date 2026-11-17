@@ -10,6 +10,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { firstValueFrom } from 'rxjs';
 import { API, ConversaResumo, Mensagem, mensagemDeErro } from '../../core/api';
+import { Confirmar } from '../../core/confirmar';
 import { atualizarACada } from '../../core/atualizar';
 import { ReservasConversaComponent } from './reservas-conversa';
 import { PedidoSimuladoDialog } from './pedido-simulado-dialog';
@@ -27,6 +28,7 @@ import { Auth } from '../../core/auth';
   styleUrl: './conversas-page.scss',
 })
 export class ConversasPage {
+  private readonly confirmar = inject(Confirmar);
   /** Conversa aberta, vinda da rota /conversas/:id. */
   readonly id = input<string>();
 
@@ -139,7 +141,7 @@ export class ConversasPage {
       : apagar
         ? `Apagar a conversa com ${c.cliente} do sistema? As mensagens somem do painel e não dá para desfazer. No celular nada muda.`
         : `Arquivar a conversa com ${c.cliente}? Ela sai da lista; se o cliente escrever de novo, abre uma conversa nova.`;
-    if (!confirm(pergunta)) return;
+    if (!await this.confirmar.perguntar(pergunta, { botao: apagar ? 'Apagar' : 'Arquivar', perigo: apagar })) return;
     await firstValueFrom(this.http.delete(`${API}/conversas/${c.id}`, { params: { definitivo: apagar } }));
     this.conversas.reload();
     void this.router.navigate(['/conversas']);

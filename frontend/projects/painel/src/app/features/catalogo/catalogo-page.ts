@@ -11,6 +11,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { firstValueFrom } from 'rxjs';
 import { API, Especie, mensagemDeErro } from '../../core/api';
+import { Confirmar } from '../../core/confirmar';
 import { Auth } from '../../core/auth';
 import { EspecieDialog } from './especie-dialog';
 
@@ -25,6 +26,7 @@ type Filtro = 'disponiveis' | 'esgotadas';
   styleUrl: './catalogo-page.scss',
 })
 export class CatalogoPage {
+  private readonly confirmar = inject(Confirmar);
   protected readonly auth = inject(Auth);
   private readonly dialog = inject(MatDialog);
   private readonly http = inject(HttpClient);
@@ -80,7 +82,7 @@ export class CatalogoPage {
   }
 
   protected async removerFoto(especie: Especie): Promise<void> {
-    if (!confirm(`Remover a foto de "${especie.nomePopular}"?`)) return;
+    if (!await this.confirmar.perguntar(`Remover a foto de "${especie.nomePopular}"?`, { botao: 'Remover', perigo: true })) return;
     try {
       await firstValueFrom(this.http.delete(`${API}/especies/${especie.id}/foto`));
       this.especies.reload();
@@ -90,7 +92,7 @@ export class CatalogoPage {
   }
 
   protected async excluir(especie: Especie): Promise<void> {
-    if (!confirm(`Excluir "${especie.nomePopular}"? Ela sai do catálogo e da entrada de lote.`)) return;
+    if (!await this.confirmar.perguntar('Ela sai do catálogo e da entrada de lote.', { titulo: `Excluir "${especie.nomePopular}"?`, botao: 'Excluir', perigo: true })) return;
     try {
       await firstValueFrom(this.http.delete(`${API}/especies/${especie.id}`));
       this.especies.reload();

@@ -8,6 +8,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { firstValueFrom } from 'rxjs';
 import { API, ROTULO_PAPEL, UsuarioEquipe, mensagemDeErro } from '../../core/api';
+import { Confirmar } from '../../core/confirmar';
 import { Auth } from '../../core/auth';
 import { SenhaDialog } from './senha-dialog';
 import { UsuarioDialog } from './usuario-dialog';
@@ -21,6 +22,7 @@ import { UsuarioDialog } from './usuario-dialog';
   styleUrl: './usuarios-page.scss',
 })
 export class UsuariosPage {
+  private readonly confirmar = inject(Confirmar);
   private readonly http = inject(HttpClient);
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
@@ -50,7 +52,7 @@ export class UsuariosPage {
   }
 
   protected async excluir(usuario: UsuarioEquipe): Promise<void> {
-    if (!confirm(`Excluir ${usuario.nome}? A pessoa perde o acesso na hora e isso não pode ser desfeito. Para só bloquear, edite e desligue "Pode entrar no painel".`))
+    if (!await this.confirmar.perguntar('A pessoa perde o acesso na hora e isso não pode ser desfeito. Para só bloquear, edite e desligue "Pode entrar no painel".', { titulo: `Excluir ${usuario.nome}?`, botao: 'Excluir', perigo: true }))
       return;
     try {
       await firstValueFrom(this.http.delete(`${API}/usuarios/${usuario.id}`));
