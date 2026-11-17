@@ -118,6 +118,19 @@ public class RoboWorker(IServiceScopeFactory scopes, EstadoWorkers estado, ILogg
             };
         }
 
+        // Cliente passou o endereço de entrega: fica no cadastro e preenche o pedido; o vendedor já pode fechar.
+        if (resposta.Endereco is { } endereco)
+        {
+            var cliente = await db.Clientes.FirstAsync(c => c.Id == conversa.ClienteId, ct);
+            cliente.Cep = endereco.Cep.ToString("00000000");
+            cliente.Endereco = endereco.Texto;
+            resposta = resposta with
+            {
+                ChamarVendedor = true,
+                MotivoVendedor = $"{resposta.MotivoVendedor ?? conversa.MotivoVendedor ?? "Entrega"} · Endereço: {endereco.Texto}"
+            };
+        }
+
         db.Mensagens.Add(new Mensagem
         {
             LojaId = conversa.LojaId,
@@ -138,10 +151,11 @@ public class RoboWorker(IServiceScopeFactory scopes, EstadoWorkers estado, ILogg
         if (resposta.ChamarVendedor)
         {
             var motivo = resposta.MotivoVendedor ?? "Cliente quer falar com uma pessoa";
-            // Robô pediu o CEP e a loja calcula frete por km: ele segue na conversa até o CEP chegar.
-            var aguardarCep = AguardaCep.Aplica(resposta.Texto, falas)
-                && await sp.GetRequiredService<ServicoFrete>().ConfigAtivaAsync(ct) is not null;
-            conversa.ChamarVendedor(motivo, agora, pausarRobo: !aguardarCep);
+            // Robô pediu o CEP (e a loja calcula frete por km) ou o endereço de entrega: ele segue na
+            // conversa até a resposta chegar, e só então pausa para o vendedor.
+            var aguardar = AguardaEntrega.PediuEndereco(resposta.Texto, enderecoCompleto: resposta.Endereco is not null)
+                || AguardaEntrega.PediuCep(resposta.Texto, falas) && await sp.GetRequiredService<ServicoFrete>().ConfigAtivaAsync(ct) is not null;
+            conversa.ChamarVendedor(motivo, agora, pausarRobo: !aguardar);
             funil.Registrar(conversa, MotorFunil.AoChamarVendedor(conversa, motivo), OrigemEvento.Ia);
             logger.LogInformation("Conversa {Id} marcada como quente: {Motivo}", conversa.Id, conversa.MotivoVendedor);
         }

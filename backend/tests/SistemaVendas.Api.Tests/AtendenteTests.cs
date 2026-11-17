@@ -1,5 +1,6 @@
 using SistemaVendas.Application.Atendimento;
 using SistemaVendas.Domain.Atendimento;
+using SistemaVendas.Domain.Entregas;
 using SistemaVendas.Infrastructure.IA;
 
 namespace SistemaVendas.Api.Tests;
@@ -28,7 +29,7 @@ public class AtendenteTests
 
         public Task<FreteCalculado?> CalcularFreteAsync(string cep, CancellationToken ct) =>
             Task.FromResult<FreteCalculado?>(cep.StartsWith("07")
-                ? new FreteCalculado("07010-000", true, "a 5,3 km da loja", 15, 1)
+                ? new FreteCalculado("07010-000", true, "a 5,3 km da loja", 15, 1) { Endereco = "Rua Dom Pedro II, Centro, Guarulhos - SP" }
                 : cep.StartsWith("99")
                     ? new FreteCalculado("99999-999", false, "a 42,0 km da loja", null, null)
                     : null);
@@ -41,6 +42,10 @@ public class AtendenteTests
 
     private static Task<RespostaAtendente> Perguntar(params string[] doCliente) =>
         new AtendentePorRegras().ResponderAsync("Loja Demo", doCliente.Select(t => new FalaConversa(true, t)).ToList(), new CatalogoFalso(), default);
+
+    /// <summary>Conversa alternada: cliente, robô, cliente...</summary>
+    private static Task<RespostaAtendente> Conversar(params string[] falas) =>
+        new AtendentePorRegras().ResponderAsync("Loja Demo", falas.Select((t, i) => new FalaConversa(i % 2 == 0, t)).ToList(), new CatalogoFalso(), default);
 
     [Fact]
     public async Task Responde_preco_e_estoque_do_catalogo()
@@ -167,13 +172,80 @@ public class AtendenteTests
     }
 
     [Fact]
+    public async Task Depois_do_frete_pede_o_numero_confirmando_a_rua_do_CEP()
+    {
+        var r = await Perguntar("meu cep é 07010-000");
+        Assert.Contains("Rua Dom Pedro II", r.Texto);
+        Assert.Contains("número", r.Texto);
+        Assert.True(AguardaEntrega.PediuEndereco(r.Texto, enderecoCompleto: false));
+        Assert.Null(r.Endereco);
+    }
+
+    [Fact]
+    public async Task Numero_e_complemento_viram_endereco_completo_com_rua_bairro_e_cidade_do_CEP()
+    {
+        var pediu = await Perguntar("meu cep é 07010-000");
+        var r = await Conversar("meu cep é 07010-000", pediu.Texto, "120, apto 34");
+
+        Assert.NotNull(r.Endereco);
+        Assert.Equal(7010000, r.Endereco!.Cep);
+        Assert.Equal("Rua Dom Pedro II, 120, apto 34 - Centro, Guarulhos - SP", r.Endereco.Texto);
+        Assert.Contains("Rua Dom Pedro II, 120, apto 34", r.Texto);
+        Assert.True(r.ChamarVendedor);
+        Assert.False(AguardaEntrega.PediuEndereco(r.Texto, enderecoCompleto: true));
+    }
+
+    [Fact]
+    public async Task Sem_rua_do_CEP_o_cliente_escreve_o_endereco_todo()
+    {
+        var pediu = await Perguntar("meu cep é 01234-567");
+        Assert.Contains("rua, número, complemento e bairro", pediu.Texto);
+
+        var r = await Conversar("meu cep é 01234-567", pediu.Texto, "Rua das Flores 45 casa 2, Vila Nova");
+        Assert.Equal("Rua das Flores 45 casa 2, Vila Nova", r.Endereco!.Texto);
+        Assert.Contains("01234-567", r.MotivoVendedor);
+    }
+
+    [Theory]
+    [InlineData("Rua Dom Pedro II, 120", "Rua Dom Pedro II, Centro, Guarulhos - SP", "Rua Dom Pedro II, 120 - Centro, Guarulhos - SP")]
+    [InlineData("Av. Brasil 900 bloco B", "Rua Dom Pedro II, Centro, Guarulhos - SP", "Av. Brasil 900 bloco B - Centro, Guarulhos - SP")]
+    [InlineData("15", "Centro, Guarulhos - SP", "15 - Centro, Guarulhos - SP")]
+    [InlineData("Rua A, 10 - Centro, Guarulhos - SP", "Rua A, Centro, Guarulhos - SP", "Rua A, 10 - Centro, Guarulhos - SP")]
+    public void Completa_o_endereco_com_o_que_o_CEP_deu(string resposta, string doCep, string esperado) =>
+        Assert.Equal(esperado, RegrasEndereco.Completar(resposta, doCep));
+
+    [Theory]
+    [InlineData("120", true)]
+    [InlineData("Rua das Flores, 120 apto 3", true)]
+    [InlineData("07010-000", false)]
+    [InlineData("é aqui mesmo", false)]
+    public void Reconhece_resposta_com_numero_da_casa(string texto, bool esperado) =>
+        Assert.Equal(esperado, RegrasEndereco.PareceEndereco(texto));
+
+    [Fact]
+    public void Monta_endereco_e_recusa_sem_numero()
+    {
+        Assert.Equal("Rua A, 10, apto 2 - Centro, Guarulhos - SP", RegrasEndereco.Montar("Rua A", "10", "apto 2", "Centro", "Guarulhos - SP"));
+        Assert.Equal("Rua A, 10", RegrasEndereco.Montar(" Rua  A ", "10", "", null, null));
+        Assert.Null(RegrasEndereco.Montar("Rua A", " ", null, "Centro", null));
+    }
+
+    [Fact]
+    public void Endereco_do_cadastro_so_vale_para_o_mesmo_CEP()
+    {
+        Assert.True(RegrasEndereco.ValeParaCep("07010000", "Rua A, 10", 7010000));
+        Assert.False(RegrasEndereco.ValeParaCep("02464100", "Rua A, 10", 7010000));
+        Assert.False(RegrasEndereco.ValeParaCep("07010000", null, 7010000));
+    }
+
+    [Fact]
     public void Robo_que_pediu_o_CEP_continua_na_conversa_ate_o_CEP_chegar()
     {
         var conversa = new Conversa();
         var pediu = "Recebi seu pedido! Para calcular o frete, me envie o seu CEP.";
         var semCep = new List<FalaConversa> { new(true, "🛒 Pedido pelo catálogo\n• 2x Betta") };
 
-        Assert.True(AguardaCep.Aplica(pediu, semCep));
+        Assert.True(AguardaEntrega.PediuCep(pediu, semCep));
         conversa.ChamarVendedor("Pedido pelo catálogo", DateTimeOffset.UtcNow, pausarRobo: false);
         Assert.True(conversa.ChamouVendedor);
         Assert.False(conversa.RoboPausado);
@@ -183,6 +255,6 @@ public class AtendenteTests
         Assert.True(conversa.AguardandoRobo);
 
         var comCep = semCep.Append(new FalaConversa(true, "meu cep é 02464100")).ToList();
-        Assert.False(AguardaCep.Aplica("Entregamos no CEP 02464-100 ...", comCep));
+        Assert.False(AguardaEntrega.PediuCep("Entregamos no CEP 02464-100 ...", comCep));
     }
 }

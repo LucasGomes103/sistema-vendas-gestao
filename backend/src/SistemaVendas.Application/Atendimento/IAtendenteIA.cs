@@ -29,6 +29,9 @@ public record FreteCalculado(string Cep, bool Atende, string? Regiao, decimal? V
 {
     private static readonly System.Globalization.CultureInfo PtBr = System.Globalization.CultureInfo.GetCultureInfo("pt-BR");
 
+    /// <summary>Rua, bairro e cidade que o CEP deu ("Rua X, Bairro, Cidade - UF"), para confirmar com o cliente e pedir só o número.</summary>
+    public string? Endereco { get; init; }
+
     public string Prazo => Dias switch { 0 => "no mesmo dia", 1 => "1 dia útil", _ => $"{Dias} dias úteis" };
 
     /// <summary>Resumo para o vendedor no card: "Frete CEP 07010-000: R$ 15,00 (Guarulhos)".</summary>
@@ -60,6 +63,9 @@ public static class PedidoCatalogo
 public record RespostaAtendente(string Texto, bool ChamarVendedor, string? MotivoVendedor)
 {
     public IReadOnlyList<SistemaVendas.Domain.Vendas.ItemPedido> Reservar { get; init; } = [];
+
+    /// <summary>Endereço de entrega que o cliente passou: fica no cadastro dele e preenche o pedido.</summary>
+    public SistemaVendas.Domain.Entregas.EnderecoEntrega? Endereco { get; init; }
 }
 
 /// <summary>Primeira resposta a um cliente: já leva o link da vitrine, para ele ver o que tem e montar o pedido.</summary>
@@ -83,12 +89,20 @@ public interface IAtendenteIA
 }
 
 /// <summary>
-/// Cliente quente que ainda não mandou o CEP: o robô pediu o CEP e não deve pausar, senão o cliente
-/// manda o CEP e ninguém responde o frete.
+/// Dados de entrega que o robô ainda está colhendo. Enquanto ele pede o CEP ou o endereço, chama o
+/// vendedor sem pausar, senão o cliente responde e ninguém continua a conversa.
 /// </summary>
-public static class AguardaCep
+public static class AguardaEntrega
 {
-    public static bool Aplica(string respostaDoRobo, IReadOnlyList<FalaConversa> historico) =>
+    /// <summary>Texto que o robô usa para pedir o endereço; o atendente por regras reconhece a resposta por ele.</summary>
+    public const string PedidoEndereco = "endereço de entrega";
+
+    public static bool PediuCep(string respostaDoRobo, IReadOnlyList<FalaConversa> historico) =>
         respostaDoRobo.Contains("CEP", StringComparison.OrdinalIgnoreCase)
         && !historico.Any(f => f.DoCliente && SistemaVendas.Domain.Entregas.RegrasFrete.AcharCep(f.Texto) is not null);
+
+    public static bool PediuEndereco(string respostaDoRobo, bool enderecoCompleto) =>
+        !enderecoCompleto
+        && (respostaDoRobo.Contains("endereço", StringComparison.OrdinalIgnoreCase)
+            || respostaDoRobo.Contains("número", StringComparison.OrdinalIgnoreCase));
 }

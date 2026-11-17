@@ -28,7 +28,7 @@ public static class PaginasPublicasEndpoints
         <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Política de privacidade</title>{{Estilo}}</head>
         <body><main>
           <h1>Política de privacidade</h1>
-          <p class="data">Última atualização: 29 de outubro de 2026</p>
+          <p class="data">Última atualização: 17 de novembro de 2026</p>
 
           <p>Esta política explica como o sistema de vendas usado pela loja trata os dados pessoais de quem conversa
           com a loja pelo WhatsApp e compra pelo catálogo, conforme a Lei Geral de Proteção de Dados (Lei 13.709/2018).</p>
@@ -37,7 +37,7 @@ public static class PaginasPublicasEndpoints
           <ul>
             <li>Nome e número de telefone do WhatsApp, recebidos quando você envia uma mensagem para a loja.</li>
             <li>Conteúdo das mensagens trocadas com a loja.</li>
-            <li>CEP e endereço, somente quando há entrega de um pedido.</li>
+            <li>CEP e endereço de entrega (rua, número, complemento, bairro e cidade), pedidos na conversa somente quando o pedido é para entregar.</li>
             <li>Histórico de pedidos e pagamentos.</li>
           </ul>
 
@@ -50,7 +50,8 @@ public static class PaginasPublicasEndpoints
 
           <h2>Atendimento automático</h2>
           <p>Parte do atendimento é feita por um assistente automático com inteligência artificial. Nome, telefone e
-          endereço não são enviados ao serviço de inteligência artificial: ele recebe apenas o texto da conversa.
+          cadastro não são enviados ao serviço de inteligência artificial: ele recebe apenas o texto da conversa, que
+          inclui o endereço de entrega quando você o escreve. O assistente nunca pede CPF, documentos ou dados de cartão.
           A qualquer momento você pode pedir para falar com uma pessoa.</p>
 
           <h2>Compartilhamento</h2>
@@ -79,7 +80,7 @@ public static class PaginasPublicasEndpoints
         <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Termos de uso</title>{{Estilo}}</head>
         <body><main>
           <h1>Termos de uso</h1>
-          <p class="data">Última atualização: 29 de outubro de 2026</p>
+          <p class="data">Última atualização: 17 de novembro de 2026</p>
           <p>Ao conversar com a loja pelo WhatsApp ou usar o catálogo, você concorda que as informações de preço e
           disponibilidade mostradas são válidas no momento da consulta e podem mudar, já que o estoque é de animais vivos.</p>
           <p>Reservas ficam válidas por 24 horas até a confirmação do pagamento. Depois disso, a reserva é cancelada

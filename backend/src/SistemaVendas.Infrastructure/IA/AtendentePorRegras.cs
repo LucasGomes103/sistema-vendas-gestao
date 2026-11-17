@@ -44,15 +44,29 @@ public class AtendentePorRegras : IAtendenteIA
                     ChamarVendedor: false, MotivoVendedor: null);
         }
 
-        // Mandou o CEP: calcula pela distância e chama o vendedor para fechar (cliente quente).
+        // Respondeu o pedido de endereço: completa com rua, bairro e cidade do CEP e passa para o vendedor fechar.
+        var anterior = historico.LastOrDefault(f => !f.DoCliente)?.Texto ?? "";
+        if (anterior.Contains(AguardaEntrega.PedidoEndereco, StringComparison.OrdinalIgnoreCase) && RegrasEndereco.PareceEndereco(ultima)
+            && historico.Where(f => f.DoCliente).Select(f => RegrasFrete.AcharCep(f.Texto)).LastOrDefault(c => c is not null) is { } cepEntrega)
+        {
+            var freteEntrega = await ferramentas.CalcularFreteAsync(cepEntrega.ToString("00000000"), ct);
+            var endereco = RegrasEndereco.Completar(ultima, freteEntrega?.Endereco);
+            var textos = await ferramentas.TextosAsync(ct);
+            return new RespostaAtendente($"Anotei o {AguardaEntrega.PedidoEndereco}: {endereco}. {textos.ChamarVendedor}", ChamarVendedor: true,
+                MotivoVendedor: freteEntrega?.Resumo ?? $"Calcular frete à mão: CEP {RegrasFrete.Formatar(cepEntrega)}")
+            {
+                Endereco = new EnderecoEntrega(cepEntrega, endereco)
+            };
+        }
+
+        // Mandou o CEP: calcula pela distância, chama o vendedor (cliente quente) e pede o endereço de entrega.
         // Fora do raio ou CEP que o mapa não acha: não chuta valor, o vendedor calcula.
         if (RegrasFrete.AcharCep(ultima) is { } cep)
         {
             var frete = await ferramentas.CalcularFreteAsync(cep.ToString("00000000"), ct);
-            var textosFrete = await ferramentas.TextosAsync(ct);
             return frete is not null
-                ? new RespostaAtendente($"{frete.ParaCliente} {textosFrete.ChamarVendedor}", ChamarVendedor: true, MotivoVendedor: frete.Resumo)
-                : new RespostaAtendente($"Anotei o CEP {RegrasFrete.Formatar(cep)}. {textosFrete.ChamarVendedor}", ChamarVendedor: true,
+                ? new RespostaAtendente($"{frete.ParaCliente}\n\n{PedirEndereco(frete.Endereco)}", ChamarVendedor: true, MotivoVendedor: frete.Resumo)
+                : new RespostaAtendente($"Anotei o CEP {RegrasFrete.Formatar(cep)}. Um atendente vai calcular a entrega.\n\n{PedirEndereco(null)}", ChamarVendedor: true,
                     MotivoVendedor: $"Calcular frete à mão: CEP {RegrasFrete.Formatar(cep)}");
         }
 
@@ -85,6 +99,12 @@ public class AtendentePorRegras : IAtendenteIA
                 : "Não encontrei esse peixe no catálogo. Pode me dizer o nome popular ou científico? Se preferir, peço para um atendente falar com você.",
             ChamarVendedor: false, MotivoVendedor: null);
     }
+
+    /// <summary>Pede o que falta do endereço: com a rua do CEP, só o número e o complemento.</summary>
+    public static string PedirEndereco(string? enderecoDoCep) =>
+        enderecoDoCep is { Length: > 0 }
+            ? $"Para a entrega, confirme o {AguardaEntrega.PedidoEndereco}: {enderecoDoCep}. Qual é o número e o complemento (apartamento, bloco)?"
+            : $"Para a entrega, me envie o {AguardaEntrega.PedidoEndereco}: rua, número, complemento e bairro.";
 
     /// <summary>Casa cada linha do pedido da vitrine com a espécie de mesmo nome no catálogo.</summary>
     public static async Task<IReadOnlyList<ItemPedido>> ItensDoPedidoAsync(string mensagem, IFerramentasAtendimento ferramentas, CancellationToken ct)
