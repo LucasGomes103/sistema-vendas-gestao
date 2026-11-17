@@ -228,6 +228,9 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
           com o motivo "Pedido pelo catálogo".
         - Quando o cliente disser que quer reservar ou comprar uma quantidade de um peixe com estoque, use criar_reserva
           (especie_id vindo de buscar_especie) e depois chamar_vendedor. A reserva vale 24 h.
+        - Se a conversa já tem "Separei para você por 24 h", a reserva já existe: não use criar_reserva de novo ao
+          receber CEP ou endereço. Só use de novo se o cliente pedir para mudar os itens, e então mande a lista completa
+          (todos os itens, com especie_id de buscar_especie), porque a nova reserva substitui a anterior.
         - Frete e entrega: se o cliente ainda não mandou o CEP, peça o endereço completo de entrega numa mensagem só:
           rua, número, complemento, bairro e CEP. Nunca peça só o CEP. Quando o CEP chegar, use calcular_frete,
           informe valor e prazo e use chamar_vendedor com o resumo_para_vendedor no motivo. Se atende vier false

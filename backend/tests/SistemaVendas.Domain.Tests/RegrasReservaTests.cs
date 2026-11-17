@@ -42,6 +42,16 @@ public class RegrasReservaTests
     }
 
     [Fact]
+    public void Item_com_id_desconhecido_vira_aviso_em_vez_de_sumir()
+    {
+        var saldos = new[] { new SaldoParaReserva(Guid.CreateVersion7(), Ramirezi.Id, Guid.NewGuid(), 5, Agora) };
+        var r = RegrasReserva.Criar(Loja, Conversa, [new ItemPedido(Ramirezi.Id, 2), new ItemPedido(Guid.CreateVersion7(), 2)], saldos, Especies, Agora);
+
+        Assert.Equal(2, r.Reserva!.Itens.Sum(i => i.Quantidade));
+        Assert.Contains(r.Faltas, f => f.Contains("não foi encontrado"));
+    }
+
+    [Fact]
     public void Sem_nada_em_estoque_nao_cria_reserva()
     {
         var r = RegrasReserva.Criar(Loja, Conversa, [new ItemPedido(Betta.Id, 1)], [], Especies, Agora);

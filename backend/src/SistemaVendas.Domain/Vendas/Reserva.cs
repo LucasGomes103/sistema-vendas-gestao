@@ -70,7 +70,11 @@ public static class RegrasReserva
         foreach (var item in pedido.Where(i => i.Quantidade > 0).GroupBy(i => i.EspecieId).Select(g => new ItemPedido(g.Key, g.Sum(i => i.Quantidade))))
         {
             if (!especies.TryGetValue(item.EspecieId, out var especie))
+            {
+                // Id que a IA errou ou espécie desativada: avisa em vez de sumir com o item calado.
+                faltas.Add("um dos itens não foi encontrado no catálogo, o atendente confere");
                 continue;
+            }
 
             var falta = item.Quantidade;
             // O lote recebido há mais tempo sai primeiro.

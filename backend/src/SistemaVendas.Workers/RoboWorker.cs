@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using SistemaVendas.Application.Atendimento;
 using SistemaVendas.Application.Comum;
 using SistemaVendas.Domain.Atendimento;
+using SistemaVendas.Domain.Entregas;
 using SistemaVendas.Domain.Funil;
 using SistemaVendas.Domain.Vendas;
 using SistemaVendas.Infrastructure.Dados;
@@ -102,6 +103,17 @@ public class RoboWorker(IServiceScopeFactory scopes, EstadoWorkers estado, ILogg
         await db.Entry(conversa).ReloadAsync(ct);
         if (conversa.RoboPausado)
             return;
+
+        // A IA não guarda os ids das espécies entre uma mensagem e outra: quando o cliente só manda o CEP
+        // ou o endereço, ela às vezes "reserva de novo" com itens faltando e troca a reserva boa por uma menor.
+        // Com reserva ativa, a mensagem de entrega não mexe na reserva.
+        var ultimaDoCliente = falas.LastOrDefault(f => f.DoCliente)?.Texto;
+        if (resposta.Reservar.Count > 0 && (resposta.Endereco is not null || RegrasFrete.AcharCep(ultimaDoCliente) is not null)
+            && await db.Reservas.AnyAsync(r => r.ConversaId == conversa.Id && r.Status == StatusReserva.Ativa, ct))
+        {
+            logger.LogInformation("Conversa {Id}: reserva repetida na mensagem de entrega ignorada", conversa.Id);
+            resposta = resposta with { Reservar = [] };
+        }
 
         // Cliente pediu para separar: cria a reserva de 24 h conferindo o estoque de agora.
         if (resposta.Reservar.Count > 0)
