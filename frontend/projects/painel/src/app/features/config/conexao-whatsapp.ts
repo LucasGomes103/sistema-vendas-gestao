@@ -9,6 +9,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { firstValueFrom } from 'rxjs';
 import { API, mensagemDeErro } from '../../core/api';
+import { Confirmar } from '../../core/confirmar';
 
 interface EstadoConexao {
   disponivel: boolean;
@@ -133,6 +134,7 @@ interface EstadoConexao {
   `,
 })
 export class ConexaoWhatsAppComponent {
+  private readonly confirmar = inject(Confirmar);
   private readonly http = inject(HttpClient);
   private readonly snack = inject(MatSnackBar);
 
@@ -160,7 +162,7 @@ export class ConexaoWhatsAppComponent {
   }
 
   protected async desconectar(): Promise<void> {
-    if (!confirm('Desconectar o WhatsApp? O robô para de receber mensagens até conectar de novo.')) return;
+    if (!await this.confirmar.perguntar('O robô para de receber mensagens até conectar de novo.', { titulo: 'Desconectar o WhatsApp?', botao: 'Desconectar', perigo: true })) return;
     await this.executar(() => firstValueFrom(this.http.post(`${API}/config/whatsapp/conexao/desconectar`, {})));
   }
 

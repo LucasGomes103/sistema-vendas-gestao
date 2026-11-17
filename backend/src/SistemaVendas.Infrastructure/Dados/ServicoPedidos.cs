@@ -111,7 +111,8 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
         if (PixPronto(loja))
             pedido.PixCopiaECola = RegrasPix.CopiaECola(loja.PixChave!, loja.PixNome!, loja.PixCidade!, pedido.Total, $"PEDIDO{pedido.Numero}");
 
-        var avisoCartao = pedido.LinkCartao is null ? await GerarLinkCartaoAsync(pedido, loja, ct) : null;
+        // Link do cartão sempre novo: o do Mercado Pago não aceita outra tentativa depois de uma que falhou.
+        var avisoCartao = await GerarLinkCartaoAsync(pedido, loja, ct);
 
         var conversa = await db.Conversas.FirstAsync(c => c.Id == conversaId, ct);
         var resultado = EnviarCobranca(pedido, conversa, loja, usuarioId);
@@ -177,6 +178,8 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
             conversa.ValorEstimado = null;
             if (conversa.Etapa is EtapaCard.AguardandoPagamento or EtapaCard.ConferirPagamento)
                 funil.Registrar(conversa, MotorFunil.Mover(conversa, EtapaCard.Perdido, MotivoPerda.Desistiu), OrigemEvento.Usuario, usuarioId);
+            // Pedido cancelado pelo vendedor: não tem mais cliente quente esperando alguém.
+            conversa.EncerrarAlerta();
         }
 
         await db.SaveChangesAsync(ct);
@@ -278,8 +281,20 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
             return "pedido não encontrado";
         if (!pagamento.Aprovado)
             return $"order {pagamento.Status}/{pagamento.StatusDetalhe}: nada a fazer";
-        if (pedido.Status == StatusPedido.Pago || (pedido.MpPagamentoId is { } ja && ja == (pagamento.PagamentoId ?? pagamento.Id)))
+        var idPagamento = pagamento.PagamentoId ?? pagamento.Id;
+        if (pedido.MpPagamentoId == idPagamento)
             return "já estava pago";
+        if (pedido.Status == StatusPedido.Pago)
+        {
+            // Pago por outro caminho (Pix, link antigo do cartão): o cliente pagou duas vezes. Só o vendedor estorna.
+            var motivoDuplo = $"Pedido #{pedido.Numero} já estava pago e o Mercado Pago aprovou outro pagamento ({idPagamento}, {pagamento.Valor.ToString("C", PtBr)}). Estornar no Mercado Pago";
+            if (pedido.ConversaId is { } c2 && await db.Conversas.FirstOrDefaultAsync(c => c.Id == c2, ct) is { } conv)
+            {
+                conv.AlertarDeNovo(motivoDuplo, DateTimeOffset.UtcNow);
+                await db.SaveChangesAsync(ct);
+            }
+            return motivoDuplo;
+        }
 
         var agora = DateTimeOffset.UtcNow;
         Conversa? conversa = pedido.ConversaId is { } cid ? await db.Conversas.FirstOrDefaultAsync(c => c.Id == cid, ct) : null;

@@ -212,7 +212,8 @@ Opcional e sem mensalidade: o Mercado Pago cobra uma taxa por venda no cartão. 
   `POST /v1/orders`) com o total do pedido e manda o `checkout_url`. A cobrança no WhatsApp passa a oferecer as duas formas: o Pix copia e cola (comprovante e confirmação
   manual, sem mudança) e o link do cartão de crédito (até 12 parcelas) ou débito. Boleto e o Pix do Mercado Pago
   ficam fora do link: o Pix continua pela chave da loja, sem taxa.
-- O link vence junto com a reserva de 24 h.
+- O link vence junto com a reserva de 24 h. **Reenviar cobrança** sempre gera um link novo (o do Mercado Pago não aceita outra tentativa
+  depois de uma que falhou). Se um link antigo for pago depois do pedido já estar pago, o vendedor é chamado para estornar.
 - Quando o cliente paga pelo link, o Mercado Pago avisa a API em `POST /api/v1/webhooks/mercadopago` (evento **Order**,
   cadastrado no painel do Mercado Pago em Configuração de webhooks). A API busca a order com o próprio token (o aviso
   sozinho não confirma nada) e, com status `processed` e o valor certo,
