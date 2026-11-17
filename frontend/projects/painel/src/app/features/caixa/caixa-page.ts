@@ -13,6 +13,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { firstValueFrom } from 'rxjs';
 import { API, CaixaDia, LancamentoCaixa, ROTULO_FORMA, TipoLancamento, mensagemDeErro } from '../../core/api';
+import { Confirmar } from '../../core/confirmar';
 import { DadosLancamento, LancamentoDialog } from './lancamento-dialog';
 
 /** Conferência do dinheiro na gaveta antes de fechar o dia. */
@@ -305,6 +306,7 @@ export class FecharCaixaDialog {
   `,
 })
 export class CaixaPage {
+  private readonly confirmar = inject(Confirmar);
   private readonly http = inject(HttpClient);
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
@@ -346,7 +348,7 @@ export class CaixaPage {
   }
 
   protected async apagar(l: LancamentoCaixa): Promise<void> {
-    if (!confirm(`Apagar "${l.categoria}" de ${l.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}?`)) return;
+    if (!await this.confirmar.perguntar(`Apagar "${l.categoria}" de ${l.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}?`, { botao: 'Apagar', perigo: true })) return;
     await this.executar(this.http.delete(`${API}/caixa/lancamentos/${l.id}`), 'Lançamento apagado.');
   }
 
@@ -364,7 +366,7 @@ export class CaixaPage {
 
   protected async reabrir(): Promise<void> {
     const c = this.caixa.value();
-    if (!c || !confirm('Reabrir o caixa deste dia?')) return;
+    if (!c || !await this.confirmar.perguntar('Reabrir o caixa deste dia?', { botao: 'Reabrir' })) return;
     await this.executar(this.http.delete(`${API}/caixa/fechamento?data=${c.data}`), 'Caixa reaberto.');
   }
 

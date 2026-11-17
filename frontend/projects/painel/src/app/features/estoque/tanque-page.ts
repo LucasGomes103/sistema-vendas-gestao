@@ -10,6 +10,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { firstValueFrom } from 'rxjs';
 import { API, LoteNoTanque, TanqueDetalhe, TipoMovimento, mensagemDeErro } from '../../core/api';
+import { Confirmar } from '../../core/confirmar';
 import { Auth } from '../../core/auth';
 import { EntradaDialog } from './entrada-dialog';
 import { AcaoMovimento, MovimentoDialog } from './movimento-dialog';
@@ -33,6 +34,7 @@ const ROTULOS: Record<TipoMovimento, { texto: string; icone: string; classe: str
   styleUrl: './tanque-page.scss',
 })
 export class TanquePage {
+  private readonly confirmar = inject(Confirmar);
   /** Id do tanque, vindo da rota /estoque/tanques/:id. */
   readonly id = input.required<string>();
 
@@ -76,7 +78,7 @@ export class TanquePage {
 
   protected async excluir(): Promise<void> {
     const t = this.tanque.value();
-    if (!t || !confirm(`Excluir o tanque "${t.nome}"? O histórico de movimentações continua guardado.`)) return;
+    if (!t || !await this.confirmar.perguntar('O histórico de movimentações continua guardado.', { titulo: `Excluir o tanque "${t.nome}"?`, botao: 'Excluir', perigo: true })) return;
     try {
       await firstValueFrom(this.http.delete(`${API}/tanques/${t.id}`));
       this.snack.open('Tanque excluído.', undefined, { duration: 3000 });

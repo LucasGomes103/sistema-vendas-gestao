@@ -7,6 +7,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { firstValueFrom } from 'rxjs';
 import { API, Pedido, PedidoAcao, Reserva, mensagemDeErro } from '../../core/api';
+import { Confirmar } from '../../core/confirmar';
 import { atualizarACada } from '../../core/atualizar';
 import { PedidoCardComponent } from '../pedidos/pedido-card';
 import { PedidoDialog } from '../pedidos/pedido-dialog';
@@ -80,6 +81,7 @@ import { PedidoDialog } from '../pedidos/pedido-dialog';
   `,
 })
 export class ReservasConversaComponent {
+  private readonly confirmar = inject(Confirmar);
   private readonly http = inject(HttpClient);
   private readonly snack = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
@@ -124,7 +126,7 @@ export class ReservasConversaComponent {
   }
 
   protected async encerrar(r: Reserva, acao: 'cancelar'): Promise<void> {
-    if (!confirm('Cancelar a reserva? O peixe volta para o estoque.')) return;
+    if (!await this.confirmar.perguntar('O peixe volta para o estoque.', { titulo: 'Cancelar a reserva?', botao: 'Cancelar reserva', perigo: true })) return;
     this.ocupado.set(true);
     try {
       await firstValueFrom(this.http.post(`${API}/reservas/${r.id}/${acao}`, {}));
