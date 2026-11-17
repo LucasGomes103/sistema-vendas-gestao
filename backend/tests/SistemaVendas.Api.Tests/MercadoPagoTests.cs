@@ -40,8 +40,8 @@ public class MercadoPagoTests(WebApplicationFactory<Program> factory) : IClassFi
         Assert.Contains($"\"external_reference\":\"{pedido.Id:N}\"", json);
         Assert.Contains("\"total_amount\":\"132.50\"", json);
         Assert.Contains("\"unit_price\":\"132.50\"", json);
-        Assert.Contains("\"not_allowed_types\":[\"ticket\",\"bank_transfer\"]", json); // Pix do MP fora: o Pix segue pela chave da loja
-        Assert.Contains("\"max_installments\":12", json);
+        Assert.Contains("\"not_allowed_types\":[\"ticket\"]", json);
+        Assert.DoesNotContain("max_installments", json);
         Assert.Contains("\"expiration_time\":\"PT20H30M\"", json);
     }
 

@@ -153,7 +153,6 @@ public class MercadoPagoCliente(HttpClient http, IOptions<MercadoPagoOptions> op
             ["processing_mode"] = "manual",
             ["total_amount"] = Dinheiro(pedido.Total),
             ["external_reference"] = pedido.Id.ToString("N"),
-            ["description"] = titulo,
             ["items"] = new[]
             {
                 new Dictionary<string, object?>
@@ -165,13 +164,11 @@ public class MercadoPagoCliente(HttpClient http, IOptions<MercadoPagoOptions> op
                     ["unit_price"] = Dinheiro(pedido.Total)
                 }
             },
+            // Só o que a documentação do Checkout Pro (Orders) mostra: tirar boleto. Parcelas e o resto ficam no padrão
+            // da conta (com "bank_transfer" e "max_installments" o botão Pagar do checkout não habilitava no teste).
             ["config"] = new Dictionary<string, object?>
             {
-                ["payment_method"] = new Dictionary<string, object?>
-                {
-                    ["not_allowed_types"] = excluirPix ? new[] { "ticket", "bank_transfer" } : new[] { "ticket" },
-                    ["max_installments"] = Math.Clamp(op.MaxParcelas, 1, 24)
-                }
+                ["payment_method"] = new Dictionary<string, object?> { ["not_allowed_types"] = new[] { "ticket" } }
             }
         };
         // Validade em duração ISO 8601 a partir de agora (ex.: PT20H30M), junto com a reserva.
