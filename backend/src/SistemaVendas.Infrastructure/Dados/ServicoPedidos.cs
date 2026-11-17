@@ -49,7 +49,8 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
         return new SugestaoPedido(
             cliente.Nome ?? cliente.Telefone,
             cep is { } c ? c.ToString("00000000") : null,
-            cliente.Endereco ?? detalhe?.Endereco,
+            // Endereço do cadastro só vale para o mesmo CEP (o robô guarda o que o cliente passou na conversa).
+            cep is not { } doPedido || RegrasEndereco.ValeParaCep(cliente.Cep, cliente.Endereco, doPedido) ? cliente.Endereco : detalhe?.Endereco,
             detalhe?.Frete is { Atende: true } f ? f.Valor : null,
             detalhe?.Frete.Resumo,
             PixPronto(loja),

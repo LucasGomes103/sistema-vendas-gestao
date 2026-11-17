@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SistemaVendas.Application.Atendimento;
+using SistemaVendas.Domain.Entregas;
 using SistemaVendas.Domain.Vendas;
 
 namespace SistemaVendas.Infrastructure.IA;
@@ -20,8 +21,9 @@ public class GeminiOptions
 }
 
 /// <summary>
-/// Atendente com Gemini e function calling. A IA só responde com dados vindos das ferramentas;
-/// nome, telefone e endereço do cliente nunca são enviados ao modelo.
+/// Atendente com Gemini e function calling. A IA só responde com dados vindos das ferramentas.
+/// Nome, telefone e cadastro do cliente nunca são enviados ao modelo: ele vê só o texto da conversa
+/// (inclusive o endereço de entrega, quando o próprio cliente o escreve).
 /// </summary>
 public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, AtendentePorRegras reserva, ILogger<GeminiAtendente> logger,
     IOptions<Pagamentos.MercadoPagoOptions> mercadoPago) : IAtendenteIA
@@ -53,6 +55,7 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
 
         string? motivoVendedor = null;
         var reservar = new List<ItemPedido>();
+        EnderecoEntrega? endereco = null;
         var textos = await ferramentas.TextosAsync(ct);
 
         for (var rodada = 0; rodada < MaximoRodadas; rodada++)
@@ -68,7 +71,7 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
                 var texto = string.Concat(partes.Select(p => p?["text"]?.GetValue<string>())).Trim();
                 if (string.IsNullOrEmpty(texto))
                     texto = motivoVendedor is not null ? "Vou chamar um atendente para falar com você, um instante." : "Pode repetir, por favor?";
-                return new RespostaAtendente(texto, motivoVendedor is not null, motivoVendedor) { Reservar = reservar };
+                return new RespostaAtendente(texto, motivoVendedor is not null, motivoVendedor) { Reservar = reservar, Endereco = endereco };
             }
 
             conteudos.Add(conteudo.DeepClone());
@@ -115,6 +118,7 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
                                 ["valor"] = frete.Valor?.ToString("C", PtBr),
                                 ["prazo"] = frete.Atende ? frete.Prazo : null,
                                 ["resposta_sugerida"] = frete.ParaCliente,
+                                ["endereco_do_cep"] = frete.Endereco,
                                 ["resumo_para_vendedor"] = frete.Resumo
                             };
                         break;
@@ -136,6 +140,26 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
                             };
                         break;
 
+                    case "salvar_endereco":
+                        var cepEndereco = RegrasFrete.LerCep(args["cep"]?.GetValue<string>())
+                            ?? historico.Where(f => f.DoCliente).Select(f => RegrasFrete.AcharCep(f.Texto)).LastOrDefault(c => c is not null);
+                        var linha = RegrasEndereco.Montar(Texto(args, "rua"), Texto(args, "numero"), Texto(args, "complemento"), Texto(args, "bairro"), Texto(args, "cidade"));
+                        if (cepEndereco is null)
+                            resultado = new JsonObject { ["erro"] = "sem CEP: peça o CEP antes do endereço" };
+                        else if (linha is null)
+                            resultado = new JsonObject { ["erro"] = "faltam a rua ou o número: pergunte ao cliente o que falta" };
+                        else
+                        {
+                            endereco = new EnderecoEntrega(cepEndereco.Value, linha);
+                            resultado = new JsonObject
+                            {
+                                ["ok"] = true,
+                                ["endereco"] = linha,
+                                ["instrucao"] = "Confirme o endereço com o cliente em uma frase e diga que um atendente vai fechar o pedido. Não peça mais nenhum dado."
+                            };
+                        }
+                        break;
+
                     case "link_catalogo":
                         resultado = new JsonObject { ["link"] = await ferramentas.LinkCatalogoAsync(ct) };
                         break;
@@ -155,7 +179,7 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
             conteudos.Add(new JsonObject { ["role"] = "user", ["parts"] = respostas });
         }
 
-        return new RespostaAtendente("Vou chamar um atendente para te ajudar, um instante.", true, motivoVendedor ?? "IA não concluiu a resposta") { Reservar = reservar };
+        return new RespostaAtendente("Vou chamar um atendente para te ajudar, um instante.", true, motivoVendedor ?? "IA não concluiu a resposta") { Reservar = reservar, Endereco = endereco };
     }
 
     private async Task<JsonObject> ChamarAsync(string nomeLoja, TextosProntos textos, JsonArray conteudos, CancellationToken ct)
@@ -184,6 +208,9 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
         return JsonNode.Parse(texto)!.AsObject();
     }
 
+    private static string? Texto(JsonObject args, string campo) =>
+        args[campo] is JsonValue v ? v.ToString() : null;
+
     private static JsonObject Parte(string papel, JsonObject parte) =>
         new() { ["role"] = papel, ["parts"] = new JsonArray(parte) };
 
@@ -197,18 +224,27 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
         - Se pedirem catálogo, lista, fotos ou "o que vocês têm", use link_catalogo e envie o link completo,
           explicando que lá dá para escolher as quantidades e enviar o pedido pelo WhatsApp.
         - Mensagem que contém "{PedidoCatalogo.Marcador}" é um pedido montado na vitrine: confira cada item com
-          buscar_especie, use criar_reserva com os itens e quantidades, peça o CEP para o frete e use chamar_vendedor
+          buscar_especie, use criar_reserva com os itens e quantidades, peça o endereço completo de entrega com CEP e use chamar_vendedor
           com o motivo "Pedido pelo catálogo".
         - Quando o cliente disser que quer reservar ou comprar uma quantidade de um peixe com estoque, use criar_reserva
           (especie_id vindo de buscar_especie) e depois chamar_vendedor. A reserva vale 24 h.
-        - Frete e entrega: se o cliente ainda não mandou o CEP, peça o CEP. Quando ele mandar, use calcular_frete,
+        - Frete e entrega: se o cliente ainda não mandou o CEP, peça o endereço completo de entrega numa mensagem só:
+          rua, número, complemento, bairro e CEP. Nunca peça só o CEP. Quando o CEP chegar, use calcular_frete,
           informe valor e prazo e use chamar_vendedor com o resumo_para_vendedor no motivo. Se atende vier false
           (além do raio de entrega da loja) ou vier sem_calculo, não dê valor: diga que um atendente vai ver a entrega
           e use chamar_vendedor. Nunca invente valor de frete ou prazo.
+        - Endereço de entrega: se o cliente já mandou rua e número junto com o CEP, use salvar_endereco na mesma resposta
+          do frete e não pergunte de novo. Se mandou só o CEP, depois do frete, na mesma resposta, peça o que falta. Se calcular_frete trouxe
+          endereco_do_cep, mostre a rua e o bairro dele para o cliente confirmar e pergunte só o número e o complemento
+          (apartamento, bloco, casa dos fundos). Sem endereco_do_cep, peça rua, número, complemento e bairro.
+          Quando o cliente responder, use salvar_endereco com o CEP, a rua, o número, o complemento, o bairro e a cidade
+          (do que ele escreveu e do endereco_do_cep). Se faltar o número, pergunte de novo. Se o cliente for retirar
+          na loja, não peça endereço.
         - Ao chamar o vendedor, use este texto da loja: "{textos.ChamarVendedor}".
         - Use chamar_vendedor quando o cliente quiser reservar, comprar ou pagar, pedir para falar com uma pessoa,
           reclamar, ou quando você não souber responder.
-        - Não peça nem repita CPF, endereço ou outros dados pessoais.
+        - O único dado pessoal que você pode pedir é o endereço de entrega, e só quando houver entrega.
+          Nunca peça CPF, RG, e-mail, data de nascimento ou dados de cartão.
         - Formas de pagamento: {(aceitaCartao
             ? "Pix ou cartão de crédito (pode parcelar) e débito. Depois que o atendente fecha o pedido, o cliente recebe o código Pix e um link do Mercado Pago para pagar no cartão."
             : "Pix. Se perguntarem de cartão, diga que um atendente vê a possibilidade e use chamar_vendedor.")}
@@ -232,6 +268,22 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
               "name": "calcular_frete",
               "description": "Valor e prazo do frete para um CEP, pela distância de carro desde a loja (base até alguns km, depois por km, até o raio máximo).",
               "parameters": { "type": "object", "properties": { "cep": { "type": "string", "description": "CEP com 8 dígitos" } }, "required": ["cep"] }
+            },
+            {
+              "name": "salvar_endereco",
+              "description": "Guarda o endereço de entrega que o cliente informou, para o atendente não precisar perguntar de novo.",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "cep": { "type": "string", "description": "CEP com 8 dígitos" },
+                  "rua": { "type": "string" },
+                  "numero": { "type": "string", "description": "Número da casa ou do prédio" },
+                  "complemento": { "type": "string", "description": "Apartamento, bloco, fundos; vazio se não tiver" },
+                  "bairro": { "type": "string" },
+                  "cidade": { "type": "string", "description": "Cidade - UF" }
+                },
+                "required": ["cep", "rua", "numero"]
+              }
             },
             {
               "name": "criar_reserva",

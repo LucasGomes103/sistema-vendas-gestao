@@ -60,7 +60,7 @@ public class ConfigFunil : EntidadeDaLoja
 
     /// <summary>Resposta pronta quando o cliente pergunta de frete (o vendedor calcula).</summary>
     public string TextoFrete { get; set; } =
-        "Para calcular o frete, me envie o seu CEP, por favor. Um atendente já te responde com o valor e o prazo.";
+        "Para calcular o frete, me envie o endereço completo de entrega (rua, número, complemento, bairro e CEP), por favor. Um atendente já te responde com o valor e o prazo.";
 
     public string TextoChamarVendedor { get; set; } =
         "Perfeito! Vou chamar um atendente para finalizar com você. Ele já responde por aqui.";

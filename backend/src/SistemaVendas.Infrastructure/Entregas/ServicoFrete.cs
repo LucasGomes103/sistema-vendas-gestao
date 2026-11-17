@@ -57,6 +57,7 @@ public class ServicoFrete(AppDbContext db, IGeolocalizacao geo)
         var frete = valor is null
             ? new FreteCalculado(formatado, false, regiao, null, null)
             : new FreteCalculado(formatado, true, regiao, valor, cfg.Dias);
+        frete = frete with { Endereco = destino?.Endereco is { Length: > 0 } e ? e : cep == cfg.CepOrigem ? cfg.OrigemEndereco : null };
         return new DetalheFrete(frete, km, porRota, destino?.Endereco, destino?.Fonte, cfg.OrigemEndereco);
     }
 }
