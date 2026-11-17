@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using SistemaVendas.Domain.Atendimento;
 using SistemaVendas.Infrastructure.Dados;
+using SistemaVendas.Application.Comum;
+using SistemaVendas.Infrastructure.Pagamentos;
 using SistemaVendas.Infrastructure.WhatsApp;
 
 namespace SistemaVendas.Api.Endpoints;
@@ -55,6 +57,39 @@ public static class WebhookEndpoints
 
             db.WebhooksRecebidos.Add(new WebhookRecebido { Origem = "whatsapp", Payload = Encoding.UTF8.GetString(corpo) });
             await db.SaveChangesAsync(ct);
+            return Results.Ok();
+        });
+
+        // Aviso de pagamento do Mercado Pago (cartão). Aceita os dois formatos que ele manda: Webhooks
+        // (?type=payment&data.id=123, com x-signature) e IPN (?topic=payment&id=123). O aviso só diz "olhe o
+        // pagamento 123": o status e o pedido vêm da API do Mercado Pago com o nosso token, então um aviso falso
+        // não confirma nada. Com a assinatura secreta configurada, aviso com x-signature inválida é recusado.
+        grupo.MapPost("/mercadopago", async (HttpRequest req, IOptions<MercadoPagoOptions> opcoes, IMercadoPago mp,
+            ILojaAtual lojaAtual, ServicoPedidos pedidos, ILoggerFactory logs, CancellationToken ct) =>
+        {
+            if (!mp.Configurado)
+                return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+            var log = logs.CreateLogger("MercadoPago");
+
+            var (tipo, id) = await LerAvisoMercadoPagoAsync(req, ct);
+            var segredo = opcoes.Value.WebhookSecret;
+            var assinatura = req.Headers["x-signature"].ToString();
+            if (!string.IsNullOrEmpty(segredo) && assinatura.Length > 0
+                && !AssinaturaMercadoPago.Valida(assinatura, req.Headers["x-request-id"], req.Query["data.id"].FirstOrDefault() ?? id, segredo))
+            {
+                log.LogWarning("Aviso do Mercado Pago com assinatura inválida (pagamento {Id})", id);
+                return Results.Unauthorized();
+            }
+            if (tipo != "payment" || string.IsNullOrEmpty(id))
+                return Results.Ok(); // merchant_order e outros: o pagamento chega em aviso próprio
+
+            var pagamento = await mp.BuscarPagamentoAsync(id, ct);
+            if (pagamento?.Pedido is not { } ref_)
+                return Results.Ok(); // pagamento de fora do sistema (ou de teste do painel do MP)
+
+            lojaAtual.Definir(ref_.LojaId);
+            var resultado = await pedidos.AoPagarNoCartaoAsync(ref_.PedidoId, pagamento, ct);
+            log.LogInformation("Mercado Pago {Id} ({Status}): {Resultado}", pagamento.Id, pagamento.Status, resultado);
             return Results.Ok();
         });
 
@@ -111,5 +146,29 @@ public static class WebhookEndpoints
             await db.SaveChangesAsync(ct);
             return Results.Ok();
         });
+    }
+
+    /// <summary>Tipo ("payment") e id do aviso, da URL ou do corpo JSON.</summary>
+    private static async Task<(string? Tipo, string? Id)> LerAvisoMercadoPagoAsync(HttpRequest req, CancellationToken ct)
+    {
+        string? tipo = req.Query["type"].FirstOrDefault() ?? req.Query["topic"].FirstOrDefault();
+        string? id = req.Query["data.id"].FirstOrDefault() ?? req.Query["id"].FirstOrDefault();
+        if (tipo is not null && id is not null)
+            return (tipo, id);
+        try
+        {
+            using var doc = await JsonDocument.ParseAsync(req.Body, cancellationToken: ct);
+            var raiz = doc.RootElement;
+            if (raiz.TryGetProperty("type", out var t) && t.ValueKind == JsonValueKind.String)
+                tipo ??= t.GetString();
+            else if (raiz.TryGetProperty("topic", out var tp) && tp.ValueKind == JsonValueKind.String)
+                tipo ??= tp.GetString();
+            if (raiz.TryGetProperty("data", out var d) && d.ValueKind == JsonValueKind.Object && d.TryGetProperty("id", out var di))
+                id ??= di.ValueKind == JsonValueKind.Number ? di.GetRawText() : di.GetString();
+        }
+        catch (JsonException)
+        {
+        }
+        return (tipo, id);
     }
 }

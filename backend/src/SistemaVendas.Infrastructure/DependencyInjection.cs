@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SistemaVendas.Application.Atendimento;
 using SistemaVendas.Infrastructure.Dados;
 using SistemaVendas.Infrastructure.IA;
+using SistemaVendas.Infrastructure.Pagamentos;
 using SistemaVendas.Infrastructure.WhatsApp;
 
 namespace SistemaVendas.Infrastructure;
@@ -22,6 +23,15 @@ public static class DependencyInjection
         services.AddScoped<ServicoFunil>();
         services.AddScoped<ServicoReservas>();
         services.AddScoped<ServicoPedidos>();
+
+        // Cartão pelo Mercado Pago: só liga com MercadoPago__AccessToken. O endereço do webhook vem do Render.
+        services.Configure<MercadoPagoOptions>(config.GetSection(MercadoPagoOptions.Secao));
+        services.PostConfigure<MercadoPagoOptions>(o =>
+        {
+            if (string.IsNullOrWhiteSpace(o.UrlPublicaApi))
+                o.UrlPublicaApi = config["RENDER_EXTERNAL_URL"];
+        });
+        services.AddHttpClient<IMercadoPago, MercadoPagoCliente>(c => c.Timeout = TimeSpan.FromSeconds(15));
         services.AddScoped<ServicoEntregas>();
         services.AddScoped<ServicoMetricas>();
 

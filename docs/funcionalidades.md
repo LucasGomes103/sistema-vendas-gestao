@@ -203,9 +203,34 @@ período, espécies, estoque por tanque, mortalidade por fornecedor e lançament
 
 Ficou de fora: custo do WhatsApp (a ponte por QR não cobra; volta quando usar a API oficial da Meta).
 
+## Cartão pelo Mercado Pago
+
+Opcional e sem mensalidade: o Mercado Pago cobra uma taxa por venda no cartão. Liga sozinho quando a variável
+`MercadoPago__AccessToken` existe no Render; sem ela, tudo segue só com Pix, como antes.
+
+- Ao criar o pedido (ou tocar em **Enviar cobrança**), o sistema cria um link do **Checkout Pro** com o total do
+  pedido. A cobrança no WhatsApp passa a oferecer as duas formas: o Pix copia e cola (comprovante e confirmação
+  manual, sem mudança) e o link do cartão de crédito (até 12 parcelas) ou débito. Boleto e o Pix do Mercado Pago
+  ficam fora do link: o Pix continua pela chave da loja, sem taxa.
+- O link vence junto com a reserva de 24 h.
+- Quando o cliente paga pelo link, o Mercado Pago avisa a API em `POST /api/v1/webhooks/mercadopago`. A API busca o
+  pagamento no Mercado Pago com o próprio token (o aviso sozinho não confirma nada) e, aprovado com o valor certo,
+  confirma o pedido sozinho: o peixe sai do estoque, entra no caixa como **Cartão**, o card vai para **Pago**, entra
+  na agenda de entregas e o cliente recebe a confirmação. Aviso repetido é ignorado.
+- Se o pagamento chega depois que a reserva venceu (ou o valor não bate), o estoque não é mexido: o pedido vai para
+  **Conferir pagamento** e o vendedor é chamado para separar de novo ou estornar no Mercado Pago.
+- No pedido, o ícone de cartão copia o link; pedido pago assim mostra "Mercado Pago, confirmado sozinho".
+- **Configuração → Cartão (Mercado Pago)** mostra se está ligado, se está em modo de teste e o endereço do aviso.
+- O robô (Gemini) passa a dizer que a loja aceita Pix e cartão, sem mandar link por conta própria.
+
+Variáveis no Render: `MercadoPago__AccessToken` (obrigatória), `MercadoPago__WebhookSecret` (assinatura secreta dos
+avisos; com ela, aviso com assinatura errada é recusado), `MercadoPago__ModoTeste=true` enquanto usar a conta de
+teste (só muda o selo no painel). O endereço público vem do `RENDER_EXTERNAL_URL`, que o Render preenche sozinho
+(ou `MercadoPago__UrlPublicaApi`).
+
 ## Pendências conhecidas
 
-- Fase 2 sem: aviso automático de Pix pago (exige provedor pago), lembrete de pagamento em 12 h e mensagens fora da
+- Fase 2 sem: aviso automático de Pix pago (dá para fazer pelo Mercado Pago, se quiser, com taxa por Pix), lembrete de pagamento em 12 h e mensagens fora da
   janela de 24 h (exigem modelos aprovados na Meta), alerta de entrega atrasada há 48 h e QR code na tela.
 
 - Trocar a senha do banco do Supabase (vazou no chat) e atualizar `ConnectionStrings__Banco` no Render.

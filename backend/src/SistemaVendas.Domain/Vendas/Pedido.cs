@@ -56,6 +56,13 @@ public class Pedido : EntidadeDaLoja
     public DateTimeOffset? PixEnviadoEm { get; set; }
     public DateTimeOffset? ComprovanteEm { get; set; }
 
+    /// <summary>Link do Mercado Pago (Checkout Pro) para o cliente pagar no cartão; vence junto com a reserva.</summary>
+    public string? LinkCartao { get; set; }
+    /// <summary>Id da preferência no Mercado Pago (o link acima).</summary>
+    public string? MpPreferenciaId { get; set; }
+    /// <summary>Id do pagamento aprovado no Mercado Pago: quando preenchido, o pagamento foi confirmado sozinho.</summary>
+    public string? MpPagamentoId { get; set; }
+
     public FormaPagamento? FormaPagamento { get; set; }
     public DateTimeOffset? PagoEm { get; set; }
     public Guid? ConfirmadoPor { get; set; }
@@ -182,8 +189,9 @@ public static partial class RegrasPedido
         $"Recebemos o seu comprovante do pedido #{pedido.Numero}! 🙌 Um atendente confere na conta e confirma o pagamento por aqui em instantes.";
 
     /// <summary>
-    /// Mensagem de cobrança: itens, frete e total. O código Pix vai sozinho na mensagem seguinte,
-    /// para o cliente copiar com um toque longo sem levar texto junto.
+    /// Mensagem de cobrança: itens, frete, total e como pagar. O código Pix (quando há) vai sozinho na
+    /// mensagem seguinte, para o cliente copiar com um toque longo sem levar texto junto. Com o link do
+    /// cartão, o cliente escolhe: Pix (comprovante, confirmação manual) ou cartão (confirmação automática).
     /// </summary>
     public static string MensagemCobranca(Pedido pedido, string? nomeRecebedor, TimeZoneInfo fuso)
     {
@@ -194,10 +202,18 @@ public static partial class RegrasPedido
             : "Retirada na loja");
         linhas.Add($"*Total: {pedido.Total.ToString("C", PtBr)}*");
         linhas.Add("");
-        linhas.Add($"Para pagar, copie o código da próxima mensagem e cole no app do seu banco em *Pix copia e cola*{(nomeRecebedor is { Length: > 0 } n ? $" (recebedor: {n})" : "")}.");
-        linhas.Add(pedido.ExpiraEm is { } expira
-            ? $"O peixe fica separado até {TimeZoneInfo.ConvertTime(expira, fuso):dd/MM 'às' HH:mm}. {PedidoDoComprovante}"
-            : PedidoDoComprovante);
+        // Sem link do cartão, a cobrança é sempre por Pix (como antes).
+        var temPix = pedido.PixCopiaECola is not null || pedido.LinkCartao is null;
+        if (temPix)
+            linhas.Add($"{(pedido.LinkCartao is null ? "Para pagar" : "💠 *Pix*")}, copie o código da próxima mensagem e cole no app do seu banco em *Pix copia e cola*{(nomeRecebedor is { Length: > 0 } n ? $" (recebedor: {n})" : "")}. {PedidoDoComprovante}");
+        if (pedido.LinkCartao is { } link)
+        {
+            if (temPix)
+                linhas.Add("");
+            linhas.Add($"💳 *Cartão de crédito ou débito*: pague por este link do Mercado Pago (pode parcelar). A confirmação chega aqui sozinha.\n{link}");
+        }
+        if (pedido.ExpiraEm is { } expira)
+            linhas.Add($"\nO peixe fica separado até {TimeZoneInfo.ConvertTime(expira, fuso):dd/MM 'às' HH:mm}.");
         return string.Join('\n', linhas);
     }
 
@@ -209,6 +225,16 @@ public static partial class RegrasPedido
         pedido.TipoEntrega == TipoEntrega.Entrega
             ? $"✅ Pagamento do pedido #{pedido.Numero} confirmado! Já vamos combinar a entrega com você."
             : $"✅ Pagamento do pedido #{pedido.Numero} confirmado! Seu peixe está separado para a retirada na loja.";
+
+    /// <summary>Pagamento do cartão aprovado, mas a reserva tinha vencido: o vendedor resolve com o cliente.</summary>
+    public static string MensagemCartaoForaDoPrazo(Pedido pedido) =>
+        $"Recebemos o pagamento no cartão do pedido #{pedido.Numero}! 🙌 Um atendente confere a separação do seu peixe e fala com você por aqui.";
+
+    /// <summary>
+    /// Pagamento aprovado no Mercado Pago bate com o pedido? Aceita só valor igual ou maior que o total
+    /// (com juros do parcelamento o cliente paga mais).
+    /// </summary>
+    public static bool ValorDoCartaoConfere(Pedido pedido, decimal valorPago) => valorPago + 0.009m >= pedido.Total;
 
     public static string Resumo(Pedido pedido) =>
         string.Join(", ", pedido.Itens.Select(i => $"{i.Quantidade}x {i.Especie}"));
