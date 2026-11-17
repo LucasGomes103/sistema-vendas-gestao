@@ -206,6 +206,23 @@ public class AtendenteTests
         Assert.Contains("01234-567", r.MotivoVendedor);
     }
 
+    [Fact]
+    public async Task Pedido_da_vitrine_pede_o_endereco_completo_e_nao_so_o_CEP()
+    {
+        var r = await Perguntar("🛒 Pedido pelo catálogo\n2x Ramirezi (casal)\nTotal: R$ 120,00");
+        Assert.Contains("rua, número, complemento, bairro e CEP", r.Texto);
+    }
+
+    [Fact]
+    public async Task Endereco_e_CEP_na_mesma_mensagem_calcula_o_frete_e_guarda_o_endereco()
+    {
+        var r = await Perguntar("Rua Dom Pedro II, 120, apto 34, CEP 07010-000");
+        Assert.Contains("R$ 15,00", r.Texto);
+        Assert.Equal("Rua Dom Pedro II, 120, apto 34 - Centro, Guarulhos - SP", r.Endereco!.Texto);
+        Assert.False(AguardaEntrega.PediuEndereco(r.Texto, enderecoCompleto: true));
+        Assert.True(r.ChamarVendedor);
+    }
+
     [Theory]
     [InlineData("Rua Dom Pedro II, 120", "Rua Dom Pedro II, Centro, Guarulhos - SP", "Rua Dom Pedro II, 120 - Centro, Guarulhos - SP")]
     [InlineData("Av. Brasil 900 bloco B", "Rua Dom Pedro II, Centro, Guarulhos - SP", "Av. Brasil 900 bloco B - Centro, Guarulhos - SP")]

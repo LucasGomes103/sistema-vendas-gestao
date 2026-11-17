@@ -224,15 +224,17 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
         - Se pedirem catálogo, lista, fotos ou "o que vocês têm", use link_catalogo e envie o link completo,
           explicando que lá dá para escolher as quantidades e enviar o pedido pelo WhatsApp.
         - Mensagem que contém "{PedidoCatalogo.Marcador}" é um pedido montado na vitrine: confira cada item com
-          buscar_especie, use criar_reserva com os itens e quantidades, peça o CEP para o frete e use chamar_vendedor
+          buscar_especie, use criar_reserva com os itens e quantidades, peça o endereço completo de entrega com CEP e use chamar_vendedor
           com o motivo "Pedido pelo catálogo".
         - Quando o cliente disser que quer reservar ou comprar uma quantidade de um peixe com estoque, use criar_reserva
           (especie_id vindo de buscar_especie) e depois chamar_vendedor. A reserva vale 24 h.
-        - Frete e entrega: se o cliente ainda não mandou o CEP, peça o CEP. Quando ele mandar, use calcular_frete,
+        - Frete e entrega: se o cliente ainda não mandou o CEP, peça o endereço completo de entrega numa mensagem só:
+          rua, número, complemento, bairro e CEP. Nunca peça só o CEP. Quando o CEP chegar, use calcular_frete,
           informe valor e prazo e use chamar_vendedor com o resumo_para_vendedor no motivo. Se atende vier false
           (além do raio de entrega da loja) ou vier sem_calculo, não dê valor: diga que um atendente vai ver a entrega
           e use chamar_vendedor. Nunca invente valor de frete ou prazo.
-        - Endereço de entrega: depois do frete, na mesma resposta, peça o endereço de entrega. Se calcular_frete trouxe
+        - Endereço de entrega: se o cliente já mandou rua e número junto com o CEP, use salvar_endereco na mesma resposta
+          do frete e não pergunte de novo. Se mandou só o CEP, depois do frete, na mesma resposta, peça o que falta. Se calcular_frete trouxe
           endereco_do_cep, mostre a rua e o bairro dele para o cliente confirmar e pergunte só o número e o complemento
           (apartamento, bloco, casa dos fundos). Sem endereco_do_cep, peça rua, número, complemento e bairro.
           Quando o cliente responder, use salvar_endereco com o CEP, a rua, o número, o complemento, o bairro e a cidade

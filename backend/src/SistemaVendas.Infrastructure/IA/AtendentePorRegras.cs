@@ -28,7 +28,7 @@ public class AtendentePorRegras : IAtendenteIA
 
         if (PedidoCatalogo.EhPedido(ultima))
             return new RespostaAtendente(
-                "Recebi seu pedido! Para calcular o frete, me envie o seu CEP. Um atendente já confere tudo e confirma com você.",
+                $"Recebi seu pedido! Para calcular o frete, me envie o {AguardaEntrega.PedidoEndereco} completo: rua, número, complemento, bairro e CEP. Um atendente já confere tudo e confirma com você.",
                 ChamarVendedor: true,
                 MotivoVendedor: "Pedido pelo catálogo")
             {
@@ -64,6 +64,21 @@ public class AtendentePorRegras : IAtendenteIA
         if (RegrasFrete.AcharCep(ultima) is { } cep)
         {
             var frete = await ferramentas.CalcularFreteAsync(cep.ToString("00000000"), ct);
+
+            // Mandou o endereço junto com o CEP: guarda tudo de uma vez, sem perguntar de novo.
+            var semCep = RegrasEndereco.SemCep(ultima);
+            if (RegrasEndereco.PareceEndereco(semCep) && semCep.Any(char.IsLetter))
+            {
+                var completo = RegrasEndereco.Completar(semCep, frete?.Endereco);
+                var textos = await ferramentas.TextosAsync(ct);
+                var inicio = frete?.ParaCliente ?? $"Anotei o CEP {RegrasFrete.Formatar(cep)}. Um atendente vai calcular a entrega.";
+                return new RespostaAtendente($"{inicio}\n\nAnotei o {AguardaEntrega.PedidoEndereco}: {completo}. {textos.ChamarVendedor}", ChamarVendedor: true,
+                    MotivoVendedor: frete?.Resumo ?? $"Calcular frete à mão: CEP {RegrasFrete.Formatar(cep)}")
+                {
+                    Endereco = new EnderecoEntrega(cep, completo)
+                };
+            }
+
             return frete is not null
                 ? new RespostaAtendente($"{frete.ParaCliente}\n\n{PedirEndereco(frete.Endereco)}", ChamarVendedor: true, MotivoVendedor: frete.Resumo)
                 : new RespostaAtendente($"Anotei o CEP {RegrasFrete.Formatar(cep)}. Um atendente vai calcular a entrega.\n\n{PedirEndereco(null)}", ChamarVendedor: true,

@@ -33,8 +33,14 @@ public static class RegrasEndereco
         if (string.IsNullOrWhiteSpace(texto) || !texto.Any(char.IsDigit))
             return false;
         // Só o CEP de novo não é endereço.
-        var semCep = System.Text.RegularExpressions.Regex.Replace(texto, @"(?<!\d)\d{5}[-.\s]?\d{3}(?!\d)", "");
-        return semCep.Any(char.IsDigit);
+        return SemCep(texto).Any(char.IsDigit);
+    }
+
+    /// <summary>Tira o CEP (e a palavra "CEP") do texto: "Rua A, 10, CEP 07010-000" vira "Rua A, 10".</summary>
+    public static string SemCep(string texto)
+    {
+        var t = System.Text.RegularExpressions.Regex.Replace(texto, @"(?i)\b(cep)?[:\s]*(?<!\d)\d{5}[-.\s]?\d{3}(?!\d)", " ");
+        return string.Join(' ', t.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).Trim(' ', ',', '-', '.');
     }
 
     /// <summary>
