@@ -3,7 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using SistemaVendas.Application.Comum;
 using SistemaVendas.Domain.Estoque;
 using SistemaVendas.Domain.Vendas;
+using Microsoft.Extensions.Options;
 using SistemaVendas.Infrastructure.Dados;
+using SistemaVendas.Infrastructure.Pagamentos;
 
 namespace SistemaVendas.Api.Endpoints;
 
@@ -13,6 +15,7 @@ public record PedidoSaida(
     Guid Id, int Numero, string Status, Guid ClienteId, string Cliente, string Telefone, Guid? ConversaId, Guid? ReservaId,
     string TipoEntrega, string? Cep, string? Endereco, decimal Subtotal, decimal Frete, decimal Total,
     DateTimeOffset CriadoEm, DateTimeOffset? ExpiraEm, string? PixCopiaECola, DateTimeOffset? PixEnviadoEm, DateTimeOffset? ComprovanteEm,
+    string? LinkCartao, bool PagoPeloMercadoPago,
     string? FormaPagamento, DateTimeOffset? PagoEm, DateTimeOffset? CanceladoEm, string? MotivoCancelamento, string? Observacao,
     List<ItemPedidoSaida> Itens);
 
@@ -28,6 +31,9 @@ public record CancelarPedidoEntrada(string? Motivo);
 public record ConfigPixSaida(string? Chave, string? TipoChave, string? Nome, string? Cidade, bool Configurado);
 
 public record ConfigPixEntrada(string? Chave, string? Nome, string? Cidade);
+
+/// <summary>Cartão pelo Mercado Pago: só leitura (as credenciais ficam no Render, nunca no banco).</summary>
+public record ConfigCartaoSaida(bool Configurado, bool ModoTeste, bool WebhookPronto, bool AssinaturaConferida, string? UrlWebhook);
 
 /// <summary>Pedidos e cobrança por Pix com a chave comum da loja (sem provedor, sem custo).</summary>
 public static class PedidoEndpoints
@@ -117,6 +123,18 @@ public static class PedidoEndpoints
             }
         })
         .RequireAuthorization(AuthEndpoints.PoliticaDono);
+
+        app.MapGet("/config/cartao", (IOptions<MercadoPagoOptions> opcoes) =>
+        {
+            var o = opcoes.Value;
+            var token = o.AccessToken ?? "";
+            // Credencial de teste: TEST-... (antiga) ou a de produção de um usuário de teste (aparece como teste no painel do MP).
+            var teste = token.StartsWith("TEST-", StringComparison.Ordinal) || o.ModoTeste;
+            return new ConfigCartaoSaida(o.Configurado, o.Configurado && teste, o.UrlWebhook?.StartsWith("https://") == true,
+                !string.IsNullOrWhiteSpace(o.WebhookSecret), o.UrlWebhook);
+        })
+        .WithTags("Pedidos")
+        .RequireAuthorization(AuthEndpoints.PoliticaEquipe);
     }
 
     private static Guid? Usuario(ClaimsPrincipal user) =>
@@ -148,7 +166,7 @@ public static class PedidoEndpoints
             return new PedidoSaida(
                 p.Id, p.Numero, p.Status.ToString(), p.ClienteId, nome ?? telefone ?? "Cliente", telefone ?? "", p.ConversaId, p.ReservaId,
                 p.TipoEntrega.ToString(), p.Cep, p.Endereco, p.Subtotal, p.Frete, p.Total,
-                p.CriadoEm, p.ExpiraEm, p.PixCopiaECola, p.PixEnviadoEm, p.ComprovanteEm,
+                p.CriadoEm, p.ExpiraEm, p.PixCopiaECola, p.PixEnviadoEm, p.ComprovanteEm, p.LinkCartao, p.MpPagamentoId is not null,
                 p.FormaPagamento?.ToString(), p.PagoEm, p.CanceladoEm, p.MotivoCancelamento, p.Observacao,
                 p.Itens.Select(i => new ItemPedidoSaida(i.Especie, i.Quantidade, i.PrecoUnitario)).ToList());
         }).ToList();

@@ -33,6 +33,13 @@ services:
         sync: false
       - key: IA__Gemini__ApiKey
         sync: false
+      # Cartão pelo Mercado Pago (opcional): sem o token, só Pix. Ver docs/funcionalidades.md
+      - key: MercadoPago__AccessToken
+        sync: false
+      - key: MercadoPago__WebhookSecret
+        sync: false
+      - key: MercadoPago__ModoTeste
+        value: "true"
       - key: WhatsApp__Provedor
         value: Local
       - key: WhatsApp__Local__Segredo

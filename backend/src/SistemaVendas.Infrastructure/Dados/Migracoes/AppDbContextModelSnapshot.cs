@@ -1457,6 +1457,11 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasColumnType("numeric(10,2)")
                         .HasColumnName("frete");
 
+                    b.Property<string>("LinkCartao")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("link_cartao");
+
                     b.Property<Guid>("LojaId")
                         .HasColumnType("uuid")
                         .HasColumnName("loja_id");
@@ -1464,6 +1469,16 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.Property<string>("MotivoCancelamento")
                         .HasColumnType("text")
                         .HasColumnName("motivo_cancelamento");
+
+                    b.Property<string>("MpOrderId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("mp_order_id");
+
+                    b.Property<string>("MpPagamentoId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("mp_pagamento_id");
 
                     b.Property<int>("Numero")
                         .HasColumnType("integer")

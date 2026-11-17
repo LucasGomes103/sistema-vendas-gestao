@@ -164,4 +164,39 @@ public class RegrasPedidoTests
         Assert.Contains("próxima mensagem", texto);
         Assert.Contains("13/11 às 12:00", texto);
     }
+
+    [Fact]
+    public void Cobranca_com_cartao_oferece_pix_e_o_link_do_mercado_pago()
+    {
+        var p = RegrasPedido.CriarDaReserva(ReservaDe(1, 0), Guid.NewGuid(), 4, new DadosEntrega(TipoEntrega.Retirada, 0, null, null, null), null);
+        p.PixCopiaECola = "000201...";
+        p.LinkCartao = "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=1";
+        var texto = RegrasPedido.MensagemCobranca(p, "ECS FISH", TimeZoneInfo.Utc);
+
+        Assert.Contains("*Pix*", texto);
+        Assert.Contains("comprovante", texto);
+        Assert.Contains("Cartão de crédito", texto);
+        Assert.Contains(p.LinkCartao, texto);
+    }
+
+    [Fact]
+    public void Cobranca_so_com_cartao_nao_fala_de_pix()
+    {
+        var p = RegrasPedido.CriarDaReserva(ReservaDe(1, 0), Guid.NewGuid(), 5, new DadosEntrega(TipoEntrega.Retirada, 0, null, null, null), null);
+        p.LinkCartao = "https://mp/link";
+        var texto = RegrasPedido.MensagemCobranca(p, null, TimeZoneInfo.Utc);
+
+        Assert.DoesNotContain("Pix", texto);
+        Assert.Contains("https://mp/link", texto);
+    }
+
+    [Fact]
+    public void Valor_do_cartao_precisa_cobrir_o_total()
+    {
+        var p = RegrasPedido.CriarDaReserva(ReservaDe(1, 0), Guid.NewGuid(), 6, new DadosEntrega(TipoEntrega.Retirada, 0, null, null, null), null);
+
+        Assert.True(RegrasPedido.ValorDoCartaoConfere(p, p.Total));
+        Assert.True(RegrasPedido.ValorDoCartaoConfere(p, p.Total + 8.4m)); // juros do parcelamento
+        Assert.False(RegrasPedido.ValorDoCartaoConfere(p, p.Total - 1m));
+    }
 }

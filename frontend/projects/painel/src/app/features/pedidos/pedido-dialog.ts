@@ -69,10 +69,14 @@ import { API, PedidoAcao, Reserva, SugestaoPedido, TipoEntrega, mensagemDeErro }
           <input matInput formControlName="observacao" />
         </mat-form-field>
 
-        @if (sugestao.value()?.pixConfigurado === false) {
+        @let s = sugestao.value();
+        @if (s && !s.pixConfigurado && !s.cartaoConfigurado) {
           <p class="dica alerta"><mat-icon>info</mat-icon> Sem chave Pix configurada: o pedido é criado, mas sem código para o cliente. Configure em Configuração → Pix da loja.</p>
         } @else {
-          <mat-checkbox formControlName="enviarPix">Enviar o pedido com o Pix copia e cola para o cliente agora</mat-checkbox>
+          <mat-checkbox formControlName="enviarPix">
+            Enviar o pedido para o cliente agora com
+            {{ s?.pixConfigurado === false ? 'o link do cartão' : s?.cartaoConfigurado ? 'o Pix copia e cola e o link do cartão' : 'o Pix copia e cola' }}
+          </mat-checkbox>
         }
       </form>
 
@@ -184,7 +188,7 @@ export class PedidoDialog {
       if (!c.cep.dirty && s.cep) c.cep.setValue(s.cep.replace(/^(\d{5})(\d{3})$/, '$1-$2'));
       if (!c.endereco.dirty && s.endereco) c.endereco.setValue(s.endereco);
       if (!c.frete.dirty && s.frete != null) c.frete.setValue(s.frete);
-      if (!s.pixConfigurado) c.enviarPix.setValue(false);
+      if (!s.pixConfigurado && !s.cartaoConfigurado) c.enviarPix.setValue(false);
     });
   }
 

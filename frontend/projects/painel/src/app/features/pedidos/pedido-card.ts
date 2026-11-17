@@ -47,7 +47,7 @@ import { AcoesPedido } from './acoes-pedido';
         <mat-icon>schedule</mat-icon>
         @switch (p.status) {
           @case ('Pago') {
-            Pago em {{ p.pagoEm | date: "dd/MM 'às' HH:mm" }}{{ p.formaPagamento ? ' · ' + forma[p.formaPagamento] : '' }}
+            Pago em {{ p.pagoEm | date: "dd/MM 'às' HH:mm" }}{{ p.formaPagamento ? ' · ' + forma[p.formaPagamento] : '' }}{{ p.pagoPeloMercadoPago ? ' (Mercado Pago, confirmado sozinho)' : '' }}
           }
           @case ('Cancelado') {
             Cancelado em {{ p.canceladoEm | date: "dd/MM 'às' HH:mm" }}{{ p.motivoCancelamento ? ' · ' + p.motivoCancelamento : '' }}
@@ -58,7 +58,7 @@ import { AcoesPedido } from './acoes-pedido';
               · reservado até {{ p.expiraEm | date: "dd/MM 'às' HH:mm" }}
             }
             @if (p.pixEnviadoEm) {
-              · Pix enviado {{ p.pixEnviadoEm | date: 'HH:mm' }}
+              · cobrança enviada {{ p.pixEnviadoEm | date: 'HH:mm' }}
             }
             @if (p.comprovanteEm) {
               · cliente disse que pagou {{ p.comprovanteEm | date: 'HH:mm' }}
@@ -73,13 +73,18 @@ import { AcoesPedido } from './acoes-pedido';
       @if (aberto()) {
         <footer>
           <button mat-flat-button [disabled]="ocupado()" (click)="executar(acoes.confirmarPagamento(p))"><mat-icon>check</mat-icon> Confirmar pagamento</button>
-          @if (p.pixCopiaECola) {
+          @if (p.pixCopiaECola || p.linkCartao) {
             @if (p.conversaId) {
               <button mat-stroked-button [disabled]="ocupado()" (click)="executar(acoes.enviarPix(p))">
-                <mat-icon>send</mat-icon> {{ p.pixEnviadoEm ? 'Reenviar Pix' : 'Enviar Pix' }}
+                <mat-icon>send</mat-icon> {{ p.pixEnviadoEm ? 'Reenviar cobrança' : 'Enviar cobrança' }}
               </button>
             }
-            <button mat-icon-button matTooltip="Copiar Pix copia e cola" aria-label="Copiar Pix" (click)="acoes.copiarPix(p)"><mat-icon>content_copy</mat-icon></button>
+            @if (p.pixCopiaECola) {
+              <button mat-icon-button matTooltip="Copiar Pix copia e cola" aria-label="Copiar Pix" (click)="acoes.copiarPix(p)"><mat-icon>content_copy</mat-icon></button>
+            }
+            @if (p.linkCartao) {
+              <button mat-icon-button matTooltip="Copiar link do cartão (Mercado Pago)" aria-label="Copiar link do cartão" (click)="acoes.copiarLinkCartao(p)"><mat-icon>credit_card</mat-icon></button>
+            }
           }
           <button mat-icon-button [matMenuTriggerFor]="mais" aria-label="Mais ações"><mat-icon>more_vert</mat-icon></button>
           <mat-menu #mais="matMenu">

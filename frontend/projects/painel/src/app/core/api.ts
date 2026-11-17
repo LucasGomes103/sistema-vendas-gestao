@@ -263,6 +263,10 @@ export interface Pedido {
   pixCopiaECola: string | null;
   pixEnviadoEm: string | null;
   comprovanteEm: string | null;
+  /** Link do Mercado Pago para pagar no cartão (quando o cartão está ligado). */
+  linkCartao: string | null;
+  /** Pago pelo link do cartão: confirmado sozinho pelo aviso do Mercado Pago. */
+  pagoPeloMercadoPago: boolean;
   formaPagamento: FormaPagamento | null;
   pagoEm: string | null;
   canceladoEm: string | null;
@@ -285,6 +289,7 @@ export interface SugestaoPedido {
   frete: number | null;
   freteResumo: string | null;
   pixConfigurado: boolean;
+  cartaoConfigurado: boolean;
 }
 
 export interface ConfigPix {
@@ -293,6 +298,15 @@ export interface ConfigPix {
   nome: string | null;
   cidade: string | null;
   configurado: boolean;
+}
+
+/** Cartão pelo Mercado Pago: só leitura, as credenciais ficam no Render. */
+export interface ConfigCartao {
+  configurado: boolean;
+  modoTeste: boolean;
+  webhookPronto: boolean;
+  assinaturaConferida: boolean;
+  urlWebhook: string | null;
 }
 
 export type TipoLancamento = 'Entrada' | 'Saida';

@@ -25,7 +25,8 @@ interface Confirmacao {
     <h2 mat-dialog-title>Confirmar pagamento do pedido #{{ pedido.numero }}</h2>
     <mat-dialog-content>
       <p class="valor">{{ pedido.total | currency: 'BRL' }} · {{ pedido.cliente }}</p>
-      <p class="ajuda">Confira se o valor caiu na conta da loja. Ao confirmar, o peixe sai do estoque e o card vai para Pago.</p>
+      <p class="ajuda">Confira se o valor caiu na conta da loja. Ao confirmar, o peixe sai do estoque e o card vai para Pago.
+        Pagamento pelo link do cartão (Mercado Pago) confirma sozinho: não precisa vir aqui.</p>
       <mat-button-toggle-group [ngModel]="forma()" (ngModelChange)="forma.set($event)" aria-label="Forma de pagamento">
         <mat-button-toggle value="Pix"><mat-icon>pix</mat-icon> Pix</mat-button-toggle>
         <mat-button-toggle value="Dinheiro"><mat-icon>payments</mat-icon> Dinheiro</mat-button-toggle>
@@ -82,7 +83,7 @@ export class AcoesPedido {
   }
 
   async enviarPix(p: Pedido): Promise<Pedido | null> {
-    return this.acao(`${API}/pedidos/${p.id}/enviar-pix`, {}, `Pix do pedido #${p.numero} enviado ao cliente.`);
+    return this.acao(`${API}/pedidos/${p.id}/enviar-pix`, {}, `Cobrança do pedido #${p.numero} enviada ao cliente.`);
   }
 
   async cancelar(p: Pedido): Promise<Pedido | null> {
@@ -105,6 +106,16 @@ export class AcoesPedido {
       this.snack.open('Código Pix copiado.', undefined, { duration: 2500 });
     } catch {
       prompt('Copie o código Pix:', p.pixCopiaECola);
+    }
+  }
+
+  async copiarLinkCartao(p: Pedido): Promise<void> {
+    if (!p.linkCartao) return;
+    try {
+      await navigator.clipboard.writeText(p.linkCartao);
+      this.snack.open('Link do cartão copiado.', undefined, { duration: 2500 });
+    } catch {
+      prompt('Copie o link do cartão:', p.linkCartao);
     }
   }
 

@@ -6,18 +6,24 @@ using SistemaVendas.Domain.Estoque;
 using SistemaVendas.Domain.Funil;
 using SistemaVendas.Domain.Vendas;
 using SistemaVendas.Infrastructure.Entregas;
+using SistemaVendas.Infrastructure.Pagamentos;
 
 namespace SistemaVendas.Infrastructure.Dados;
 
 /// <summary>Sugestão para o vendedor montar o pedido: CEP e frete que o sistema já conhece do cliente.</summary>
-public record SugestaoPedido(string Cliente, string? Cep, string? Endereco, decimal? Frete, string? FreteResumo, bool PixConfigurado);
+public record SugestaoPedido(string Cliente, string? Cep, string? Endereco, decimal? Frete, string? FreteResumo, bool PixConfigurado, bool CartaoConfigurado);
 
 /// <summary>Resultado de uma ação que tenta avisar o cliente: Enviada = false quando a janela de 24 h fechou.</summary>
 public record ResultadoAviso(Pedido Pedido, bool MensagemEnviada, string? Aviso);
 
-/// <summary>Pedidos da loja atual: nascem da reserva, cobram por Pix copia e cola e viram venda quando pagos.</summary>
-public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete frete)
+/// <summary>
+/// Pedidos da loja atual: nascem da reserva, cobram por Pix copia e cola (confirmação manual) e, com o
+/// Mercado Pago ligado, também por link de cartão (confirmação automática pelo webhook). Pagos, viram venda.
+/// </summary>
+public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete frete, IMercadoPago mercadoPago)
 {
+    private static readonly System.Globalization.CultureInfo PtBr = System.Globalization.CultureInfo.GetCultureInfo("pt-BR");
+
     public async Task<SugestaoPedido?> SugerirAsync(Guid reservaId, CancellationToken ct)
     {
         var reserva = await db.Reservas.AsNoTracking().FirstOrDefaultAsync(r => r.Id == reservaId, ct);
@@ -46,7 +52,8 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
             cliente.Endereco ?? detalhe?.Endereco,
             detalhe?.Frete is { Atende: true } f ? f.Valor : null,
             detalhe?.Frete.Resumo,
-            PixPronto(loja));
+            PixPronto(loja),
+            mercadoPago.Configurado);
     }
 
     public async Task<ResultadoAviso> CriarAsync(Guid reservaId, DadosEntrega entrega, bool enviarPix, Guid? usuarioId, CancellationToken ct)
@@ -79,9 +86,11 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
         if (PixPronto(loja))
             pedido.PixCopiaECola = RegrasPix.CopiaECola(loja.PixChave!, loja.PixNome!, loja.PixCidade!, pedido.Total, $"PEDIDO{pedido.Numero}");
 
-        var resultado = new ResultadoAviso(pedido, false, null);
+        var avisoCartao = await GerarLinkCartaoAsync(pedido, loja, ct);
+
+        var resultado = new ResultadoAviso(pedido, false, avisoCartao);
         if (enviarPix)
-            resultado = EnviarCobranca(pedido, conversa, loja, usuarioId);
+            resultado = EnviarCobranca(pedido, conversa, loja, usuarioId) is var r && avisoCartao is not null ? r with { Aviso = r.Aviso ?? avisoCartao } : r;
 
         await db.SaveChangesAsync(ct);
         return resultado;
@@ -101,13 +110,16 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
         if (PixPronto(loja))
             pedido.PixCopiaECola = RegrasPix.CopiaECola(loja.PixChave!, loja.PixNome!, loja.PixCidade!, pedido.Total, $"PEDIDO{pedido.Numero}");
 
+        var avisoCartao = pedido.LinkCartao is null ? await GerarLinkCartaoAsync(pedido, loja, ct) : null;
+
         var conversa = await db.Conversas.FirstAsync(c => c.Id == conversaId, ct);
         var resultado = EnviarCobranca(pedido, conversa, loja, usuarioId);
         await db.SaveChangesAsync(ct);
-        return resultado;
+        return avisoCartao is null ? resultado : resultado with { Aviso = resultado.Aviso ?? avisoCartao };
     }
 
-    public async Task<ResultadoAviso?> ConfirmarPagamentoAsync(Guid pedidoId, FormaPagamento forma, bool avisarCliente, Guid? usuarioId, CancellationToken ct)
+    public async Task<ResultadoAviso?> ConfirmarPagamentoAsync(Guid pedidoId, FormaPagamento forma, bool avisarCliente, Guid? usuarioId, CancellationToken ct,
+        OrigemEvento origem = OrigemEvento.Usuario)
     {
         var pedido = await db.Pedidos.Include(p => p.Itens).FirstOrDefaultAsync(p => p.Id == pedidoId, ct);
         if (pedido is null)
@@ -134,7 +146,7 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
             var conversa = await db.Conversas.FirstAsync(c => c.Id == conversaId, ct);
             conversa.ValorEstimado = pedido.Total;
             if (conversa.Etapa != EtapaCard.Pago)
-                funil.Registrar(conversa, MotorFunil.Mover(conversa, EtapaCard.Pago, null), OrigemEvento.Usuario, usuarioId);
+                funil.Registrar(conversa, MotorFunil.Mover(conversa, EtapaCard.Pago, null), origem, usuarioId);
             conversa.Assumir(agora);
             conversa.EncerrarAlerta(); // venda fechada: não é mais cliente quente esperando alguém
             if (avisarCliente)
@@ -217,14 +229,85 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
 
     private ResultadoAviso EnviarCobranca(Pedido pedido, Conversa conversa, Domain.Lojas.Loja loja, Guid? usuarioId)
     {
-        if (pedido.PixCopiaECola is null)
-            throw new RegraException("Cadastre a chave Pix da loja em Configuração → Pix para enviar a cobrança.");
+        if (pedido.PixCopiaECola is null && pedido.LinkCartao is null)
+            throw new RegraException("Cadastre a chave Pix da loja em Configuração → Pix (ou ligue o cartão do Mercado Pago) para enviar a cobrança.");
         var agora = DateTimeOffset.UtcNow;
         var fuso = TimeZoneInfo.FindSystemTimeZoneById(loja.Fuso);
-        var resultado = Avisar(pedido, conversa, [RegrasPedido.MensagemCobranca(pedido, RegrasPix.Limpar(loja.PixNome, 25), fuso), pedido.PixCopiaECola], agora, usuarioId);
+        List<string> textos = [RegrasPedido.MensagemCobranca(pedido, RegrasPix.Limpar(loja.PixNome, 25), fuso)];
+        if (pedido.PixCopiaECola is { } pix)
+            textos.Add(pix);
+        var resultado = Avisar(pedido, conversa, textos, agora, usuarioId);
         if (resultado.MensagemEnviada)
             pedido.PixEnviadoEm = agora;
         return resultado;
+    }
+
+    /// <summary>
+    /// Cria o link do cartão no Mercado Pago, quando ligado. Se o Mercado Pago falhar, o pedido segue só com Pix
+    /// e o vendedor recebe o aviso (devolvido aqui).
+    /// </summary>
+    private async Task<string?> GerarLinkCartaoAsync(Pedido pedido, Domain.Lojas.Loja loja, CancellationToken ct)
+    {
+        if (!mercadoPago.Configurado)
+            return null;
+        try
+        {
+            var link = await mercadoPago.CriarLinkAsync(pedido, loja.Nome, ct);
+            pedido.LinkCartao = link.Url;
+            pedido.MpOrderId = link.OrderId;
+            return null;
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or RegraException)
+        {
+            return e is RegraException
+                ? e.Message
+                : "O Mercado Pago não respondeu: o pedido saiu sem o link do cartão. Tente \"Enviar cobrança\" de novo daqui a pouco.";
+        }
+    }
+
+    /// <summary>
+    /// Aviso do Mercado Pago (order já buscada na API com o nosso token). Paga ("processed") e com valor certo:
+    /// confirma o pedido sozinho (cartão), tira do estoque, lança no caixa e avisa o cliente. Se a reserva
+    /// venceu, não mexe no estoque: deixa em "Conferir pagamento" e chama o vendedor. Devolve o que fez (para o log).
+    /// </summary>
+    public async Task<string> AoPagarNoCartaoAsync(Guid pedidoId, PagamentoMp pagamento, CancellationToken ct)
+    {
+        var pedido = await db.Pedidos.Include(p => p.Itens).FirstOrDefaultAsync(p => p.Id == pedidoId, ct);
+        if (pedido is null)
+            return "pedido não encontrado";
+        if (!pagamento.Aprovado)
+            return $"order {pagamento.Status}/{pagamento.StatusDetalhe}: nada a fazer";
+        if (pedido.Status == StatusPedido.Pago || (pedido.MpPagamentoId is { } ja && ja == (pagamento.PagamentoId ?? pagamento.Id)))
+            return "já estava pago";
+
+        var agora = DateTimeOffset.UtcNow;
+        Conversa? conversa = pedido.ConversaId is { } cid ? await db.Conversas.FirstOrDefaultAsync(c => c.Id == cid, ct) : null;
+        var reserva = pedido.ReservaId is { } rid ? await db.Reservas.AsNoTracking().FirstOrDefaultAsync(r => r.Id == rid, ct) : null;
+        var valorCerto = RegrasPedido.ValorDoCartaoConfere(pedido, pagamento.Valor);
+
+        if (pedido.Status == StatusPedido.Cancelado || reserva is not { Status: StatusReserva.Ativa } || !valorCerto)
+        {
+            // Dinheiro entrou, mas o sistema não pode fechar sozinho: o vendedor decide (separar de novo ou estornar).
+            pedido.MpPagamentoId = pagamento.PagamentoId ?? pagamento.Id;
+            var motivo = !valorCerto
+                ? $"Pedido #{pedido.Numero}: Mercado Pago aprovou {pagamento.Valor.ToString("C", PtBr)} mas o total é {pedido.Total.ToString("C", PtBr)}. Conferir"
+                : $"Pedido #{pedido.Numero} pago no cartão (Mercado Pago {pagamento.PagamentoId ?? pagamento.Id}), mas a reserva já tinha encerrado. Separar de novo ou estornar";
+            if (pedido.Status == StatusPedido.AguardandoPagamento)
+                RegrasPedido.ComprovanteRecebido(pedido, agora);
+            if (conversa is not null)
+            {
+                conversa.AlertarDeNovo(motivo, agora);
+                if (pedido.Status == StatusPedido.ConferirPagamento && conversa.Etapa != EtapaCard.ConferirPagamento)
+                    funil.Registrar(conversa, MotorFunil.Mover(conversa, EtapaCard.ConferirPagamento, null), OrigemEvento.Webhook);
+                Responder(conversa, RegrasPedido.MensagemCartaoForaDoPrazo(pedido), agora);
+            }
+            await db.SaveChangesAsync(ct);
+            return motivo;
+        }
+
+        pedido.MpPagamentoId = pagamento.PagamentoId ?? pagamento.Id;
+        await ConfirmarPagamentoAsync(pedido.Id, FormaPagamento.Cartao, avisarCliente: true, usuarioId: null, ct, OrigemEvento.Webhook);
+        return $"pedido #{pedido.Numero} pago no cartão";
     }
 
     private ResultadoAviso Avisar(Pedido pedido, Conversa conversa, IEnumerable<string> textos, DateTimeOffset agora, Guid? usuarioId)

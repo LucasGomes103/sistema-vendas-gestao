@@ -23,7 +23,8 @@ public class GeminiOptions
 /// Atendente com Gemini e function calling. A IA só responde com dados vindos das ferramentas;
 /// nome, telefone e endereço do cliente nunca são enviados ao modelo.
 /// </summary>
-public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, AtendentePorRegras reserva, ILogger<GeminiAtendente> logger) : IAtendenteIA
+public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, AtendentePorRegras reserva, ILogger<GeminiAtendente> logger,
+    IOptions<Pagamentos.MercadoPagoOptions> mercadoPago) : IAtendenteIA
 {
     private const int MaximoRodadas = 4;
     private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
@@ -162,7 +163,7 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
         var o = opcoes.Value;
         var corpo = new JsonObject
         {
-            ["systemInstruction"] = new JsonObject { ["parts"] = new JsonArray(new JsonObject { ["text"] = InstrucaoSistema(nomeLoja, textos) }) },
+            ["systemInstruction"] = new JsonObject { ["parts"] = new JsonArray(new JsonObject { ["text"] = InstrucaoSistema(nomeLoja, textos, mercadoPago.Value.Configurado) }) },
             ["contents"] = conteudos.DeepClone(),
             ["tools"] = JsonNode.Parse(Ferramentas),
             ["generationConfig"] = new JsonObject { ["temperature"] = 0.3, ["maxOutputTokens"] = 400 }
@@ -186,7 +187,7 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
     private static JsonObject Parte(string papel, JsonObject parte) =>
         new() { ["role"] = papel, ["parts"] = new JsonArray(parte) };
 
-    private static string InstrucaoSistema(string nomeLoja, TextosProntos textos) => $"""
+    private static string InstrucaoSistema(string nomeLoja, TextosProntos textos, bool aceitaCartao) => $"""
         Você é o atendente virtual da {nomeLoja}, uma loja de peixes ornamentais, conversando pelo WhatsApp.
         Regras:
         - Responda em português do Brasil, curto e simpático (no máximo 3 frases), como num WhatsApp.
@@ -208,6 +209,10 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
         - Use chamar_vendedor quando o cliente quiser reservar, comprar ou pagar, pedir para falar com uma pessoa,
           reclamar, ou quando você não souber responder.
         - Não peça nem repita CPF, endereço ou outros dados pessoais.
+        - Formas de pagamento: {(aceitaCartao
+            ? "Pix ou cartão de crédito (pode parcelar) e débito. Depois que o atendente fecha o pedido, o cliente recebe o código Pix e um link do Mercado Pago para pagar no cartão."
+            : "Pix. Se perguntarem de cartão, diga que um atendente vê a possibilidade e use chamar_vendedor.")}
+          Nunca mande link de pagamento por conta própria.
         """;
 
     private const string Ferramentas = """
