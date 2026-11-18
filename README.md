@@ -11,7 +11,12 @@ Os documentos de origem estão em [docs/iniciacao](docs/iniciacao). O que cada f
 https://sistema-vendas-gestao.pages.dev/ecsfish e API em https://sistema-vendas-api-0x0l.onrender.com.
 O merge na `main` publica sozinho (Cloudflare Pages para o front, Render para a API, migrações aplicadas ao subir).
 
-## Stack (fase 1, custo zero)
+**Produção de verdade:** esta é uma versão teste, toda no plano grátis. Para levar a uma loja em operação, veja
+[docs/producao](docs/producao): [custos mensais](docs/producao/custos.md) (enxuta ≈ R$ 200 a 240/mês, recomendada
+≈ R$ 500 a 680/mês, mais as taxas do Mercado Pago), [arquitetura, deploy e variáveis](docs/producao/implantacao.md)
+e o [checklist de ida para produção](docs/producao/checklist.md).
+
+## Stack (versão teste, custo zero)
 
 | Camada | Tecnologia |
 | --- | --- |
@@ -187,8 +192,12 @@ dotnet user-secrets set "IA:Gemini:ApiKey" "<sua chave do AI Studio>"
 
 ## Próximos passos
 
-1. Fase 2: pedidos, Pix com chave comum, caixa e entregas.
-2. Fase 3: métricas e relatórios.
+As fases 0 a 3 estão prontas (ver [docs/funcionalidades.md](docs/funcionalidades.md)). Daqui em diante:
+
+1. Ida para produção: seguir o [checklist](docs/producao/checklist.md) (planos pagos, domínio, WhatsApp oficial da Meta,
+   Mercado Pago fora do modo teste, segurança e LGPD).
+2. Melhorias de código para operação real, listadas no fim do checklist (chaves dos cookies no banco, modelos de
+   mensagem da Meta, exclusão de dados do cliente, backup fora do Supabase).
 3. Fase 4: itens restantes do plano em [docs/iniciacao](docs/iniciacao).
 
 Segredos (tokens da Meta, Pix, IA) ficam em variáveis de ambiente ou em `dotnet user-secrets`, nunca no repositório.
