@@ -232,6 +232,8 @@ teste (só muda o selo no painel). O endereço público vem do `RENDER_EXTERNAL_
 
 ## Pendências conhecidas
 
+Para a ida à produção (custos, variáveis, segurança, LGPD), ver [producao/checklist.md](producao/checklist.md).
+
 - Fase 2 sem: aviso automático de Pix pago (dá para fazer pelo Mercado Pago, se quiser, com taxa por Pix), lembrete de pagamento em 12 h e mensagens fora da
   janela de 24 h (exigem modelos aprovados na Meta), alerta de entrega atrasada há 48 h e QR code na tela.
 
