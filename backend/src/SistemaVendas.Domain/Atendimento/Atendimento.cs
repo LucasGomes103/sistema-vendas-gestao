@@ -79,6 +79,13 @@ public class Conversa : EntidadeDaLoja
     /// <summary>Quando um vendedor assumiu ou respondeu o cliente quente. Vazio = cliente "sem dono".</summary>
     public DateTimeOffset? AtendidoEm { get; set; }
 
+    /// <summary>
+    /// Vendedor que cuida da conversa: quem assumiu ou respondeu primeiro, ou quem o dono alocou. Os outros vendedores
+    /// veem a conversa, mas não respondem por cima; o dono pode responder e transferir. Vazio = ninguém pegou ainda.
+    /// </summary>
+    public Guid? ResponsavelId { get; set; }
+    public DateTimeOffset? ResponsavelDesde { get; set; }
+
     /// <summary>Avisos já dados sobre o cliente quente sem dono: 1 = lembrete de 15 min, 2 = escalada de 1 h.</summary>
     public int AvisosQuente { get; set; }
 
@@ -143,18 +150,59 @@ public class Conversa : EntidadeDaLoja
         AvisosQuente = 0;
     }
 
-    /// <summary>Vendedor assumiu (ou respondeu): o robô para e o cliente quente deixa de estar sem dono.</summary>
-    public void Assumir(DateTimeOffset? em = null)
+    /// <summary>
+    /// Vendedor assumiu (ou respondeu): o robô para e o cliente quente deixa de estar sem dono. Quem assume primeiro
+    /// vira o responsável; se a conversa já tem responsável, ele continua (o dono troca pelo Transferir).
+    /// </summary>
+    public void Assumir(DateTimeOffset? em = null, Guid? usuarioId = null)
     {
+        var quando = em ?? DateTimeOffset.UtcNow;
         if (ChamouVendedor)
-            AtendidoEm ??= em ?? DateTimeOffset.UtcNow;
+            AtendidoEm ??= quando;
+        if (ResponsavelId is null && usuarioId is { } u)
+        {
+            ResponsavelId = u;
+            ResponsavelDesde = quando;
+        }
         RoboPausado = true;
         AguardandoRobo = false;
+    }
+
+    /// <summary>A conversa está com outro vendedor: só ele ou o dono respondem.</summary>
+    public bool ComOutro(Guid? usuarioId, bool ehDono) =>
+        !ehDono && ResponsavelId is { } r && r != usuarioId;
+
+    /// <summary>
+    /// Dono aloca a conversa para outro vendedor (ou tira o responsável, com null): o novo segue o atendimento
+    /// e o robô continua pausado.
+    /// </summary>
+    public void Transferir(Guid? usuarioId, DateTimeOffset agora)
+    {
+        if (ResponsavelId == usuarioId)
+            return;
+        ResponsavelId = usuarioId;
+        ResponsavelDesde = usuarioId is null ? null : agora;
+        if (usuarioId is not null)
+        {
+            if (ChamouVendedor)
+                AtendidoEm = agora;
+            RoboPausado = true;
+            AguardandoRobo = false;
+        }
+        else if (ChamouVendedor)
+        {
+            // Sem responsável de novo: volta a ser cliente quente sem dono, com os avisos do começo.
+            AtendidoEm = null;
+            AvisosQuente = 0;
+            ChamouVendedorEm = agora;
+        }
     }
 
     /// <summary>Vendedor devolve ao robô; o histórico fica guardado.</summary>
     public void DevolverAoRobo()
     {
+        ResponsavelId = null;
+        ResponsavelDesde = null;
         RoboPausado = false;
         ChamouVendedor = false;
         MotivoVendedor = null;

@@ -151,6 +151,14 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("proxima_acao_em");
 
+                    b.Property<DateTimeOffset?>("ResponsavelDesde")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("responsavel_desde");
+
+                    b.Property<Guid?>("ResponsavelId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("responsavel_id");
+
                     b.Property<bool>("RoboPausado")
                         .HasColumnType("boolean")
                         .HasColumnName("robo_pausado");
@@ -181,6 +189,10 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.HasIndex("ProximaAcaoEm")
                         .HasDatabaseName("ix_conversa_proxima_acao_em")
                         .HasFilter("robo_pausado = false AND proxima_acao_em IS NOT NULL");
+
+                    b.HasIndex("ResponsavelId")
+                        .HasDatabaseName("ix_conversa_responsavel_id")
+                        .HasFilter("responsavel_id IS NOT NULL");
 
                     b.HasIndex("LojaId", "UltimaMensagemEm")
                         .HasDatabaseName("ix_conversa_loja_id_ultima_mensagem_em");
@@ -1525,6 +1537,10 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasColumnType("numeric(10,2)")
                         .HasColumnName("total");
 
+                    b.Property<Guid?>("VendedorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("vendedor_id");
+
                     b.HasKey("Id")
                         .HasName("pk_pedido");
 
@@ -1536,6 +1552,9 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
 
                     b.HasIndex("ReservaId")
                         .HasDatabaseName("ix_pedido_reserva_id");
+
+                    b.HasIndex("VendedorId")
+                        .HasDatabaseName("ix_pedido_vendedor_id");
 
                     b.HasIndex("LojaId", "Numero")
                         .IsUnique()

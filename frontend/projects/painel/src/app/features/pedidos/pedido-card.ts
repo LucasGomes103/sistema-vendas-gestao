@@ -69,6 +69,18 @@ import { AcoesPedido } from './acoes-pedido';
       @if (p.observacao) {
         <p class="detalhe"><mat-icon>notes</mat-icon> {{ p.observacao }}</p>
       }
+      @if (p.vendedor || p.confirmadoPor) {
+        <p class="detalhe">
+          <mat-icon>badge</mat-icon>
+          Vendedor: {{ p.vendedor ?? 'sem vendedor' }}
+          @if (p.criadoPor && p.criadoPor !== p.vendedor) {
+            · pedido feito por {{ p.criadoPor }}
+          }
+          @if (p.status === 'Pago' && p.confirmadoPor) {
+            · pagamento confirmado por {{ p.confirmadoPor }}
+          }
+        </p>
+      }
 
       @if (aberto()) {
         <footer>

@@ -117,6 +117,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
             e.HasIndex(x => x.ProximaAcaoEm).HasFilter("robo_pausado = false AND proxima_acao_em IS NOT NULL");
             // Quadro kanban por loja e etapa.
             e.HasIndex(x => new { x.LojaId, x.Etapa, x.UltimaMensagemEm });
+            e.HasIndex(x => x.ResponsavelId).HasFilter("responsavel_id IS NOT NULL");
         });
 
         modelBuilder.Entity<CardEvento>(e =>
@@ -157,6 +158,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
             e.Property(x => x.MpPagamentoId).HasMaxLength(64);
             e.Ignore(x => x.Aberto);
             e.HasIndex(x => new { x.LojaId, x.Numero }).IsUnique();
+            e.HasIndex(x => x.VendedorId);
             e.HasIndex(x => new { x.LojaId, x.Status, x.CriadoEm });
             e.HasIndex(x => x.ConversaId);
             e.HasIndex(x => x.ReservaId);

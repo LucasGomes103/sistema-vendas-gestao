@@ -230,6 +230,23 @@ avisos; com ela, aviso com assinatura errada é recusado), `MercadoPago__ModoTes
 teste (só muda o selo no painel). O endereço público vem do `RENDER_EXTERNAL_URL`, que o Render preenche sozinho
 (ou `MercadoPago__UrlPublicaApi`); serve só para o painel mostrar a URL a cadastrar no Mercado Pago.
 
+## Equipe: quem atendeu e quem vendeu
+
+- **Responsável pela conversa:** quem assume ou responde primeiro fica com a conversa e segue o atendimento. Todos veem
+  todas as conversas, mas os outros vendedores só acompanham (o campo de mensagem fica bloqueado e aparece "Conversa com
+  Ana"). O dono pode responder em qualquer conversa sem tirar o responsável.
+- **Transferir (só o dono):** menu ⋮ da conversa → Transferir atendimento. Passa para outra pessoa (os pedidos em aberto
+  vão junto) ou deixa sem responsável, e a conversa volta a ser cliente quente sem dono. "Assumir eu" passa para o dono.
+  Devolver ao robô também tira o responsável. Quem é bloqueado, excluído ou vira entregador deixa as conversas livres.
+- **Autor de cada mensagem:** as mensagens da equipe mostram o nome de quem enviou. Na lista, filtros Todas, Minhas e
+  Sem responsável; no funil, o card mostra com quem está.
+- **Vendedor do pedido:** o pedido fica com o responsável da conversa (ou com quem criou). O card do pedido mostra o
+  vendedor, quem fez o pedido e quem confirmou o pagamento.
+- **Métricas:** quadro "Por vendedor" (conversas atendidas, mensagens, vendas pagas, receita, ticket médio, cancelados e
+  conversas abertas com a pessoa agora), filtro por vendedor no topo e o relatório CSV "Desempenho por vendedor". Com o
+  filtro, vendas, funil e perdas mostram só o que é da pessoa; estoque, caixa e entregas continuam da loja toda.
+- Na migração, pedidos antigos ficaram com quem os criou e conversas pausadas com quem respondeu por último.
+
 ## Pendências conhecidas
 
 Para a ida à produção (custos, variáveis, segurança, LGPD), ver [producao/checklist.md](producao/checklist.md).

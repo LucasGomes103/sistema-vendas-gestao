@@ -206,3 +206,16 @@
     scroll-snap-type: x mandatory;
   }
 }
+
+// Quem está com a conversa.
+.responsavel {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 110px;
+  overflow: hidden;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-label-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

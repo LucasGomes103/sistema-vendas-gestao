@@ -17,7 +17,8 @@ public record PedidoSaida(
     DateTimeOffset CriadoEm, DateTimeOffset? ExpiraEm, string? PixCopiaECola, DateTimeOffset? PixEnviadoEm, DateTimeOffset? ComprovanteEm,
     string? LinkCartao, bool PagoPeloMercadoPago,
     string? FormaPagamento, DateTimeOffset? PagoEm, DateTimeOffset? CanceladoEm, string? MotivoCancelamento, string? Observacao,
-    List<ItemPedidoSaida> Itens);
+    List<ItemPedidoSaida> Itens,
+    Guid? VendedorId = null, string? Vendedor = null, string? CriadoPor = null, string? ConfirmadoPor = null);
 
 /// <summary>Resposta de ação que pode mandar mensagem ao cliente: Aviso explica quando não deu.</summary>
 public record PedidoAcaoSaida(PedidoSaida Pedido, bool MensagemEnviada, string? Aviso);
@@ -160,6 +161,8 @@ public static class PedidoEndpoints
         var ids = pedidos.Select(p => p.ClienteId).Distinct().ToList();
         var clientes = await db.Clientes.AsNoTracking().Where(c => ids.Contains(c.Id))
             .ToDictionaryAsync(c => c.Id, c => (c.Nome, c.Telefone), ct);
+        var equipe = await ConversaEndpoints.NomesAsync(db, pedidos.SelectMany(p => new[] { p.VendedorId, p.CriadoPor, p.ConfirmadoPor }), ct);
+        string? Nome(Guid? id) => id is { } u ? equipe.GetValueOrDefault(u) ?? "Usuário removido" : null;
         return pedidos.Select(p =>
         {
             var (nome, telefone) = clientes.GetValueOrDefault(p.ClienteId);
@@ -168,7 +171,8 @@ public static class PedidoEndpoints
                 p.TipoEntrega.ToString(), p.Cep, p.Endereco, p.Subtotal, p.Frete, p.Total,
                 p.CriadoEm, p.ExpiraEm, p.PixCopiaECola, p.PixEnviadoEm, p.ComprovanteEm, p.LinkCartao, p.MpPagamentoId is not null,
                 p.FormaPagamento?.ToString(), p.PagoEm, p.CanceladoEm, p.MotivoCancelamento, p.Observacao,
-                p.Itens.Select(i => new ItemPedidoSaida(i.Especie, i.Quantidade, i.PrecoUnitario)).ToList());
+                p.Itens.Select(i => new ItemPedidoSaida(i.Especie, i.Quantidade, i.PrecoUnitario)).ToList(),
+                p.VendedorId, Nome(p.VendedorId), Nome(p.CriadoPor), Nome(p.ConfirmadoPor));
         }).ToList();
     }
 }

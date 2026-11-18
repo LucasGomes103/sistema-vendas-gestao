@@ -70,7 +70,7 @@ public class ServicoReservas(AppDbContext db, ServicoFunil funil)
         {
             conversa.ValorEstimado = reserva.Total;
             funil.Registrar(conversa, MotorFunil.Mover(conversa, EtapaCard.Pago, null), OrigemEvento.Usuario, usuarioId);
-            conversa.Assumir();
+            conversa.Assumir(usuarioId: usuarioId);
         }
         else if (!await db.Reservas.AnyAsync(r => r.ConversaId == conversa.Id && r.Status == StatusReserva.Ativa && r.Id != reserva.Id, ct))
         {

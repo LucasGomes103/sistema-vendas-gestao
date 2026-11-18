@@ -26,7 +26,9 @@ public record CardFunil(
     DateTimeOffset? ProximaAcaoEm,
     string? MotivoPerda,
     int NaoLidas,
-    bool SemDono);
+    bool SemDono,
+    Guid? ResponsavelId = null,
+    string? Responsavel = null);
 
 public record MoverCardEntrada(EtapaCard Etapa, MotivoPerda? MotivoPerda);
 
@@ -64,12 +66,14 @@ public static class FunilEndpoints
                     Ultima = db.Mensagens.Where(m => m.ConversaId == c.Id).OrderByDescending(m => m.CriadoEm).Select(m => m.Conteudo).FirstOrDefault()
                 })
                 .ToListAsync(ct);
+            var nomes = await ConversaEndpoints.NomesAsync(db, lista.Select(x => x.Conversa.ResponsavelId), ct);
 
             return lista.Select(x => new CardFunil(
                 x.Conversa.Id, x.Nome ?? x.Telefone, x.Conversa.Etapa.ToString(), x.Ultima, x.Conversa.UltimaMensagemEm,
                 x.Conversa.Simulada, x.Conversa.RoboPausado, x.Conversa.ChamouVendedor, x.Conversa.MotivoVendedor,
                 x.Conversa.ChamouVendedorEm, x.Conversa.FollowupsEnviados, x.Conversa.ProximaAcao?.ToString(),
-                x.Conversa.ProximaAcaoEm, x.Conversa.MotivoPerda?.ToString(), x.Conversa.NaoLidas, LeadQuente.SemDono(x.Conversa)));
+                x.Conversa.ProximaAcaoEm, x.Conversa.MotivoPerda?.ToString(), x.Conversa.NaoLidas, LeadQuente.SemDono(x.Conversa),
+                x.Conversa.ResponsavelId, x.Conversa.ResponsavelId is { } r ? nomes.GetValueOrDefault(r) ?? "Usuário removido" : null));
         });
 
         // Mover o card à mão. Etapas de venda pausam o robô; voltar para "Robô atendendo" religa.
@@ -91,7 +95,7 @@ public static class FunilEndpoints
             }
             else if (!MotorFunil.Automatica(entrada.Etapa))
             {
-                conversa.Assumir();
+                conversa.Assumir(usuarioId: UsuarioId(user));
             }
 
             funil.Registrar(conversa, mudanca, OrigemEvento.Usuario, UsuarioId(user));

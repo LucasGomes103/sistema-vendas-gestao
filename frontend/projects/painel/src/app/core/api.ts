@@ -121,6 +121,17 @@ export interface ConversaResumo {
   motivoVendedor: string | null;
   chamouVendedorEm: string | null;
   semDono: boolean;
+  /** Vendedor que cuida da conversa (quem assumiu ou respondeu primeiro, ou quem o dono alocou). */
+  responsavelId: string | null;
+  responsavel: string | null;
+  responsavelDesde: string | null;
+}
+
+/** Quem pode ficar com uma conversa: dono e vendedores ativos. */
+export interface Atendente {
+  id: string;
+  nome: string;
+  papel: 'Dono' | 'Vendedor';
 }
 
 /** Cliente quente esperando um vendedor. Nível 1 = mais de 15 min, 2 = mais de 1 h. */
@@ -131,6 +142,8 @@ export interface AlertaQuente {
   chamouVendedorEm: string;
   nivel: 0 | 1 | 2;
   simulada: boolean;
+  responsavelId: string | null;
+  responsavel: string | null;
 }
 
 export interface Mensagem {
@@ -141,6 +154,9 @@ export interface Mensagem {
   status: 'Pendente' | 'Enviada' | 'Entregue' | 'Lida' | 'Falhou' | 'Recebida';
   erro: string | null;
   criadoEm: string;
+  /** Quem da equipe enviou (só nas mensagens do vendedor). */
+  usuarioId: string | null;
+  usuario: string | null;
 }
 
 export type EtapaCard =
@@ -173,6 +189,8 @@ export interface CardFunil {
   motivoPerda: MotivoPerda | null;
   naoLidas: number;
   semDono: boolean;
+  responsavelId: string | null;
+  responsavel: string | null;
 }
 
 export interface ConfigFunil {
@@ -273,6 +291,11 @@ export interface Pedido {
   motivoCancelamento: string | null;
   observacao: string | null;
   itens: ReservaItem[];
+  /** Vendedor que fica com a venda (o responsável pela conversa). */
+  vendedorId: string | null;
+  vendedor: string | null;
+  criadoPor: string | null;
+  confirmadoPor: string | null;
 }
 
 /** Ação que pode avisar o cliente: aviso explica quando a mensagem não saiu (janela de 24 h fechada). */
