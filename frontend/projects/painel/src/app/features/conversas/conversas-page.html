@@ -45,7 +45,8 @@
     <div class="filtros" role="group" aria-label="Filtrar conversas">
       <button [class.ativo]="filtro() === 'todas'" (click)="filtro.set('todas')">Todas</button>
       <button [class.ativo]="filtro() === 'minhas'" (click)="filtro.set('minhas')">Minhas@if (minhas() > 0) { · {{ minhas() }}}</button>
-      <button [class.ativo]="filtro() === 'livres'" (click)="filtro.set('livres')">Sem responsável</button>
+      <button [class.ativo]="filtro() === 'livres'" (click)="filtro.set('livres')" [class.pendente]="livres() > 0"
+        [attr.aria-label]="'Sem responsável: ' + livres()">Sem responsável · {{ livres() }}</button>
     </div>
 
     <ul>

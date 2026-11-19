@@ -1,20 +1,21 @@
 <nav class="trilho" aria-label="Menu principal">
   <img class="marca" src="icone.svg" alt="Sistema de Vendas" [matTooltip]="auth.usuario()?.loja ?? ''" matTooltipPosition="right" />
 
-  @for (item of menu(); track item.rota) {
-    <a class="destino" [routerLink]="item.rota" routerLinkActive="ativo">
-      <span class="pilula"><mat-icon>{{ item.icone }}</mat-icon></span>
-      <span class="rotulo">{{ item.rotulo }}</span>
-    </a>
-  }
-  @for (item of auth.ehEntregador() ? [] : emBreve; track item.rotulo) {
-    <span class="destino desabilitado" matTooltip="Em breve" matTooltipPosition="right">
-      <span class="pilula"><mat-icon>{{ item.icone }}</mat-icon></span>
-      <span class="rotulo">{{ item.rotulo }}</span>
-    </span>
-  }
-
-  <span class="espaco"></span>
+  <!-- Só os itens do meio rolam; logo, sino e conta ficam sempre à vista. -->
+  <div class="itens">
+    @for (item of menu(); track item.rota) {
+      <a class="destino" [routerLink]="item.rota" routerLinkActive="ativo">
+        <span class="pilula"><mat-icon>{{ item.icone }}</mat-icon></span>
+        <span class="rotulo">{{ item.rotulo }}</span>
+      </a>
+    }
+    @for (item of auth.ehEntregador() ? [] : emBreve; track item.rotulo) {
+      <span class="destino desabilitado" matTooltip="Em breve" matTooltipPosition="right">
+        <span class="pilula"><mat-icon>{{ item.icone }}</mat-icon></span>
+        <span class="rotulo">{{ item.rotulo }}</span>
+      </span>
+    }
+  </div>
 
   @if (!auth.ehEntregador()) {
     <app-sino-alertas />

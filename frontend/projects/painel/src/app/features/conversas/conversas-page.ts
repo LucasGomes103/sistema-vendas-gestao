@@ -58,6 +58,8 @@ export class ConversasPage {
         return todas;
     }
   });
+  /** Conversas que ninguém pegou ainda: sempre à vista, para saber quantas faltam atender. */
+  protected readonly livres = computed(() => (this.conversas.value() ?? []).filter((c) => !c.responsavelId).length);
   protected readonly minhas = computed(() => (this.conversas.value() ?? []).filter((c) => c.responsavelId === this.auth.usuario()?.id).length);
 
   protected readonly aberta = computed(() => this.conversas.value()?.find((c) => c.id === this.id()));
