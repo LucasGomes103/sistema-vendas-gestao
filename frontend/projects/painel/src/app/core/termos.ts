@@ -58,6 +58,8 @@ export class Termos {
   readonly locaisMin = computed(() => this.v().locais.toLowerCase());
 
   readonly nomeSecundario = computed(() => this.v().nomeSecundario);
+  /** Campos opcionais sugeridos no cadastro do produto. */
+  readonly camposSugeridos = computed(() => this.v().camposSugeridos ?? (this.v().aquario ? ['Temperatura', 'pH', 'Alimentação'] : ['Marca', 'Tamanho', 'Cor']));
 
   /** Ícones: peixe e água no aquarismo; caixa e prateleira nas outras lojas. */
   readonly iconeProduto = computed(() => (this.v().aquario ? 'set_meal' : 'inventory_2'));

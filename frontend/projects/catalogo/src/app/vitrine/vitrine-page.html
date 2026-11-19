@@ -44,6 +44,13 @@
             @if (item.tamanhoCm) {
               <span class="tamanho">{{ item.tamanhoCm }} cm</span>
             }
+            @if (item.atributos?.length) {
+              <span class="atributos">
+                @for (a of item.atributos; track a.nome) {
+                  <span>{{ a.nome }}: {{ a.valor }}</span>
+                }
+              </span>
+            }
             @if (c.whatsApp) {
               @let qtd = quantidade(item.id);
               <div class="quantidade" [class.ativa]="qtd > 0">

@@ -26,16 +26,38 @@ public sealed record Vocabulario(
     bool Aquario,
     // Nome do lugar que não vende (quarentena no aquarismo).
     string Isolamento,
-    string Emoji)
+    string Emoji,
+    // Campos opcionais sugeridos no cadastro do produto (o dono pode escrever outros).
+    string[]? CamposSugeridos = null)
 {
     public static readonly Vocabulario Aquarismo = new(
         "aquarismo", "uma loja de peixes ornamentais", "Espécie", "Espécies", true, "peixes", "Tanque", "Tanques",
-        "Nome científico", true, "Quarentena", "🐠");
+        "Nome científico", true, "Quarentena", "🐠", ["Temperatura", "pH", "Alimentação", "Comportamento"]);
 
     // Loja de qualquer outro tipo.
     public static Vocabulario Geral(string? segmento) => new(
         "geral", segmento is { Length: > 0 } s ? $"uma loja do ramo de {s.Trim().ToLowerInvariant()}" : "uma loja",
-        "Produto", "Produtos", false, "produtos", "Local", "Locais", "Marca ou modelo", false, "Separado (não vende)", "🛍️");
+        "Produto", "Produtos", false, "produtos", "Local", "Locais", "Marca ou modelo", false, "Separado (não vende)", "🛍️",
+        CamposPara(segmento));
+
+    // Campos que costumam importar em cada ramo; o padrão serve para qualquer loja.
+    private static readonly (string[] Sinais, string[] Campos)[] CamposPorRamo =
+    [
+        (["roupa", "moda", "vestu", "calcad", "sapat", "tenis", "acessori"], ["Tamanho", "Cor", "Tecido", "Gênero"]),
+        (["auto", "peca", "moto", "mecan", "carro"], ["Marca", "Aplicação (veículo e ano)", "Código", "Garantia"]),
+        (["pet", "racao", "animal", "veterin"], ["Marca", "Peso", "Porte", "Idade indicada"]),
+        (["cosmet", "perfum", "beleza", "maquiag"], ["Marca", "Volume", "Tipo de pele", "Fragrância"]),
+        (["eletron", "celular", "informat", "eletro"], ["Marca", "Modelo", "Voltagem", "Garantia"]),
+        (["aliment", "bebida", "mercad", "padar", "doce", "comida"], ["Peso", "Sabor", "Validade", "Ingredientes"]),
+        (["planta", "jardin", "flor"], ["Tamanho do vaso", "Luz", "Rega"]),
+        (["casa", "decor", "movel", "moveis"], ["Medidas", "Material", "Cor"]),
+    ];
+
+    private static string[] CamposPara(string? segmento)
+    {
+        var s = SemAcento(segmento ?? "").ToLowerInvariant();
+        return CamposPorRamo.FirstOrDefault(r => r.Sinais.Any(s.Contains)).Campos ?? ["Marca", "Tamanho", "Cor", "Medidas"];
+    }
 
     // Palavras que indicam loja de aquário no tipo de loja escrito no cadastro.
     private static readonly string[] SinaisAquario = ["aquar", "aquá", "peixe", "aquat", "aquát"];

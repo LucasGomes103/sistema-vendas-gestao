@@ -28,10 +28,10 @@ public static class CatalogoEndpoints
             var especies = await db.Especies.AsNoTracking()
                 .Where(e => e.Ativo && comEstoque.Contains(e.Id))
                 .OrderBy(e => e.NomePopular)
-                .Select(e => new { e.Id, e.NomePopular, e.NomeCientifico, e.TamanhoCm, e.Preco, FotoUrl = e.Fotos.OrderBy(f => f.Ordem).Select(f => f.Url).FirstOrDefault() })
+                .Select(e => new { e.Id, e.NomePopular, e.NomeCientifico, e.TamanhoCm, e.Preco, e.Atributos, FotoUrl = e.Fotos.OrderBy(f => f.Ordem).Select(f => f.Url).FirstOrDefault() })
                 .ToListAsync(ct);
 
-            var itens = especies.Select(e => new ItemCatalogoPublico(e.Id, e.NomePopular, e.NomeCientifico, e.TamanhoCm, e.Preco, disponivel[e.Id], e.FotoUrl));
+            var itens = especies.Select(e => new ItemCatalogoPublico(e.Id, e.NomePopular, e.NomeCientifico, e.TamanhoCm, e.Preco, disponivel[e.Id], e.FotoUrl, e.Atributos));
             return Results.Ok(new { loja = loja.Nome, whatsApp = loja.WhatsAppNumero, segmento = loja.Segmento, termos = Domain.Lojas.Vocabulario.Para(loja.Segmento), itens });
         })
         .WithTags("Catálogo público");
@@ -147,9 +147,10 @@ public static class CatalogoEndpoints
         especie.TamanhoCm = entrada.TamanhoCm;
         especie.Preco = entrada.Preco;
         especie.Observacoes = entrada.Observacoes;
+        especie.Atributos = RegrasAtributos.Normalizar(entrada.Atributos);
     }
 
     private static EspecieSaida Saida(Especie e, int disponivel) =>
         new(e.Id, e.NomePopular, e.NomeCientifico, e.TamanhoCm, e.Preco, e.Observacoes, e.Ativo, disponivel,
-            e.Fotos.OrderBy(f => f.Ordem).Select(f => f.Url).FirstOrDefault());
+            e.Fotos.OrderBy(f => f.Ordem).Select(f => f.Url).FirstOrDefault(), e.Atributos);
 }

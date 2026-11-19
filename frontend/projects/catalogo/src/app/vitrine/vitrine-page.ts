@@ -10,6 +10,8 @@ interface ItemCatalogo {
   preco: number;
   disponivel: number;
   fotoUrl: string | null;
+  /** Campos opcionais do produto (Tamanho: M, Cor: preto...). */
+  atributos?: { nome: string; valor: string }[];
 }
 
 interface Termos {
@@ -83,7 +85,7 @@ export class VitrinePage {
   protected readonly itens = computed(() => {
     const termo = normalizar(this.busca());
     return (this.catalogo.value()?.itens ?? []).filter(
-      (i) => !termo || normalizar(`${i.nomePopular} ${i.nomeCientifico ?? ''}`).includes(termo),
+      (i) => !termo || normalizar(`${i.nomePopular} ${i.nomeCientifico ?? ''} ${(i.atributos ?? []).map((a) => a.valor).join(' ')}`).includes(termo),
     );
   });
 
