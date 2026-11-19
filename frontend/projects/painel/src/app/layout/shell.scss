@@ -39,11 +39,23 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  flex-shrink: 0;
   width: 88px;
   height: 100vh;
+  height: 100dvh;
   padding: 16px 0;
+  // Em janelas baixas o menu rola sozinho, sem empurrar nem cortar o conteúdo principal.
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
   background: var(--mat-sys-surface);
   border-right: 1px solid var(--mat-sys-outline-variant);
+
+  // Os itens mantêm o tamanho; quem cede é o espaço vazio.
+  > * {
+    flex-shrink: 0;
+  }
 
   .marca {
     margin-bottom: 20px;
