@@ -7,11 +7,13 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { firstValueFrom } from 'rxjs';
 import { API, LojaAdmin, mensagemDeErro } from '../../core/api';
 import { Confirmar } from '../../core/confirmar';
 import { Auth } from '../../core/auth';
+import { EditarLojaDialog } from './editar-loja-dialog';
 
 const STATUS: Record<LojaAdmin['status'], { rotulo: string; classe: string; icone: string }> = {
   Ativa: { rotulo: 'Ativa', classe: 'ok', icone: 'check_circle' },
@@ -75,6 +77,7 @@ const STATUS: Record<LojaAdmin['status'], { rotulo: string; classe: string; icon
               <span class="sv-selo {{ l.mercadoPagoProprio ? 'ok' : 'info' }}"><mat-icon>credit_card</mat-icon>Mercado Pago {{ l.mercadoPagoProprio ? 'próprio' : 'não conectado' }}</span>
             </span>
             <span class="acoes">
+              <button mat-stroked-button (click)="editar(l)" [disabled]="ocupado()"><mat-icon>edit</mat-icon> Editar</button>
               @if (l.status === 'Suspensa') {
                 <button mat-flat-button (click)="ativar(l, 'Reativar')" [disabled]="ocupado()"><mat-icon>play_arrow</mat-icon> Reativar</button>
               } @else {
@@ -84,6 +87,9 @@ const STATUS: Record<LojaAdmin['status'], { rotulo: string; classe: string; icon
                 @if (l.id !== minhaLoja()) {
                   <button mat-stroked-button class="perigo" (click)="suspender(l)" [disabled]="ocupado()"><mat-icon>block</mat-icon> Suspender</button>
                 }
+              }
+              @if (l.id !== minhaLoja() && !l.lojaOriginal) {
+                <button mat-stroked-button class="perigo" (click)="excluir(l)" [disabled]="ocupado()"><mat-icon>delete_forever</mat-icon> Excluir</button>
               }
             </span>
           </div>
@@ -193,6 +199,7 @@ export class AdminPage {
   private readonly http = inject(HttpClient);
   private readonly confirmar = inject(Confirmar);
   private readonly snack = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly status = STATUS;
   private readonly auth = inject(Auth);
@@ -233,6 +240,28 @@ export class AdminPage {
         : `Ativa a ${l.nome} sem a confirmação do e-mail. Faça isso só se você conferiu que o e-mail é do dono.`;
     if (!(await this.confirmar.perguntar(texto, { titulo: `${acao}?`, botao: acao }))) return;
     await this.executar(`${API}/admin/lojas/${l.id}/ativar`, {}, `${l.nome} ativa.`);
+  }
+
+  protected async editar(l: LojaAdmin): Promise<void> {
+    const ref = this.dialog.open(EditarLojaDialog, { data: l, width: '480px', maxWidth: '95vw' });
+    if (await firstValueFrom(ref.afterClosed())) {
+      this.lojas.reload();
+      this.snack.open(`${l.nome} atualizada.`, undefined, { duration: 3000 });
+    }
+  }
+
+  protected async excluir(l: LojaAdmin): Promise<void> {
+    const digitado = await this.confirmar.pedirTexto(
+      `Apaga a ${l.nome} e tudo dela: produtos, estoque, conversas, clientes, pedidos, caixa, usuários e as chaves de WhatsApp e Mercado Pago. Não tem como desfazer.\n\nSe só quer bloquear o acesso, use Suspender.\n\nPara confirmar, digite o endereço da loja: ${l.slug}`,
+      'Endereço da loja',
+      { titulo: 'Excluir a loja para sempre?', botao: 'Excluir', perigo: true },
+    );
+    if (digitado === null) return;
+    if (digitado.trim() !== l.slug) {
+      this.snack.open('O endereço digitado não confere. Nada foi apagado.', 'OK', { duration: 6000 });
+      return;
+    }
+    await this.executar(`${API}/admin/lojas/${l.id}/excluir`, { confirmacao: digitado.trim() }, `${l.nome} excluída.`);
   }
 
   private async executar(url: string, corpo: object, ok: string): Promise<void> {
