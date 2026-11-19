@@ -25,8 +25,7 @@ public class GeminiOptions
 /// Nome, telefone e cadastro do cliente nunca são enviados ao modelo: ele vê só o texto da conversa
 /// (inclusive o endereço de entrega, quando o próprio cliente o escreve).
 /// </summary>
-public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, AtendentePorRegras reserva, ILogger<GeminiAtendente> logger,
-    IOptions<Pagamentos.MercadoPagoOptions> mercadoPago) : IAtendenteIA
+public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, AtendentePorRegras reserva, ILogger<GeminiAtendente> logger) : IAtendenteIA
 {
     private const int MaximoRodadas = 4;
     private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
@@ -187,7 +186,7 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
         var o = opcoes.Value;
         var corpo = new JsonObject
         {
-            ["systemInstruction"] = new JsonObject { ["parts"] = new JsonArray(new JsonObject { ["text"] = InstrucaoSistema(nomeLoja, textos, mercadoPago.Value.Configurado) }) },
+            ["systemInstruction"] = new JsonObject { ["parts"] = new JsonArray(new JsonObject { ["text"] = InstrucaoSistema(nomeLoja, textos, textos.CartaoLigado) }) },
             ["contents"] = conteudos.DeepClone(),
             ["tools"] = JsonNode.Parse(Ferramentas),
             ["generationConfig"] = new JsonObject { ["temperature"] = 0.3, ["maxOutputTokens"] = 400 }

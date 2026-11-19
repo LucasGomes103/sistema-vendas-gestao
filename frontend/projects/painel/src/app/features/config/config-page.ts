@@ -11,20 +11,23 @@ import { firstValueFrom } from 'rxjs';
 import { API, ConfigFunil, mensagemDeErro } from '../../core/api';
 import { ConexaoWhatsAppComponent } from './conexao-whatsapp';
 import { ConfigFreteComponent } from './config-frete';
+import { Auth } from '../../core/auth';
 import { ConfigCartaoComponent } from './config-cartao';
+import { ConfigWhatsAppOficialComponent } from './config-whatsapp-oficial';
 import { ConfigPixComponent } from './config-pix';
 import { ConfigWhatsAppComponent } from './config-whatsapp';
 
 /** Prazos do funil e respostas prontas. Mudar um prazo é editar aqui, não fazer deploy. */
 @Component({
   selector: 'app-config-page',
-  imports: [ConexaoWhatsAppComponent, ConfigWhatsAppComponent, ConfigFreteComponent, ConfigPixComponent, ConfigCartaoComponent, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule],
+  imports: [ConexaoWhatsAppComponent, ConfigWhatsAppComponent, ConfigFreteComponent, ConfigPixComponent, ConfigCartaoComponent, ConfigWhatsAppOficialComponent, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './config-page.html',
   styleUrl: './config-page.scss',
 })
 export class ConfigPage {
   private readonly http = inject(HttpClient);
+  protected readonly auth = inject(Auth);
   private readonly snack = inject(MatSnackBar);
 
   protected readonly config = httpResource<ConfigFunil>(() => `${API}/config/funil`);

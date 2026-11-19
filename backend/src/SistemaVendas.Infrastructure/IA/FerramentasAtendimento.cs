@@ -19,12 +19,13 @@ public class VitrineOptions
 }
 
 /// <summary>Ferramentas da IA sobre o catálogo e o estoque da loja atual.</summary>
-public class FerramentasAtendimento(AppDbContext db, ILojaAtual lojaAtual, IOptions<VitrineOptions> vitrine, ServicoFunil funil, ServicoFrete frete) : IFerramentasAtendimento
+public class FerramentasAtendimento(AppDbContext db, ILojaAtual lojaAtual, IOptions<VitrineOptions> vitrine, ServicoFunil funil, ServicoFrete frete,
+    Pagamentos.IMercadoPago mercadoPago) : IFerramentasAtendimento
 {
     public async Task<TextosProntos> TextosAsync(CancellationToken ct)
     {
         var cfg = await funil.ConfigAsync(lojaAtual.LojaId!.Value, ct);
-        return new TextosProntos(cfg.TextoFrete, cfg.TextoChamarVendedor);
+        return new TextosProntos(cfg.TextoFrete, cfg.TextoChamarVendedor, await mercadoPago.ConfiguradoAsync(lojaAtual.LojaId!.Value, ct));
     }
 
     public async Task<string?> LinkCatalogoAsync(CancellationToken ct)

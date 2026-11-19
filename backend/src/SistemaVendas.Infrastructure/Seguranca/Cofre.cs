@@ -20,6 +20,12 @@ public class PlataformaOptions
     /// Gere com: openssl rand -base64 32. Trocar a chave invalida as credenciais já salvas.
     /// </summary>
     public string? ChaveMestra { get; set; }
+
+    /// <summary>
+    /// Slug da loja que usa as variáveis do servidor (MercadoPago__AccessToken, WhatsApp__AccessToken). Vazio: usa
+    /// PrimeiraLoja__Slug, depois WhatsApp__Local__LojaSlug e, sem nenhum, a loja mais antiga do banco.
+    /// </summary>
+    public string? LojaOriginal { get; set; }
 }
 
 /// <summary>Credencial da WhatsApp Cloud API de uma loja.</summary>
@@ -156,4 +162,60 @@ public class ServicoCredenciais(AppDbContext db, Cofre cofre)
 
     /// <summary>"…a1b2": os 4 últimos caracteres, para o dono reconhecer qual token está salvo.</summary>
     public static string Final(string segredo) => segredo.Length <= 8 ? "…" : "…" + segredo[^4..];
+}
+
+/// <summary>De onde veio a credencial em uso: do cadastro da loja ou das variáveis do servidor (só a loja original).</summary>
+public enum OrigemCredencial
+{
+    Loja,
+    Servidor
+}
+
+public record CredencialEmUso<T>(T Valor, OrigemCredencial Origem);
+
+/// <summary>
+/// Credencial que cada integração usa para uma loja. Primeiro a da própria loja (credencial_loja). Sem ela, só a
+/// loja original (a ECS Fish: Plataforma__LojaOriginal, PrimeiraLoja__Slug, WhatsApp__Local__LojaSlug ou a mais
+/// antiga do banco) continua com as variáveis do servidor
+/// (MercadoPago__AccessToken, WhatsApp__AccessToken), como antes. Uma loja nova nunca usa o token da plataforma:
+/// o dinheiro do cartão cairia na conta de outra loja.
+/// </summary>
+public class CredenciaisDaLoja(ServicoCredenciais credenciais, AppDbContext db, IOptions<PlataformaOptions> plataforma,
+    Microsoft.Extensions.Configuration.IConfiguration config,
+    IOptions<Pagamentos.MercadoPagoOptions> mercadoPago, IOptions<WhatsApp.WhatsAppOptions> whatsApp)
+{
+    private Guid? _lojaOriginal;
+
+    /// <summary>A loja que herdou as variáveis do servidor.</summary>
+    public async Task<Guid?> LojaOriginalAsync(CancellationToken ct)
+    {
+        if (_lojaOriginal is not null)
+            return _lojaOriginal;
+        var wa = whatsApp.Value;
+        var slug = new[] { plataforma.Value.LojaOriginal, config["PrimeiraLoja:Slug"], wa.UsaPonteLocal ? wa.Local.LojaSlug : null }
+            .FirstOrDefault(s => !string.IsNullOrWhiteSpace(s))?.Trim().ToLowerInvariant();
+        if (slug is not null)
+            _lojaOriginal = await db.Lojas.AsNoTracking().Where(l => l.Slug == slug).Select(l => (Guid?)l.Id).FirstOrDefaultAsync(ct);
+        return _lojaOriginal ??= await db.Lojas.AsNoTracking().OrderBy(l => l.CriadoEm).ThenBy(l => l.Id).Select(l => (Guid?)l.Id).FirstOrDefaultAsync(ct);
+    }
+
+    public async Task<CredencialEmUso<CredencialMercadoPago>?> MercadoPagoAsync(Guid lojaId, CancellationToken ct)
+    {
+        if (await credenciais.LerAsync<CredencialMercadoPago>(lojaId, ct) is { } daLoja && !string.IsNullOrWhiteSpace(daLoja.AccessToken))
+            return new(daLoja, OrigemCredencial.Loja);
+        var o = mercadoPago.Value;
+        if (o.Configurado && await LojaOriginalAsync(ct) == lojaId)
+            return new(new CredencialMercadoPago(o.AccessToken!, o.WebhookSecret, o.ModoTeste), OrigemCredencial.Servidor);
+        return null;
+    }
+
+    public async Task<CredencialEmUso<CredencialWhatsApp>?> WhatsAppAsync(Guid lojaId, CancellationToken ct)
+    {
+        if (await credenciais.LerAsync<CredencialWhatsApp>(lojaId, ct) is { } daLoja && !string.IsNullOrWhiteSpace(daLoja.AccessToken))
+            return new(daLoja, OrigemCredencial.Loja);
+        var token = whatsApp.Value.AccessToken;
+        if (!string.IsNullOrWhiteSpace(token) && await LojaOriginalAsync(ct) == lojaId)
+            return new(new CredencialWhatsApp(token), OrigemCredencial.Servidor);
+        return null;
+    }
 }

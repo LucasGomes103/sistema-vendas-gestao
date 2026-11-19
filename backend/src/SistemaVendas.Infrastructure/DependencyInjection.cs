@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.Configure<PlataformaOptions>(config.GetSection(PlataformaOptions.Secao));
         services.AddSingleton<Cofre>();
         services.AddScoped<ServicoCredenciais>();
+        services.AddScoped<CredenciaisDaLoja>();
         services.AddScoped<ServicoFunil>();
         services.AddScoped<ServicoReservas>();
         services.AddScoped<ServicoPedidos>();
@@ -40,18 +41,16 @@ public static class DependencyInjection
         services.AddScoped<ServicoEntregas>();
         services.AddScoped<ServicoMetricas>();
 
-        // Sem token da Meta, o envio é simulado: dá para desenvolver tudo sem número conectado.
+        // Loja sem token da Meta: envio simulado (dá para desenvolver tudo sem número conectado). O token é da loja.
         var whatsApp = config.GetSection(WhatsAppOptions.Secao);
         services.Configure<WhatsAppOptions>(whatsApp);
         services.AddSingleton<WhatsAppSimulado>();
         // A tela de conexão do WhatsApp usa IHttpClientFactory mesmo no modo simulado (sem ela a API nem sobe).
         services.AddHttpClient();
-        if (string.Equals(whatsApp[nameof(WhatsAppOptions.Provedor)], "Local", StringComparison.OrdinalIgnoreCase))
-            services.AddHttpClient<IWhatsAppCliente, WhatsAppLocalCliente>(c => c.Timeout = TimeSpan.FromSeconds(20));
-        else if (string.IsNullOrWhiteSpace(whatsApp[nameof(WhatsAppOptions.AccessToken)]))
-            services.AddSingleton<IWhatsAppCliente>(sp => sp.GetRequiredService<WhatsAppSimulado>());
-        else
-            services.AddHttpClient<IWhatsAppCliente, WhatsAppCloudCliente>(c => c.Timeout = TimeSpan.FromSeconds(20));
+        services.AddHttpClient<WhatsAppLocalCliente>(c => c.Timeout = TimeSpan.FromSeconds(20));
+        services.AddHttpClient<WhatsAppCloudCliente>(c => c.Timeout = TimeSpan.FromSeconds(20));
+        services.AddScoped<IWhatsAppCliente, WhatsAppRoteador>();
+        services.AddHttpClient<VerificadorWhatsApp>(c => c.Timeout = TimeSpan.FromSeconds(15));
 
         // Atendente: Gemini quando há chave; sem ela, respostas por regras (também usadas se o Gemini falhar).
         var gemini = config.GetSection(GeminiOptions.Secao);

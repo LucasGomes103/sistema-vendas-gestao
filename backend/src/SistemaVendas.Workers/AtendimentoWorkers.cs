@@ -70,7 +70,6 @@ public class WebhookWorker(IServiceScopeFactory scopes, EstadoWorkers estado, IL
 /// </summary>
 public class MensagemWorker(
     IServiceScopeFactory scopes,
-    IWhatsAppCliente whatsApp,
     WhatsAppSimulado simulado,
     IOptions<WhatsAppOptions> opcoes,
     EstadoWorkers estado,
@@ -100,6 +99,8 @@ public class MensagemWorker(
     {
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        // Do escopo: o cliente lê a credencial de cada loja no banco.
+        var whatsApp = scope.ServiceProvider.GetRequiredService<IWhatsAppCliente>();
         var agora = DateTimeOffset.UtcNow;
 
         var pendentes = await db.Mensagens.IgnoreQueryFilters()
@@ -118,7 +119,7 @@ public class MensagemWorker(
                 // Conversa do simulador nunca sai pela Meta, mesmo com o número real configurado.
                 if (p.Simulada)
                 {
-                    p.Mensagem.Wamid = await simulado.EnviarTextoAsync("simulador", p.Telefone, p.Mensagem.Conteudo, ct);
+                    p.Mensagem.Wamid = await simulado.EnviarTextoAsync(p.Mensagem.LojaId, "simulador", p.Telefone, p.Mensagem.Conteudo, ct);
                 }
                 else if (opcoes.Value.UsaPonteLocal && !p.Loja.PodeAtender(p.Telefone))
                 {
@@ -130,7 +131,7 @@ public class MensagemWorker(
                 }
                 else
                 {
-                    p.Mensagem.Wamid = await whatsApp.EnviarTextoAsync(p.PhoneNumberId ?? "", p.Telefone, p.Mensagem.Conteudo, ct);
+                    p.Mensagem.Wamid = await whatsApp.EnviarTextoAsync(p.Mensagem.LojaId, p.PhoneNumberId ?? "", p.Telefone, p.Mensagem.Conteudo, ct);
                 }
                 p.Mensagem.Status = StatusMensagem.Enviada;
                 p.Mensagem.Erro = null;

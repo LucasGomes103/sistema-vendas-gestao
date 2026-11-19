@@ -45,7 +45,8 @@ public record FreteCalculado(string Cep, bool Atende, string? Regiao, decimal? V
         : $"O CEP {Cep} fica fora da área em que calculo o frete sozinho{(Regiao is null ? "" : $" ({Regiao})")}, então um atendente vai ver a entrega para você.";
 }
 
-public record TextosProntos(string Frete, string ChamarVendedor);
+/// <summary>Textos da loja para o robô. CartaoLigado: a loja tem Mercado Pago, a cobrança leva link do cartão.</summary>
+public record TextosProntos(string Frete, string ChamarVendedor, bool CartaoLigado = false);
 
 /// <summary>Mensagem montada pela vitrine quando o cliente toca em "Enviar pedido pelo WhatsApp".</summary>
 public static class PedidoCatalogo

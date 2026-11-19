@@ -58,6 +58,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
         {
             e.ToTable("loja");
             e.HasIndex(x => x.Slug).IsUnique();
+            // Um número do WhatsApp atende uma loja só (o webhook acha a loja por ele).
+            e.HasIndex(x => x.PhoneNumberId).IsUnique().HasFilter("phone_number_id IS NOT NULL");
             e.Property(x => x.Nome).HasMaxLength(120);
             e.Property(x => x.Slug).HasMaxLength(60);
         });
