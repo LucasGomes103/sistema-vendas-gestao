@@ -1268,6 +1268,11 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasColumnType("time without time zone")
                         .HasColumnName("horario_inicio");
 
+                    b.Property<string>("MotivoSuspensao")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("motivo_suspensao");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(120)
@@ -1313,6 +1318,10 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasColumnType("character varying(30)")
                         .HasDefaultValue("Ativa")
                         .HasColumnName("status");
+
+                    b.Property<DateTimeOffset?>("SuspensaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("suspensa_em");
 
                     b.Property<string>("WhatsAppNumero")
                         .HasColumnType("text")

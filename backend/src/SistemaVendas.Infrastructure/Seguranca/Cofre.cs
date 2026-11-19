@@ -29,6 +29,13 @@ public class PlataformaOptions
 
     /// <summary>Endereço do painel, usado nos links dos e-mails (confirmação de cadastro).</summary>
     public string UrlPainel { get; set; } = "https://sistema-vendas-gestao.pages.dev/painel";
+
+    /// <summary>E-mails dos administradores da plataforma, separados por vírgula (Plataforma__Admins).</summary>
+    public string? Admins { get; set; }
+
+    public bool EhAdmin(string? email) =>
+        !string.IsNullOrWhiteSpace(email) && (Admins ?? "").Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries)
+            .Any(a => string.Equals(a.Trim(), email.Trim(), StringComparison.OrdinalIgnoreCase));
 }
 
 /// <summary>Credencial da WhatsApp Cloud API de uma loja.</summary>

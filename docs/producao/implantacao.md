@@ -66,6 +66,7 @@ Em .NET, `__` separa seções (`IA__Gemini__ApiKey` = `IA:Gemini:ApiKey`).
 | `Vitrine__UrlBase` | sim | `https://<dominio>` | link da vitrine que o robô envia |
 | `ChavesProtecao__Pasta` | não | — | pasta das chaves dos cookies. Vazia (o normal no Render), as chaves ficam no banco (tabela `chave_protecao`) e um deploy não desloga ninguém |
 | `Email__Smtp__Host`, `Email__Smtp__Porta`, `Email__Smtp__Usuario`, `Email__Smtp__Senha`, `Email__Remetente` | para o cadastro pelo site | Gmail: `smtp.gmail.com`, `587`, o seu Gmail, uma **senha de app** (Conta Google → Segurança → Senhas de app) | e-mail de confirmação do cadastro de loja. Sem eles, o link vai só para o log e o administrador ativa a loja à mão |
+| `Plataforma__Admins` | para o painel da plataforma | o seu e-mail de login (vários separados por vírgula) | quem vê e administra todas as lojas em Lojas da plataforma |
 | `Plataforma__UrlPainel` | não | `https://sistema-vendas-gestao.pages.dev/painel` (padrão) | endereço do painel nos links dos e-mails |
 | `Plataforma__ChaveMestra` | sim, para lojas novas | `openssl rand -base64 32` | chave que cifra as credenciais de cada loja (tabela `credencial_loja`). Guarde uma cópia fora do Render: trocar ou perder a chave invalida as credenciais salvas |
 | `Simulador__Habilitado` | não | `false` | desliga o simulador de cliente na produção |

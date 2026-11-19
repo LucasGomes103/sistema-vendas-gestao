@@ -11,6 +11,31 @@ export interface UsuarioLogado {
   lojaId: string;
   loja: string;
   lojaSlug: string;
+  /** Administrador da plataforma (e-mail em Plataforma__Admins). */
+  adminPlataforma?: boolean;
+}
+
+/** Loja vista pelo administrador da plataforma: só números agregados. */
+export interface LojaAdmin {
+  id: string;
+  nome: string;
+  slug: string;
+  segmento: string | null;
+  status: 'Ativa' | 'AguardandoConfirmacao' | 'Suspensa';
+  motivoSuspensao: string | null;
+  criadoEm: string;
+  dono: string | null;
+  emailDono: string | null;
+  emailConfirmado: boolean;
+  usuarios: number;
+  produtos: number;
+  conversas30Dias: number;
+  pedidos30Dias: number;
+  vendido30Dias: number;
+  ultimaMensagemEm: string | null;
+  whatsAppProprio: boolean;
+  mercadoPagoProprio: boolean;
+  lojaOriginal: boolean;
 }
 
 export interface UsuarioEquipe {

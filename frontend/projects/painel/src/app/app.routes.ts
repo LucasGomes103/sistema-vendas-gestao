@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
 import { Auth } from './core/auth';
-import { exigeDono, exigeLogin, somenteVisitante } from './core/guards';
+import { exigeAdmin, exigeDono, exigeLogin, somenteVisitante } from './core/guards';
 import { Shell } from './layout/shell';
 
 export const routes: Routes = [
@@ -75,6 +75,12 @@ export const routes: Routes = [
         title: 'Usuários',
         canActivate: [exigeDono],
         loadComponent: () => import('./features/usuarios/usuarios-page').then((m) => m.UsuariosPage),
+      },
+      {
+        path: 'admin',
+        title: 'Lojas da plataforma',
+        canActivate: [exigeAdmin],
+        loadComponent: () => import('./features/admin/admin-page').then((m) => m.AdminPage),
       },
       {
         path: 'conversas',

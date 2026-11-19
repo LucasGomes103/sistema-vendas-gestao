@@ -16,6 +16,10 @@ public class Loja : Entidade
 {
     public StatusLoja Status { get; set; } = StatusLoja.Ativa;
 
+    /// <summary>Motivo anotado pelo administrador da plataforma ao suspender (ex.: "mensalidade atrasada").</summary>
+    public string? MotivoSuspensao { get; set; }
+    public DateTimeOffset? SuspensaEm { get; set; }
+
     /// <summary>Tipo de loja escolhido no cadastro (ex.: "Aquarismo", "Roupas"). Usado na fase 4 para o robô.</summary>
     public string? Segmento { get; set; }
 

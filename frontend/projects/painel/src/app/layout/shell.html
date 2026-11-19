@@ -72,6 +72,12 @@
       <span>Configuração</span>
     </a>
   }
+  @if (auth.ehAdmin()) {
+    <a mat-menu-item routerLink="/admin">
+      <mat-icon>admin_panel_settings</mat-icon>
+      <span>Lojas da plataforma</span>
+    </a>
+  }
   <button mat-menu-item (click)="auth.sair()">
     <mat-icon>logout</mat-icon>
     <span>Sair</span>

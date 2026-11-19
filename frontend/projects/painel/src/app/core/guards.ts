@@ -21,3 +21,9 @@ export const exigeDono: CanActivateFn = async () => {
   const router = inject(Router);
   return ((await auth.carregar()) && auth.ehDono()) || router.parseUrl('/');
 };
+
+export const exigeAdmin: CanActivateFn = async () => {
+  const auth = inject(Auth);
+  const router = inject(Router);
+  return ((await auth.carregar()) && auth.ehAdmin()) || router.parseUrl('/');
+};

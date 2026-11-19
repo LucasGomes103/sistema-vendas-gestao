@@ -60,8 +60,10 @@ public static class Sessao
         var usuario = await db.Usuarios.IgnoreQueryFilters().AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == id, ctx.HttpContext.RequestAborted);
 
+        var lojaAtiva = usuario is not null && await db.Lojas.AsNoTracking()
+            .AnyAsync(l => l.Id == usuario.LojaId && l.Status == StatusLoja.Ativa, ctx.HttpContext.RequestAborted);
         var carimbo = principal!.FindFirstValue(ClaimCarimbo);
-        var valido = usuario is { Ativo: true }
+        var valido = lojaAtiva && usuario is { Ativo: true }
             && usuario.Papel.ToString() == principal.FindFirstValue(ClaimTypes.Role)
             && (carimbo is null || carimbo == Carimbo(usuario)); // sessões antigas, sem carimbo, continuam até expirar
 

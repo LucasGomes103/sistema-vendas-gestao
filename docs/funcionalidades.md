@@ -259,6 +259,16 @@ teste (só muda o selo no painel). O endereço público vem do `RENDER_EXTERNAL_
 - A loja nova começa vazia: não vê nada das outras (coberto pelos testes de isolamento).
 - E-mail por SMTP (Gmail com senha de app, grátis). Sem SMTP configurado, o link vai para o log do Render.
 
+## Administrador da plataforma (SaaS fase 1)
+
+- Quem tem o e-mail em `Plataforma__Admins` (no Render, separados por vírgula) vê **Lojas da plataforma** no menu
+  da conta (`/painel/admin`).
+- Lista todas as lojas com status, dono, tipo, e números dos últimos 30 dias (conversas, pedidos, vendido), produtos,
+  usuários, última mensagem e se WhatsApp e Mercado Pago são próprios. Só números: não abre conversa nem cliente.
+- **Suspender** (com motivo): ninguém da loja entra, quem está dentro sai em até 1 minuto, a vitrine sai do ar e as
+  mensagens que chegam são ignoradas. **Reativar** devolve tudo, sem perder nada. **Ativar sem e-mail** libera uma
+  loja cujo e-mail de confirmação não chegou. O administrador não suspende a própria loja.
+
 ## Equipe: quem atendeu e quem vendeu
 
 - **Responsável pela conversa:** quem assume ou responde primeiro fica com a conversa e segue o atendimento. Todos veem
