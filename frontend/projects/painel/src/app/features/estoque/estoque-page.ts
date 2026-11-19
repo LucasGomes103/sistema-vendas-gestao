@@ -11,6 +11,7 @@ import { API, Tanque } from '../../core/api';
 import { Auth } from '../../core/auth';
 import { EntradaDialog } from './entrada-dialog';
 import { TanqueDialog, TanqueCriado } from './tanque-dialog';
+import { Termos } from '../../core/termos';
 
 type Filtro = 'Venda' | 'Quarentena' | 'Alertas';
 
@@ -31,6 +32,7 @@ const ESTOQUE_BAIXO = 5;
   styleUrl: './estoque-page.scss',
 })
 export class EstoquePage {
+  protected readonly tx = inject(Termos);
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
   protected readonly auth = inject(Auth);
@@ -90,7 +92,7 @@ export class EstoquePage {
   protected status(t: Tanque): StatusTanque {
     if (t.baixasUltimos7Dias > 0)
       return { classe: 'alerta', icone: 'warning', texto: `${t.baixasUltimos7Dias} baixas em 7 dias` };
-    if (t.tipo === 'Quarentena') return { classe: 'info', icone: 'shield', texto: 'Em quarentena' };
+    if (t.tipo === 'Quarentena') return { classe: 'info', icone: 'shield', texto: this.tx.aquario() ? 'Em quarentena' : 'Separado (não vende)' };
     if (t.total === 0) return { classe: 'alerta', icone: 'inventory_2', texto: 'Vazio' };
     if (t.total <= ESTOQUE_BAIXO) return { classe: 'alerta', icone: 'trending_down', texto: 'Estoque baixo' };
     return { classe: 'ok', icone: 'check_circle', texto: 'Tudo certo' };

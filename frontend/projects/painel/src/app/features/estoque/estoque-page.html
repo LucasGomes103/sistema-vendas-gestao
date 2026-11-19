@@ -1,12 +1,12 @@
 <header class="sv-cabecalho-pagina">
   <div>
-    <h1>Estoque por tanque</h1>
-    <p>O que está em cada tanque e o que precisa de atenção.</p>
+    <h1>Estoque por {{ tx.localMin() }}</h1>
+    <p>O que está em cada {{ tx.localMin() }} e o que precisa de atenção.</p>
   </div>
   <div class="botoes">
     <button mat-icon-button aria-label="Atualizar" (click)="tanques.reload()"><mat-icon>refresh</mat-icon></button>
     @if (auth.ehDono()) {
-      <button mat-stroked-button (click)="novoTanque()"><mat-icon>water</mat-icon> Novo tanque</button>
+      <button mat-stroked-button (click)="novoTanque()"><mat-icon>{{ tx.iconeLocal() }}</mat-icon> {{ tx.novoLocal() }}</button>
     }
     <button mat-flat-button (click)="entrada()"><mat-icon>add</mat-icon> Entrada de lote</button>
   </div>
@@ -14,15 +14,15 @@
 
 <section class="kpis">
   <div class="sv-card kpi">
-    <span class="rotulo"><mat-icon>water</mat-icon> Tanques</span>
+    <span class="rotulo"><mat-icon>{{ tx.iconeLocal() }}</mat-icon> {{ tx.locais() }}</span>
     <strong>{{ resumo().tanques }}</strong>
   </div>
   <div class="sv-card kpi destaque">
-    <span class="rotulo"><mat-icon>set_meal</mat-icon> Disponíveis</span>
+    <span class="rotulo"><mat-icon>{{ tx.iconeProduto() }}</mat-icon> Disponíveis</span>
     <strong>{{ resumo().disponiveis }}</strong>
   </div>
   <div class="sv-card kpi">
-    <span class="rotulo"><mat-icon>shield</mat-icon> Quarentena</span>
+    <span class="rotulo"><mat-icon>shield</mat-icon> {{ tx.aquario() ? 'Quarentena' : 'Separados' }}</span>
     <strong>{{ resumo().quarentena }}</strong>
   </div>
   <div class="sv-card kpi" [class.atencao]="resumo().baixas > 0">
@@ -33,13 +33,13 @@
 
 <mat-chip-listbox
   class="filtros chips-rolagem"
-  aria-label="Filtro de tanques"
+  [attr.aria-label]="'Filtro de ' + tx.locaisMin()"
   hideSingleSelectionIndicator
   [value]="filtro()"
   (change)="filtro.set($event.value ?? 'Venda')"
 >
   <mat-chip-option value="Venda">Venda ({{ contagem().Venda }})</mat-chip-option>
-  <mat-chip-option value="Quarentena">Quarentena ({{ contagem().Quarentena }})</mat-chip-option>
+  <mat-chip-option value="Quarentena">{{ tx.aquario() ? 'Quarentena' : 'Separados' }} ({{ contagem().Quarentena }})</mat-chip-option>
   <mat-chip-option value="Alertas">
     <mat-icon matChipAvatar>warning</mat-icon>
     Alertas ({{ contagem().Alertas }})
@@ -51,7 +51,7 @@
 } @else if (tanques.error()) {
   <div class="sv-vazio">
     <mat-icon>cloud_off</mat-icon>
-    <p>Não foi possível carregar os tanques.</p>
+    <p>Não foi possível carregar os {{ tx.locaisMin() }}.</p>
     <button mat-stroked-button (click)="tanques.reload()">Tentar de novo</button>
   </div>
 } @else {
@@ -62,7 +62,7 @@
         <header>
           <div>
             <h3>{{ t.nome }}</h3>
-            <span class="litros">{{ t.litros ? t.litros + ' L' : '' }}</span>
+            <span class="litros">{{ tx.aquario() && t.litros ? t.litros + ' L' : '' }}</span>
           </div>
           <span class="sv-selo" [class]="s.classe"><mat-icon>{{ s.icone }}</mat-icon>{{ s.texto }}</span>
         </header>
@@ -77,23 +77,23 @@
             }
           </ul>
         } @else {
-          <p class="vazio">Nenhum peixe neste tanque.</p>
+          <p class="vazio">Nenhum {{ tx.item() }} {{ tx.nesteLocal() }}.</p>
         }
 
         <div class="barra" role="presentation">
           <span [style.width.%]="ocupacao(t)"></span>
         </div>
         <footer>
-          <span>{{ t.total }} {{ t.tipo === 'Quarentena' ? 'em quarentena' : 'disponíveis' }}</span>
+          <span>{{ t.total }} {{ t.tipo === 'Quarentena' ? tx.emIsolamento() : 'disponíveis' }}</span>
           <mat-icon>chevron_right</mat-icon>
         </footer>
       </a>
     } @empty {
       <div class="sv-vazio">
-        <mat-icon>{{ filtro() === 'Alertas' ? 'task_alt' : 'water' }}</mat-icon>
-        <p>{{ filtro() === 'Alertas' ? 'Nenhum alerta. Tudo certo nos tanques.' : 'Nenhum tanque aqui.' }}</p>
+        <mat-icon>{{ filtro() === 'Alertas' ? 'task_alt' : tx.iconeLocal() }}</mat-icon>
+        <p>{{ filtro() === 'Alertas' ? 'Nenhum alerta. Tudo certo nos ' + tx.locaisMin() + '.' : 'Nenhum ' + tx.localMin() + ' aqui.' }}</p>
         @if (filtro() !== 'Alertas' && auth.ehDono()) {
-          <button mat-stroked-button (click)="novoTanque()"><mat-icon>add</mat-icon> Cadastrar tanque</button>
+          <button mat-stroked-button (click)="novoTanque()"><mat-icon>add</mat-icon> Cadastrar {{ tx.localMin() }}</button>
         }
       </div>
     }

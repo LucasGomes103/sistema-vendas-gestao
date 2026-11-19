@@ -10,6 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { firstValueFrom } from 'rxjs';
 import { API, LoteNoTanque, Tanque, mensagemDeErro } from '../../core/api';
+import { Termos } from '../../core/termos';
 
 export type AcaoMovimento = 'baixa' | 'transferencia' | 'ajuste';
 
@@ -21,11 +22,13 @@ export interface DadosMovimento {
   loteId?: string;
 }
 
-const TITULOS: Record<AcaoMovimento, string> = {
-  baixa: 'Baixa por morte',
-  transferencia: 'Transferir para outro tanque',
-  ajuste: 'Ajuste de contagem',
-};
+function titulos(aquario: boolean, local: string): Record<AcaoMovimento, string> {
+  return {
+    baixa: aquario ? 'Baixa por morte' : 'Baixa por perda',
+    transferencia: `Transferir para outro ${local}`,
+    ajuste: 'Ajuste de contagem',
+  };
+}
 
 @Component({
   selector: 'app-movimento-dialog',
@@ -43,14 +46,14 @@ const TITULOS: Record<AcaoMovimento, string> = {
     <h2 mat-dialog-title>{{ titulo }}</h2>
     <form [formGroup]="form" (ngSubmit)="salvar()">
       <mat-dialog-content class="campos">
-        <p class="origem"><mat-icon>water</mat-icon>{{ dados.tanqueNome }}</p>
+        <p class="origem"><mat-icon>{{ tx.iconeLocal() }}</mat-icon>{{ dados.tanqueNome }}</p>
 
         <mat-form-field appearance="outline">
-          <mat-label>Peixe (lote)</mat-label>
+          <mat-label>{{ tx.aquario() ? 'Peixe' : 'Produto' }} (lote)</mat-label>
           <mat-select formControlName="loteId">
             @for (l of dados.lotes; track l.loteId) {
               <mat-option [value]="l.loteId">
-                {{ l.especie }} · {{ l.disponivel }} no tanque{{ l.status === 'Quarentena' ? ' · quarentena' : '' }}
+                {{ l.especie }} · {{ l.disponivel }} no {{ tx.localMin() }}{{ l.status === 'Quarentena' ? ' · ' + tx.isolamentoCurto() : '' }}
               </mat-option>
             }
           </mat-select>
@@ -68,7 +71,7 @@ const TITULOS: Record<AcaoMovimento, string> = {
 
         @if (dados.acao === 'transferencia') {
           <mat-form-field appearance="outline">
-            <mat-label>Tanque de destino</mat-label>
+            <mat-label>{{ tx.local() }} de destino</mat-label>
             <mat-select formControlName="tanqueDestinoId">
               @for (t of destinos(); track t.id) {
                 <mat-option [value]="t.id">{{ t.nome }}</mat-option>
@@ -79,7 +82,7 @@ const TITULOS: Record<AcaoMovimento, string> = {
 
         <mat-form-field appearance="outline">
           <mat-label>{{ dados.acao === 'ajuste' ? 'Motivo (obrigatório)' : 'Observação' }}</mat-label>
-          <input matInput formControlName="observacao" [placeholder]="dados.acao === 'baixa' ? 'Ex.: chegou fraco do fornecedor' : ''" />
+          <input matInput formControlName="observacao" [placeholder]="dados.acao === 'baixa' ? (tx.aquario() ? 'Ex.: chegou fraco do fornecedor' : 'Ex.: chegou com defeito') : ''" />
         </mat-form-field>
 
         @if (erro()) {
@@ -122,10 +125,11 @@ const TITULOS: Record<AcaoMovimento, string> = {
   `,
 })
 export class MovimentoDialog {
+  protected readonly tx = inject(Termos);
   private readonly http = inject(HttpClient);
   private readonly ref = inject<MatDialogRef<MovimentoDialog, boolean>>(MatDialogRef);
   protected readonly dados = inject<DadosMovimento>(MAT_DIALOG_DATA);
-  protected readonly titulo = TITULOS[this.dados.acao];
+  protected readonly titulo = titulos(this.tx.aquario(), this.tx.localMin())[this.dados.acao];
 
   private readonly tanques = httpResource<Tanque[]>(() =>
     this.dados.acao === 'transferencia' ? `${API}/tanques` : undefined,

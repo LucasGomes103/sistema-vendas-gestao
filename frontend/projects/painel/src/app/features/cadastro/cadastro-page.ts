@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { HttpClient } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -32,7 +33,7 @@ export function sugerirSlug(nome: string): string {
 /** Cadastro público: loja + dono. A conta só ativa quando o dono abre o link do e-mail. */
 @Component({
   selector: 'app-cadastro-page',
-  imports: [ReactiveFormsModule, RouterLink, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressSpinnerModule],
+  imports: [ReactiveFormsModule, RouterLink, MatAutocompleteModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressSpinnerModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: '../login/login-page.scss',
   template: `
@@ -83,7 +84,16 @@ export function sugerirSlug(nome: string): string {
           <mat-form-field appearance="outline">
             <mat-label>Tipo de loja</mat-label>
             <mat-icon matPrefix>category</mat-icon>
-            <input matInput formControlName="segmento" placeholder="Ex.: aquarismo, roupas, pet shop" maxlength="60" />
+            <input matInput formControlName="segmento" placeholder="Ex.: aquarismo, roupas, pet shop" maxlength="60" [matAutocomplete]="tipos" />
+            <mat-autocomplete #tipos="matAutocomplete">
+              @for (t of tiposSugeridos; track t) {
+                <mat-option [value]="t">{{ t }}</mat-option>
+              }
+            </mat-autocomplete>
+            <mat-hint>Define as palavras do sistema e como o robô apresenta a loja.</mat-hint>
+            @if (form.controls.segmento.touched && form.controls.segmento.invalid) {
+              <mat-error>Informe o tipo de loja.</mat-error>
+            }
           </mat-form-field>
 
           <mat-form-field appearance="outline">
@@ -128,12 +138,17 @@ export function sugerirSlug(nome: string): string {
   `,
 })
 export class CadastroPage {
+  /** Sugestões do tipo de loja (pode escrever outro). Aquarismo mantém espécie, tanque e quarentena. */
+  protected readonly tiposSugeridos = [
+    'Aquarismo', 'Pet shop', 'Roupas e acessórios', 'Calçados', 'Autopeças', 'Cosméticos e perfumaria',
+    'Alimentos e bebidas', 'Eletrônicos', 'Casa e decoração', 'Papelaria', 'Plantas e jardinagem', 'Outro',
+  ];
   private readonly http = inject(HttpClient);
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     nomeLoja: ['', [Validators.required, Validators.minLength(2)]],
     slug: ['', [Validators.required, Validators.minLength(3), Validators.pattern(/^[a-z0-9]+(-[a-z0-9]+)*$/)]],
-    segmento: [''],
+    segmento: ['', [Validators.required, Validators.minLength(2)]],
     nomeDono: ['', [Validators.required, Validators.minLength(2)]],
     email: ['', [Validators.required, Validators.email]],
     senha: ['', [Validators.required, Validators.minLength(8)]],

@@ -126,7 +126,7 @@ export class ReservasConversaComponent {
   }
 
   protected async encerrar(r: Reserva, acao: 'cancelar'): Promise<void> {
-    if (!await this.confirmar.perguntar('O peixe volta para o estoque.', { titulo: 'Cancelar a reserva?', botao: 'Cancelar reserva', perigo: true })) return;
+    if (!await this.confirmar.perguntar('Os itens voltam para o estoque.', { titulo: 'Cancelar a reserva?', botao: 'Cancelar reserva', perigo: true })) return;
     this.ocupado.set(true);
     try {
       await firstValueFrom(this.http.post(`${API}/reservas/${r.id}/${acao}`, {}));

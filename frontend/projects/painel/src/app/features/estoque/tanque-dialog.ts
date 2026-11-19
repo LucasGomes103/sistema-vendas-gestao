@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { firstValueFrom } from 'rxjs';
 import { API, Tanque, mensagemDeErro } from '../../core/api';
+import { Termos } from '../../core/termos';
 
 /** Tanque criado, para quem abriu o diálogo já poder mostrá-lo e selecioná-lo. */
 export type TanqueCriado = Tanque | undefined;
@@ -27,25 +28,27 @@ export type TanqueCriado = Tanque | undefined;
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>Novo tanque</h2>
+    <h2 mat-dialog-title>{{ tx.novoLocal() }}</h2>
     <form [formGroup]="form" (ngSubmit)="salvar()">
       <mat-dialog-content class="campos">
         <mat-form-field appearance="outline">
           <mat-label>Nome</mat-label>
-          <input matInput formControlName="nome" placeholder="Ex.: T01, Aquário da vitrine" cdkFocusInitial />
-          <mat-error>Informe o nome do tanque.</mat-error>
+          <input matInput formControlName="nome" [placeholder]="tx.aquario() ? 'Ex.: T01, Aquário da vitrine' : 'Ex.: Prateleira A, Depósito, Vitrine'" cdkFocusInitial />
+          <mat-error>Informe o nome {{ 'do ' + tx.localMin() }}.</mat-error>
         </mat-form-field>
 
-        <mat-button-toggle-group formControlName="tipo" aria-label="Tipo do tanque" class="tipo">
+        <mat-button-toggle-group formControlName="tipo" [attr.aria-label]="'Tipo do ' + tx.localMin()" class="tipo">
           <mat-button-toggle value="Venda"><mat-icon>storefront</mat-icon> Venda</mat-button-toggle>
-          <mat-button-toggle value="Quarentena"><mat-icon>shield</mat-icon> Quarentena</mat-button-toggle>
+          <mat-button-toggle value="Quarentena"><mat-icon>shield</mat-icon> {{ tx.aquario() ? 'Quarentena' : 'Não vende' }}</mat-button-toggle>
         </mat-button-toggle-group>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Litros</mat-label>
-          <input matInput type="number" min="1" inputmode="numeric" formControlName="litros" />
-          <mat-hint>Opcional</mat-hint>
-        </mat-form-field>
+        @if (tx.aquario()) {
+          <mat-form-field appearance="outline">
+            <mat-label>Litros</mat-label>
+            <input matInput type="number" min="1" inputmode="numeric" formControlName="litros" />
+            <mat-hint>Opcional</mat-hint>
+          </mat-form-field>
+        }
 
         @if (erro()) {
           <p class="erro"><mat-icon>error</mat-icon>{{ erro() }}</p>
@@ -53,7 +56,7 @@ export type TanqueCriado = Tanque | undefined;
       </mat-dialog-content>
       <mat-dialog-actions align="end">
         <button mat-button type="button" mat-dialog-close>Cancelar</button>
-        <button mat-flat-button type="submit" [disabled]="salvando()">Cadastrar tanque</button>
+        <button mat-flat-button type="submit" [disabled]="salvando()">Cadastrar {{ tx.localMin() }}</button>
       </mat-dialog-actions>
     </form>
   `,
@@ -80,6 +83,7 @@ export type TanqueCriado = Tanque | undefined;
   `,
 })
 export class TanqueDialog {
+  protected readonly tx = inject(Termos);
   private readonly http = inject(HttpClient);
   private readonly ref = inject<MatDialogRef<TanqueDialog, TanqueCriado>>(MatDialogRef);
 

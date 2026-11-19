@@ -14,6 +14,7 @@ import { API, Especie, mensagemDeErro } from '../../core/api';
 import { Confirmar } from '../../core/confirmar';
 import { Auth } from '../../core/auth';
 import { EspecieDialog } from './especie-dialog';
+import { Termos } from '../../core/termos';
 
 /** O catálogo mostra o que tem no estoque; "sem estoque" fica à parte, só para editar ou excluir. */
 type Filtro = 'disponiveis' | 'esgotadas';
@@ -26,6 +27,7 @@ type Filtro = 'disponiveis' | 'esgotadas';
   styleUrl: './catalogo-page.scss',
 })
 export class CatalogoPage {
+  protected readonly tx = inject(Termos);
   private readonly confirmar = inject(Confirmar);
   protected readonly auth = inject(Auth);
   private readonly dialog = inject(MatDialog);
@@ -96,7 +98,7 @@ export class CatalogoPage {
     try {
       await firstValueFrom(this.http.delete(`${API}/especies/${especie.id}`));
       this.especies.reload();
-      this.snack.open('Espécie excluída.', undefined, { duration: 3000 });
+      this.snack.open(`${this.tx.produto()} ${this.tx.v().produtoFeminino ? 'excluída' : 'excluído'}.`, undefined, { duration: 3000 });
     } catch (e) {
       this.snack.open(mensagemDeErro(e), 'OK', { duration: 6000 });
     }

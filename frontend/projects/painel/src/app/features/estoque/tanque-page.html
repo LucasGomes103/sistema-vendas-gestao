@@ -5,7 +5,7 @@
 } @else if (tanque.error()) {
   <div class="sv-vazio">
     <mat-icon>cloud_off</mat-icon>
-    <p>Não foi possível carregar o tanque.</p>
+    <p>Não foi possível carregar o {{ tx.localMin() }}.</p>
     <button mat-stroked-button (click)="tanque.reload()">Tentar de novo</button>
   </div>
 } @else if (tanque.value(); as t) {
@@ -13,12 +13,12 @@
     <div>
       <h1>{{ t.nome }}</h1>
       <p>
-        {{ t.tipo === 'Quarentena' ? 'Tanque de quarentena' : 'Tanque de venda' }}{{ t.litros ? ' · ' + t.litros + ' L' : '' }}
-        · {{ total() }} {{ t.tipo === 'Quarentena' ? 'em quarentena' : 'peixes' }}
+        {{ tx.local() }} {{ t.tipo === 'Quarentena' ? (tx.aquario() ? 'de quarentena' : 'separado (não vende)') : 'de venda' }}{{ tx.aquario() && t.litros ? ' · ' + t.litros + ' L' : '' }}
+        · {{ total() }} {{ t.tipo === 'Quarentena' ? tx.emIsolamento() : tx.itens() }}
       </p>
     </div>
     @if (auth.ehDono()) {
-      <button mat-stroked-button class="excluir" (click)="excluir()"><mat-icon>delete</mat-icon> Excluir tanque</button>
+      <button mat-stroked-button class="excluir" (click)="excluir()"><mat-icon>delete</mat-icon> Excluir {{ tx.localMin() }}</button>
     }
   </header>
 
@@ -39,7 +39,7 @@
   </div>
 
   <section>
-    <h2>Lotes neste tanque</h2>
+    <h2>Lotes {{ tx.nesteLocal() }}</h2>
     @for (l of t.lotes; track l.loteId) {
       <article class="sv-card lote" [class.quarentena]="l.status === 'Quarentena'">
         <div class="info">
@@ -50,7 +50,7 @@
           @if (l.status === 'Quarentena') {
             <span class="sv-selo info">
               <mat-icon>shield</mat-icon>
-              Quarentena{{ l.quarentenaAte ? ' até ' + (l.quarentenaAte | date: 'dd/MM') : '' }}
+              {{ tx.aquario() ? 'Quarentena' : 'Separado' }}{{ l.quarentenaAte ? ' até ' + (l.quarentenaAte | date: 'dd/MM') : '' }}
             </span>
           }
         </div>
@@ -59,7 +59,7 @@
           <mat-icon>more_vert</mat-icon>
         </button>
         <mat-menu #menuLote="matMenu" xPosition="before">
-          <button mat-menu-item (click)="movimento('baixa', l)"><mat-icon>heart_minus</mat-icon>Baixa por morte</button>
+          <button mat-menu-item (click)="movimento('baixa', l)"><mat-icon>heart_minus</mat-icon>{{ tx.aquario() ? 'Baixa por morte' : 'Baixa por perda' }}</button>
           <button mat-menu-item (click)="movimento('transferencia', l)"><mat-icon>swap_horiz</mat-icon>Transferir</button>
           @if (auth.ehDono()) {
             <button mat-menu-item (click)="movimento('ajuste', l)"><mat-icon>tune</mat-icon>Ajustar contagem</button>
@@ -71,8 +71,8 @@
       </article>
     } @empty {
       <div class="sv-vazio">
-        <mat-icon>water</mat-icon>
-        <p>Tanque vazio. Registre uma entrada quando chegar peixe.</p>
+        <mat-icon>{{ tx.iconeLocal() }}</mat-icon>
+        <p>{{ tx.local() }} vazio. Registre uma entrada quando chegar {{ tx.item() }}.</p>
       </div>
     }
   </section>

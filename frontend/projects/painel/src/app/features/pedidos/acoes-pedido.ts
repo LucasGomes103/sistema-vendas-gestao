@@ -26,7 +26,7 @@ interface Confirmacao {
     <h2 mat-dialog-title>Confirmar pagamento do pedido #{{ pedido.numero }}</h2>
     <mat-dialog-content>
       <p class="valor">{{ pedido.total | currency: 'BRL' }} · {{ pedido.cliente }}</p>
-      <p class="ajuda">Confira se o valor caiu na conta da loja. Ao confirmar, o peixe sai do estoque e o card vai para Pago.
+      <p class="ajuda">Confira se o valor caiu na conta da loja. Ao confirmar, os itens saem do estoque e o card vai para Pago.
         Pagamento pelo link do cartão (Mercado Pago) confirma sozinho: não precisa vir aqui.</p>
       <mat-button-toggle-group [ngModel]="forma()" (ngModelChange)="forma.set($event)" aria-label="Forma de pagamento">
         <mat-button-toggle value="Pix"><mat-icon>pix</mat-icon> Pix</mat-button-toggle>
@@ -81,7 +81,7 @@ export class AcoesPedido {
       this.dialog.open<ConfirmarPagamentoDialog, Pedido, Confirmacao>(ConfirmarPagamentoDialog, { data: p, width: '460px', maxWidth: '95vw' }).afterClosed(),
     );
     if (!escolha) return null;
-    return this.acao(`${API}/pedidos/${p.id}/confirmar-pagamento`, escolha, `Pedido #${p.numero} pago: o peixe saiu do estoque.`);
+    return this.acao(`${API}/pedidos/${p.id}/confirmar-pagamento`, escolha, `Pedido #${p.numero} pago: os itens saíram do estoque.`);
   }
 
   async enviarPix(p: Pedido): Promise<Pedido | null> {
@@ -89,7 +89,7 @@ export class AcoesPedido {
   }
 
   async cancelar(p: Pedido): Promise<Pedido | null> {
-    const motivo = await this.confirmar.pedirTexto('O peixe volta para o estoque e o card vai para Perdido.', 'Motivo (opcional)', {
+    const motivo = await this.confirmar.pedirTexto('Os itens voltam para o estoque e o card vai para Perdido.', 'Motivo (opcional)', {
       titulo: `Cancelar o pedido #${p.numero}?`,
       botao: 'Cancelar pedido',
       perigo: true,

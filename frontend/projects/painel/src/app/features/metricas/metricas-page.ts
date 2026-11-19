@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, signal, inject } from '@angular/core';
 import { CurrencyPipe, DatePipe, DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { httpResource } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -13,6 +13,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { API, mensagemDeErro } from '../../core/api';
+import { Termos } from '../../core/termos';
 
 interface Resumo {
   conversas: number;
@@ -113,12 +114,12 @@ const MOTIVOS: Record<string, string> = {
   SemMotivo: 'Sem motivo informado',
 };
 
-const RELATORIOS = [
+const relatoriosPara = (t: Termos) => [
   { id: 'pedidos', nome: 'Pedidos pagos', icone: 'receipt_long' },
   { id: 'vendas', nome: 'Vendas por período', icone: 'bar_chart' },
-  { id: 'especies', nome: 'Espécies (vendas e margem)', icone: 'set_meal' },
-  { id: 'estoque', nome: 'Estoque por tanque (giro)', icone: 'water' },
-  { id: 'fornecedores', nome: 'Mortalidade por fornecedor', icone: 'local_shipping' },
+  { id: 'especies', nome: `${t.produtos()} (vendas e margem)`, icone: t.iconeProduto() },
+  { id: 'estoque', nome: `Estoque por ${t.localMin()} (giro)`, icone: t.iconeLocal() },
+  { id: 'fornecedores', nome: t.aquario() ? 'Mortalidade por fornecedor' : 'Perdas por fornecedor', icone: 'local_shipping' },
   { id: 'caixa', nome: 'Lançamentos do caixa', icone: 'point_of_sale' },
   { id: 'vendedores', nome: 'Desempenho por vendedor', icone: 'badge' },
 ];
@@ -152,7 +153,8 @@ function iso(d: Date): string {
   styleUrl: './metricas-page.scss',
 })
 export class MetricasPage {
-  protected readonly relatorios = RELATORIOS;
+  protected readonly tx = inject(Termos);
+  protected readonly relatorios = computed(() => relatoriosPara(this.tx));
   protected readonly etapas = ETAPAS;
   protected readonly motivos = MOTIVOS;
 

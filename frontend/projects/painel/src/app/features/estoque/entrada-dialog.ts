@@ -14,6 +14,7 @@ import { API, Especie, Fornecedor, Tanque, mensagemDeErro } from '../../core/api
 import { Auth } from '../../core/auth';
 import { TanqueDialog, TanqueCriado } from './tanque-dialog';
 import { EspecieDialog, EspecieSalva } from '../catalogo/especie-dialog';
+import { Termos } from '../../core/termos';
 
 export interface DadosEntrada {
   /** Tanque já escolhido (quando aberto a partir do detalhe do tanque). */
@@ -39,40 +40,40 @@ export interface DadosEntrada {
     <form [formGroup]="form" (ngSubmit)="salvar()">
       <mat-dialog-content class="campos">
         <mat-form-field appearance="outline" class="inteiro">
-          <mat-label>Espécie</mat-label>
+          <mat-label>{{ tx.produto() }}</mat-label>
           <mat-select formControlName="especieId">
             @for (e of especies.value() ?? []; track e.id) {
               <mat-option [value]="e.id">{{ e.nomePopular }}</mat-option>
             }
           </mat-select>
-          <mat-error>Escolha a espécie.</mat-error>
+          <mat-error>Escolha {{ tx.oProduto() }}.</mat-error>
           @if (especieEscolhida(); as esp) {
-            <mat-hint>Preço de venda: {{ esp.preco | currency: 'BRL' }} (vem do cadastro da espécie)</mat-hint>
+            <mat-hint>Preço de venda: {{ esp.preco | currency: 'BRL' }} (vem do cadastro {{ tx.doProduto() }})</mat-hint>
           } @else if (especies.hasValue() && !especies.value().length) {
-            <mat-hint>Nenhuma espécie cadastrada ainda.</mat-hint>
+            <mat-hint>{{ tx.nenhumProduto() }} {{ tx.v().produtoFeminino ? 'cadastrada' : 'cadastrado' }} ainda.</mat-hint>
           }
         </mat-form-field>
         @if (auth.ehDono()) {
           <button mat-button type="button" class="inteiro novo" (click)="novaEspecie()">
-            <mat-icon>add</mat-icon> Cadastrar nova espécie
+            <mat-icon>add</mat-icon> Cadastrar {{ tx.novoProduto().toLowerCase() }}
           </button>
         }
 
         <mat-form-field appearance="outline" class="inteiro">
-          <mat-label>Tanque</mat-label>
+          <mat-label>{{ tx.local() }}</mat-label>
           <mat-select formControlName="tanqueId">
             @for (t of tanques.value() ?? []; track t.id) {
-              <mat-option [value]="t.id">{{ t.nome }}{{ t.tipo === 'Quarentena' ? ' (quarentena)' : '' }}</mat-option>
+              <mat-option [value]="t.id">{{ t.nome }}{{ t.tipo === 'Quarentena' ? ' (' + tx.isolamentoCurto() + ')' : '' }}</mat-option>
             }
           </mat-select>
-          <mat-error>Escolha o tanque.</mat-error>
+          <mat-error>Escolha o {{ tx.localMin() }}.</mat-error>
           @if (tanques.hasValue() && !tanques.value().length) {
-            <mat-hint>Nenhum tanque cadastrado ainda.</mat-hint>
+            <mat-hint>Nenhum {{ tx.localMin() }} cadastrado ainda.</mat-hint>
           }
         </mat-form-field>
         @if (auth.ehDono()) {
           <button mat-button type="button" class="inteiro novo" (click)="novoTanque()">
-            <mat-icon>add</mat-icon> Cadastrar novo tanque
+            <mat-icon>add</mat-icon> Cadastrar {{ tx.novoLocal().toLowerCase() }}
           </button>
         }
 
@@ -83,7 +84,7 @@ export interface DadosEntrada {
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Custo por peixe (compra)</mat-label>
+          <mat-label>Custo por {{ tx.item() }} (compra)</mat-label>
           <span matTextPrefix>R$&nbsp;</span>
           <input matInput type="number" min="0" step="0.01" inputmode="decimal" formControlName="custoUnitario" />
         </mat-form-field>
@@ -98,11 +99,13 @@ export interface DadosEntrada {
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Dias de quarentena</mat-label>
-          <input matInput type="number" min="0" inputmode="numeric" formControlName="quarentenaDias" />
-          <mat-hint>0 = já disponível para venda</mat-hint>
-        </mat-form-field>
+        @if (tx.aquario()) {
+          <mat-form-field appearance="outline">
+            <mat-label>Dias de quarentena</mat-label>
+            <input matInput type="number" min="0" inputmode="numeric" formControlName="quarentenaDias" />
+            <mat-hint>0 = já disponível para venda</mat-hint>
+          </mat-form-field>
+        }
 
         @if (erro()) {
           <p class="erro inteiro"><mat-icon>error</mat-icon>{{ erro() }}</p>
@@ -138,6 +141,7 @@ export interface DadosEntrada {
   `,
 })
 export class EntradaDialog {
+  protected readonly tx = inject(Termos);
   private readonly http = inject(HttpClient);
   private readonly ref = inject<MatDialogRef<EntradaDialog, boolean>>(MatDialogRef);
   private readonly dados = inject<DadosEntrada | null>(MAT_DIALOG_DATA);

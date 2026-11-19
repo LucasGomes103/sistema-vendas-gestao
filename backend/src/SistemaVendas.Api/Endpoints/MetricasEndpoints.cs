@@ -62,17 +62,19 @@ public static class MetricasEndpoints
                 else
                 {
                     var r = await metricas.GerarAsync(p.De, p.Ate, agrupar, incluiSimuladas, ct, vendedorId);
+                    var v = Domain.Lojas.Vocabulario.Para(await db.Lojas.AsNoTracking().Where(l => l.Id == db.LojaAtualId).Select(l => l.Segmento).FirstOrDefaultAsync(ct));
+                    var mortes = v.Aquario ? "Mortes" : "Perdas";
                     csv = relatorio switch
                     {
                         "vendas" => Csv.Gerar(["Início", "Pedidos pagos", "Receita"],
                             r.Vendas.Select(v => new object?[] { v.Inicio, v.Pedidos, v.Receita })),
-                        "especies" => Csv.Gerar(["Espécie", "Vendidos", "Receita", "Custo", "Margem", "Margem %", "Mortes no período"],
+                        "especies" => Csv.Gerar([v.Produto, "Vendidos", "Receita", "Custo", "Margem", "Margem %", $"{mortes} no período"],
                             r.Especies.Select(e => new object?[] { e.Especie, e.Quantidade, e.Receita, e.Custo, e.Margem, e.MargemPercentual, e.Mortes })),
-                        "estoque" => Csv.Gerar(["Tanque", "Tipo", "Saldo no início", "Entradas", "Vendidos", "Mortes", "Giro", "Saldo atual"],
+                        "estoque" => Csv.Gerar([v.Local, "Tipo", "Saldo no início", "Entradas", "Vendidos", mortes, "Giro", "Saldo atual"],
                             r.Tanques.Select(t => new object?[] { t.Tanque, t.Tipo, t.SaldoInicio, t.Entradas, t.Vendidos, t.Mortes, t.Giro, t.SaldoAtual })),
                         "vendedores" => Csv.Gerar(["Vendedor", "Conversas atendidas", "Mensagens", "Vendas pagas", "Receita", "Ticket médio", "Cancelados", "Em atendimento agora"],
                             r.Vendedores.Select(v => new object?[] { v.Nome, v.ConversasAtendidas, v.Mensagens, v.Vendas, v.Receita, v.TicketMedio, v.Cancelados, v.EmAtendimento })),
-                        _ => Csv.Gerar(["Fornecedor", "Lotes", "Recebidos", "Mortes", "Mortalidade %", "Custo das compras"],
+                        _ => Csv.Gerar(["Fornecedor", "Lotes", "Recebidos", mortes, v.Aquario ? "Mortalidade %" : "Perdas %", "Custo das compras"],
                             r.Fornecedores.Select(f => new object?[] { f.Fornecedor, f.Lotes, f.Recebidos, f.Mortes, f.Mortalidade, f.CustoCompras }))
                     };
                 }

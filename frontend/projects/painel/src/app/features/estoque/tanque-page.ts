@@ -14,6 +14,7 @@ import { Confirmar } from '../../core/confirmar';
 import { Auth } from '../../core/auth';
 import { EntradaDialog } from './entrada-dialog';
 import { AcaoMovimento, MovimentoDialog } from './movimento-dialog';
+import { Termos } from '../../core/termos';
 
 const ROTULOS: Record<TipoMovimento, { texto: string; icone: string; classe: string }> = {
   Entrada: { texto: 'Entrada', icone: 'add_circle', classe: 'ok' },
@@ -34,6 +35,7 @@ const ROTULOS: Record<TipoMovimento, { texto: string; icone: string; classe: str
   styleUrl: './tanque-page.scss',
 })
 export class TanquePage {
+  protected readonly tx = inject(Termos);
   private readonly confirmar = inject(Confirmar);
   /** Id do tanque, vindo da rota /estoque/tanques/:id. */
   readonly id = input.required<string>();
@@ -78,10 +80,10 @@ export class TanquePage {
 
   protected async excluir(): Promise<void> {
     const t = this.tanque.value();
-    if (!t || !await this.confirmar.perguntar('O histórico de movimentações continua guardado.', { titulo: `Excluir o tanque "${t.nome}"?`, botao: 'Excluir', perigo: true })) return;
+    if (!t || !await this.confirmar.perguntar('O histórico de movimentações continua guardado.', { titulo: `Excluir o ${this.tx.localMin()} "${t.nome}"?`, botao: 'Excluir', perigo: true })) return;
     try {
       await firstValueFrom(this.http.delete(`${API}/tanques/${t.id}`));
-      this.snack.open('Tanque excluído.', undefined, { duration: 3000 });
+      this.snack.open(`${this.tx.local()} excluído.`, undefined, { duration: 3000 });
       this.router.navigate(['/estoque']);
     } catch (e) {
       this.snack.open(mensagemDeErro(e), 'OK', { duration: 6000 });

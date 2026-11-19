@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, signal, inject } from '@angular/core';
 import { httpResource } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { API, Especie } from '../../core/api';
+import { Termos } from '../../core/termos';
 
 const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -40,7 +41,7 @@ const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' 
         </div>
       } @empty {
         @if (especies.hasValue()) {
-          <p class="ajuda">Nenhuma espécie com estoque. Dê entrada de um lote no Estoque primeiro.</p>
+          <p class="ajuda">{{ tx.nenhumProduto() }} com estoque. Dê entrada de um lote no Estoque primeiro.</p>
         }
       }
     </mat-dialog-content>
@@ -100,6 +101,7 @@ const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' 
   `,
 })
 export class PedidoSimuladoDialog {
+  protected readonly tx = inject(Termos);
   protected readonly especies = httpResource<Especie[]>(() => `${API}/especies`);
   protected readonly disponiveis = computed(() => (this.especies.value() ?? []).filter((e) => e.ativo && e.disponivel > 0));
   private readonly carrinho = signal<Record<string, number>>({});

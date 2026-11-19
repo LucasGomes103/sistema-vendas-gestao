@@ -13,7 +13,26 @@ export interface UsuarioLogado {
   lojaSlug: string;
   /** Administrador da plataforma (e-mail em Plataforma__Admins). */
   adminPlataforma?: boolean;
+  /** Palavras do tipo de loja (espécie/tanque ou produto/local). Use o serviço Termos. */
+  termos?: Vocabulario;
 }
+
+/** Palavras do tipo de loja, vindas da API (Vocabulario). */
+export interface Vocabulario {
+  chave: 'aquarismo' | 'geral';
+  descricaoLoja: string;
+  produto: string;
+  produtos: string;
+  produtoFeminino: boolean;
+  itens: string;
+  local: string;
+  locais: string;
+  nomeSecundario: string;
+  aquario: boolean;
+  isolamento: string;
+  emoji: string;
+}
+
 
 /** Loja vista pelo administrador da plataforma: só números agregados. */
 export interface LojaAdmin {
