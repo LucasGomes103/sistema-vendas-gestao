@@ -81,6 +81,9 @@ var app = builder.Build();
 
 app.UseForwardedHeaders();
 
+// Lê a chave mestra já na subida: se estiver errada, o erro aparece logo no log do Render.
+app.Services.GetRequiredService<SistemaVendas.Infrastructure.Seguranca.Cofre>();
+
 if (app.Configuration.GetValue<bool>("Banco:MigrarAoIniciar"))
 {
     using var scope = app.Services.CreateScope();

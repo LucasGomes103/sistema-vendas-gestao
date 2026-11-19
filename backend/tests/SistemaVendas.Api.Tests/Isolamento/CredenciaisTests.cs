@@ -56,11 +56,15 @@ public class CofreTests
         Assert.Null(cofre.Decifrar(NovoCofre().Cifrar("x", "c"), "c"));
     }
 
-    [Fact]
-    public void Chave_mestra_de_tamanho_errado_impede_a_subida()
+    [Theory]
+    [InlineData("openssl rand -base64 32")]
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAA==")]
+    [InlineData("não é base64")]
+    public void Chave_mestra_errada_so_desliga_as_credenciais(string chave)
     {
-        Assert.Throws<InvalidOperationException>(() => NovoCofre(Convert.ToBase64String(new byte[16])));
-        Assert.Throws<InvalidOperationException>(() => NovoCofre("não é base64"));
+        var cofre = NovoCofre(chave);
+        Assert.False(cofre.Disponivel);
+        Assert.Throws<RegraException>(() => cofre.Cifrar("x", "c"));
     }
 }
 

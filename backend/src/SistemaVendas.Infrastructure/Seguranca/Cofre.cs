@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SistemaVendas.Domain.Estoque;
 using SistemaVendas.Domain.Lojas;
@@ -32,26 +33,33 @@ public record CredencialMercadoPago(string AccessToken, string? WebhookSecret = 
 /// AES-256-GCM com a chave mestra. O texto associado (loja + tipo) amarra cada segredo à sua loja: copiar o valor
 /// cifrado de uma loja para outra no banco não funciona.
 /// </summary>
-public class Cofre(IOptions<PlataformaOptions> opcoes)
+public class Cofre(IOptions<PlataformaOptions> opcoes, ILogger<Cofre>? logger = null)
 {
     private const string Versao = "v1:";
-    private readonly byte[]? _chave = Ler(opcoes.Value.ChaveMestra);
+    private readonly byte[]? _chave = Ler(opcoes.Value.ChaveMestra, logger);
 
     public bool Disponivel => _chave is not null;
 
-    private static byte[]? Ler(string? base64)
+    /// <summary>
+    /// Chave errada não derruba nada: fica como "sem chave" (credenciais da loja desligadas, a loja original segue
+    /// com as variáveis do servidor) e o erro aparece no log.
+    /// </summary>
+    public static byte[]? Ler(string? base64, ILogger? logger = null)
     {
         if (string.IsNullOrWhiteSpace(base64))
             return null;
         try
         {
             var chave = Convert.FromBase64String(base64.Trim());
-            return chave.Length == 32 ? chave : throw new InvalidOperationException("Plataforma:ChaveMestra precisa ter 32 bytes (openssl rand -base64 32).");
+            if (chave.Length == 32)
+                return chave;
+            logger?.LogError("Plataforma__ChaveMestra tem {Bytes} bytes, precisa de 32 (resultado de openssl rand -base64 32). Credenciais das lojas desligadas.", chave.Length);
         }
         catch (FormatException)
         {
-            throw new InvalidOperationException("Plataforma:ChaveMestra não é base64 válido (openssl rand -base64 32).");
+            logger?.LogError("Plataforma__ChaveMestra não é base64 válido: cole o RESULTADO de openssl rand -base64 32 (44 caracteres). Credenciais das lojas desligadas.");
         }
+        return null;
     }
 
     private byte[] Chave => _chave ?? throw new RegraException("Falta a chave mestra (Plataforma__ChaveMestra) no servidor: não dá para guardar credenciais.");
