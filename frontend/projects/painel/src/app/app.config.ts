@@ -9,9 +9,10 @@ import {
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
 import { MatIconRegistry } from '@angular/material/icon';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { TitleStrategy, provideRouter, withComponentInputBinding } from '@angular/router';
 import { routes } from './app.routes';
 import { sessaoInterceptor } from './core/interceptor';
+import { TituloLagChat } from './core/titulo';
 
 registerLocaleData(localePt);
 
@@ -20,6 +21,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     { provide: LOCALE_ID, useValue: 'pt-BR' },
     provideRouter(routes, withComponentInputBinding()),
+    { provide: TitleStrategy, useClass: TituloLagChat },
     provideHttpClient(withFetch(), withInterceptors([sessaoInterceptor])),
     // Ícones do Material Symbols (mesma família das telas de referência).
     provideAppInitializer(() => {

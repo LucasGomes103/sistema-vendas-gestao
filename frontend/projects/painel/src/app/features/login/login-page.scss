@@ -13,13 +13,12 @@
   background: linear-gradient(160deg, #004f4f 0%, #006a6a 60%, #1f8a89 100%);
   color: #fff;
 
+  // Logo horizontal do LAG CHAT (versão para fundo escuro).
   .marca {
     display: block;
-    width: 56px;
-    height: 56px;
-    border-radius: 12px;
-    // Contorno claro para o ícone não sumir no fundo azul-petróleo.
-    box-shadow: 0 0 0 2px rgb(255 255 255 / 0.35);
+    width: auto;
+    height: 64px;
+    align-self: flex-start;
   }
 
   h1 {
@@ -128,10 +127,9 @@
     gap: 14px;
 
     .marca {
-      width: 44px;
-      height: 44px;
+      height: 36px;
       flex-shrink: 0;
-      border-radius: 12px;
+      align-self: center;
     }
 
     h1 {
