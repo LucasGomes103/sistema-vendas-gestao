@@ -1,25 +1,46 @@
 # Proposta comercial: planos do sistema
 
-Rascunho para o Lucas revisar, feito em **18/11/2026**. Os preços são uma sugestão a partir da pesquisa de
-concorrentes abaixo e dos custos de [docs/producao/custos.md](../producao/custos.md). Nada aqui foi combinado com
-cliente ainda. O plano técnico para o cliente se cadastrar e configurar tudo sozinho está em
-[plano-saas.md](plano-saas.md).
+Rascunho para o Lucas revisar. Primeira versão em 18/11/2026; **revisada em 19/11/2026** com as decisões do Lucas:
+
+- O caminho é o **SaaS com autoatendimento** ([plano-saas.md](plano-saas.md)): o cliente escolhe o plano, paga e
+  configura sozinho.
+- O sistema serve **qualquer segmento** de varejo pequeno, não só aquarismo.
+- **Hospedagem, banco, IA, mapas do frete e tudo o que é da plataforma fica na conta do Lucas** e o custo já entra
+  na mensalidade. **WhatsApp, Mercado Pago, Pix e o que é do negócio vêm do cliente.**
+
+Os preços são sugestão a partir da pesquisa de concorrentes no fim deste documento e dos custos de
+[docs/producao/custos.md](../producao/custos.md). Nada foi combinado com cliente ainda.
 
 ## O que estamos vendendo
 
 Um **vendedor no WhatsApp com IA ligado ao estoque da loja**, mais a gestão do dia a dia, num sistema só:
 
-- Robô com IA que responde no WhatsApp oficial, consulta o estoque de verdade, calcula o frete pelo CEP, separa
-  (reserva) os itens por 24 h, pede o endereço e manda a cobrança (Pix copia e cola e link de cartão).
+- Robô com IA que responde no WhatsApp oficial, consulta o estoque de verdade, calcula o frete pelo CEP, reserva os
+  itens por 24 h, pede o endereço e manda a cobrança (Pix copia e cola e link de cartão).
 - Vitrine online (catálogo) que mostra só o que tem saldo, com botão para pedir pelo WhatsApp.
-- Painel: conversas e funil (kanban), alerta de cliente quente sem atendimento, pedidos, conferência de Pix,
-  caixa do dia, entregas com papel de entregador, estoque por lote, métricas com exportação para Excel.
+- Painel: conversas e funil (kanban), alerta de cliente quente sem atendimento, pedidos, conferência de Pix, caixa
+  do dia, entregas com papel de entregador, estoque por lote, métricas com exportação para Excel.
 
-A maioria dos concorrentes vende **só o atendimento** (robô e caixa de entrada) e a loja paga um sistema de gestão
-à parte (Bling, Tiny e outros, de R$ 39 a R$ 349 por mês). O nosso diferencial é o robô vender a partir do estoque
-e do frete reais, sem integração para montar.
+A maioria dos concorrentes vende **só o atendimento** e a loja paga um sistema de gestão à parte (Bling, Tiny e
+outros, de R$ 39 a R$ 349 por mês). O nosso diferencial é o robô vender a partir do estoque e do frete reais, sem
+integração para montar.
 
-## Planos sugeridos
+## Quem fornece o quê
+
+| Fica na conta do Lucas (incluído na mensalidade) | Vem do cliente (conectado no assistente de configuração) |
+| --- | --- |
+| Servidor da API (Render) | **Conta do WhatsApp oficial** e o número da loja, conectados pelo botão "Conectar WhatsApp" da Meta. O cliente cadastra o cartão dele na conta do WhatsApp e a Meta cobra as mensagens direto dele. |
+| Banco de dados e backups (Supabase) | **Conta do Mercado Pago**, conectada pelo botão "Conectar Mercado Pago". O dinheiro das vendas cai direto na conta do cliente, e as taxas também são descontadas lá. |
+| Painel, vitrine e endereço `sistema/<loja>` (Cloudflare) | **Chave Pix** da loja (banco do cliente). |
+| IA do robô (Gemini) | Catálogo, fotos, preços, horário e endereço da loja. |
+| Mapas e cálculo do frete por CEP | CNPJ ou CPF da loja, exigido pela Meta e pelo Mercado Pago. |
+| E-mails do sistema (cadastro, cobrança, avisos) | Domínio próprio, só se quiser a vitrine no endereço da loja (plano Completo). |
+| Monitoramento, atualizações e suporte | |
+
+O cliente nunca copia chave nem token: os dois botões abrem a tela oficial da Meta e do Mercado Pago, ele entra com a
+própria conta e autoriza.
+
+## Planos
 
 "Conversa" = cada cliente diferente que escreveu para a loja no mês (o mesmo critério da Yavendió). As respostas do
 robô dentro dessa conversa não têm limite.
@@ -28,89 +49,91 @@ robô dentro dessa conversa não têm limite.
 | --- | --- | --- | --- |
 | Mensalidade | **R$ 297** | **R$ 497** | **R$ 797** |
 | No plano anual (2 meses grátis) | R$ 247/mês | R$ 414/mês | R$ 664/mês |
-| Conversas com o robô por mês | 500 | 1.500 | 4.000 |
+| Conversas com o robô por mês (IA incluída) | 500 | 1.500 | 4.000 |
 | Usuários no painel | 2 | 5 | 15 |
+| Produtos com foto | até 300 | até 2.000 | sem limite |
 | Robô com IA no WhatsApp oficial | ✓ | ✓ | ✓ |
 | Vitrine online e catálogo pelo estoque | ✓ | ✓ | ✓ |
 | Estoque, pedidos, Pix com a chave da loja, caixa | ✓ | ✓ | ✓ |
 | Funil (kanban) e alerta de cliente quente | ✓ | ✓ | ✓ |
-| Frete por distância a partir do CEP | — | ✓ | ✓ |
+| Frete por distância a partir do CEP (mapas incluídos) | ✓ | ✓ | ✓ |
 | Link de cartão (Mercado Pago) com baixa automática | — | ✓ | ✓ |
 | Entregas e papel de entregador | — | ✓ | ✓ |
 | Métricas e relatórios (CSV) | básico | ✓ | ✓ |
 | Vitrine no domínio próprio da loja | — | — | ✓ |
 | Suporte | e-mail, até 2 dias úteis | WhatsApp, horário comercial | WhatsApp prioritário + 1 reunião por mês |
-| Conversas extras | R$ 49 por pacote de +500 | R$ 49 por pacote de +500 | R$ 39 por pacote de +500 |
+| Conversas extras | R$ 49 por +500 | R$ 49 por +500 | R$ 39 por +500 |
+| Implantação | **grátis** (assistente) | grátis, ou assistida **R$ 490** | grátis, ou assistida **R$ 990** |
 
-Por que esses números:
+O frete por CEP passou para todos os planos porque a maioria dos segmentos entrega, e o custo dos mapas é baixo
+(ver a conta abaixo).
 
-- **Essencial (R$ 297)** fica na faixa de entrada das plataformas com IA (SocialHub a partir de R$ 299, FalaMais
-  Start R$ 299 ainda sem IA), mas já com estoque e vitrine.
-- **Profissional (R$ 497)** é o plano para empurrar: igual ao FalaMais Essencial com IA (R$ 499) e bem abaixo do
-  Yavendió Pro (R$ 999 por 1.500 conversas), entregando também a gestão.
-- **Completo (R$ 797)** fica abaixo do Yavendió Business (a partir de R$ 2.499) e perto do SocialHub Business
-  (R$ 899), para lojas com mais volume e equipe.
-- Nosso custo de IA por conversa é de centavos (≈ R$ 0,05 com 8 respostas, ver custos.md), então o pacote extra de
-  R$ 49 por 500 conversas tem margem alta e ainda é barato perto do Yavendió (R$ 1.000 por 1.000 conversas).
+### Quanto custa cada plano para o Lucas
 
-## Implantação
+Conta no pior caso, com a loja usando **todas** as conversas do plano e o Lucas com 10 a 30 lojas no ar. Hospedagem
+rateada a partir do [plano-saas.md](plano-saas.md) (≈ R$ 450 a 700 por mês no total para 10 a 50 lojas, com e-mail e
+monitor; os mapas vão numa linha à parte). IA a ≈ R$ 0,05 por conversa (8 respostas de ≈ R$ 0,006, ver custos.md).
 
-A maioria dos concorrentes de pequeno porte **não cobra implantação** (Yavendió, FalaMais, Clint, Leadsales e
-SocialHub não listam taxa). Cobrar R$ 1.500 a R$ 3.000, como estimado antes, só se justifica enquanto **o Lucas
-faz a configuração à mão**. Sugestão em duas etapas:
+| Custo por loja, por mês | Essencial | Profissional | Completo |
+| --- | --- | --- | --- |
+| Hospedagem, banco, front, monitor e e-mail (rateio) | R$ 30 | R$ 30 | R$ 40 |
+| IA (Gemini), com o limite todo usado | R$ 25 | R$ 75 | R$ 200 |
+| Mapas do frete (estimativa, com cache de CEP) | R$ 5 | R$ 10 | R$ 20 |
+| Taxa da cobrança da mensalidade (Mercado Pago Assinaturas, cartão ≈ 4,49%) | R$ 13 | R$ 22 | R$ 36 |
+| Imposto (Simples Nacional, estimativa de 6%) | R$ 18 | R$ 30 | R$ 48 |
+| **Custo total** | **≈ R$ 91** | **≈ R$ 167** | **≈ R$ 344** |
+| **Sobra por loja (antes do tempo de suporte)** | **≈ R$ 206** | **≈ R$ 330** | **≈ R$ 453** |
 
-| | Agora (implantação feita pelo Lucas) | Depois do autoatendimento ([plano-saas.md](plano-saas.md)) |
-| --- | --- | --- |
-| Essencial | R$ 990 | **grátis** (o assistente guia o cliente) |
-| Profissional | R$ 1.490 | grátis, ou **implantação assistida R$ 490** |
-| Completo | R$ 2.490 | grátis, ou implantação assistida R$ 990 |
+Na média, uma loja usa bem menos que o limite, então a sobra real tende a ser maior. O pacote extra de 500 conversas
+custa ≈ R$ 25 de IA e é vendido por R$ 49.
 
-O que a implantação feita pelo Lucas inclui: acompanhar a verificação da empresa na Meta e a conexão do número,
-cadastrar o catálogo inicial (até 100 itens com foto, a partir de planilha), configurar frete, Pix e Mercado Pago,
-ajustar o jeito de falar do robô e treinar a equipe (1 h por vídeo). Uma opção comercial é **descontar a implantação
-para quem fechar o plano anual**.
+Com **10 lojas de cada plano** (30 lojas): receita de R$ 15.910 e custo de ≈ R$ 6.000 no pior caso, sobrando
+≈ R$ 9.900 por mês. Com uso médio de 60% das conversas, a sobra passa de R$ 11.000.
 
-## O que é cobrado à parte (pago pela loja direto ao fornecedor)
+Pontos a confirmar antes de fechar o preço: o custo dos mapas (o serviço pago ainda não foi escolhido; os públicos
+de hoje não aguentam muitas lojas) e o anexo do Simples com um contador (software como serviço pode cair no Anexo
+III ou V, conforme o fator R).
+
+### Proteções na conta do Lucas
+
+Como a IA e os mapas ficam na conta do Lucas, o custo cresce com o uso dos clientes. Por isso o sistema precisa:
+
+- Contar conversas por loja e parar o robô (passando para atendimento humano) quando o limite acabar, com aviso
+  para comprar o pacote extra.
+- Limitar respostas por conversa (ex.: 40) para um cliente insistente ou um robô de spam não gastar IA à toa.
+- Alerta de gasto no Google Cloud (orçamento do projeto do Gemini) e no Supabase.
+
+## O que o cliente paga à parte, direto ao fornecedor
 
 | Item | Quem cobra | Quanto (nov/2026) | Observação para o contrato |
 | --- | --- | --- | --- |
-| Mensagens do WhatsApp oficial | Meta, no cartão da própria loja cadastrado na conta do WhatsApp dela | 1.000 respostas de atendimento grátis por mês por número, depois R$ 0,035; aviso de pedido (utilidade) R$ 0,035; marketing R$ 0,32 | Igual aos concorrentes (Yavendió, SleekFlow e Respond.io também repassam). Exemplo: 500 atendimentos de 10 respostas ≈ R$ 140/mês. |
-| Taxas do Mercado Pago | Mercado Pago, descontadas de cada venda na conta da loja | cartão na hora 4,98%; em 30 dias 2,95%; Pix pelo link 0,99% | O dinheiro cai direto na conta da loja; o sistema não toca no dinheiro. |
-| Pix com a chave da loja | banco da loja | depende do banco (para CNPJ muitos cobram por Pix recebido) | |
-| Domínio próprio (opcional) | Registro.br | R$ 40/ano | Só no Completo a vitrine usa o domínio da loja. |
-| Número de celular dedicado | operadora | chip pré-pago | Recomendado: o número usado no robô deve ser só da loja. |
+| Mensagens do WhatsApp oficial | Meta, no cartão do cliente cadastrado na conta do WhatsApp dele | 1.000 respostas de atendimento grátis por mês por número, depois R$ 0,035; aviso de pedido (utilidade) R$ 0,035; marketing R$ 0,32 | Igual aos concorrentes (Yavendió, SleekFlow e Respond.io também repassam). Exemplo: 500 atendimentos de 10 respostas ≈ R$ 140/mês. A maioria das lojas pequenas fica nas 1.000 grátis. |
+| Taxas do Mercado Pago | Mercado Pago, descontadas de cada venda na conta do cliente | cartão na hora 4,98%; em 30 dias 2,95%; Pix pelo link 0,99% | O sistema não toca no dinheiro. |
+| Pix com a chave da loja | banco do cliente | depende do banco (para CNPJ muitos cobram por Pix recebido) | |
+| Domínio próprio (opcional, Completo) | Registro.br | R$ 40/ano | |
+| Número de celular dedicado | operadora | chip pré-pago | Recomendado: o número do robô deve ser só da loja. |
 
-A IA (Gemini) **está incluída** em todos os planos, dentro do limite de conversas.
+## Implantação
 
-## Conta de margem (exemplo)
+Com o autoatendimento, a implantação é **grátis**: o assistente guia o cliente em cada passo. Isso segue o mercado:
+Yavendió, FalaMais, Clint, Leadsales e SocialHub não listam taxa de implantação.
 
-Com a hospedagem compartilhada (todas as lojas no mesmo servidor, como no [plano-saas.md](plano-saas.md)):
+A **implantação assistida** é opcional, para quem não quer fazer sozinho: uma chamada de vídeo em que o Lucas faz o
+assistente junto com o cliente, importa o catálogo da planilha dele (até 300 itens no Profissional, sem limite no
+Completo), ajusta o jeito de falar do robô e treina a equipe por 1 h. Pode sair de graça para quem fechar o anual.
 
-| | 10 lojas Profissional | 30 lojas (10 de cada plano) |
-| --- | --- | --- |
-| Receita mensal | R$ 4.970 | R$ 15.910 |
-| Infraestrutura compartilhada (Render Standard, Supabase Pro, Cloudflare, monitor, e-mail) | ≈ R$ 450 | ≈ R$ 650 |
-| IA (≈ R$ 0,05 por conversa, uso médio de 60% do limite) | ≈ R$ 450 | ≈ R$ 1.800 |
-| Taxa da cobrança recorrente (Mercado Pago Assinaturas, cartão ≈ 4,49%) | ≈ R$ 225 | ≈ R$ 715 |
-| Imposto (Simples Nacional, estimativa de 6% sobre serviço) | ≈ R$ 300 | ≈ R$ 955 |
-| **Sobra antes do tempo de suporte** | **≈ R$ 3.500** | **≈ R$ 11.800** |
-
-Já no modelo de **um servidor por cliente** (como está hoje), cada loja custaria R$ 200 a 240 por mês só de
-infraestrutura, e o Essencial a R$ 297 quase não pagaria a conta. Por isso o caminho multi-cliente do plano SaaS
-é o que torna esses preços viáveis.
-
-O imposto é estimativa: conferir com um contador o anexo do Simples (software como serviço pode cair no Anexo III
-ou V, conforme o fator R).
+Enquanto o autoatendimento não fica pronto, as primeiras lojas (piloto) entram com a configuração feita pelo Lucas,
+com desconto na mensalidade em troca de opinião e depoimento.
 
 ## Condições sugeridas
 
-- Teste grátis de 7 dias (com o simulador de cliente; o WhatsApp oficial entra quando a loja conectar o número).
-- Sem fidelidade no mensal; plano anual com 2 meses grátis (pago à vista ou parcelado no cartão).
+- Teste grátis de 7 dias com o simulador de cliente (o WhatsApp oficial entra quando a loja conectar o número).
+- Sem fidelidade no mensal; anual com 2 meses grátis (à vista ou parcelado no cartão).
 - Atraso no pagamento: aviso por e-mail, 7 dias de carência, depois o robô para de responder e o painel fica só
   leitura. Os dados ficam guardados por 90 dias após o cancelamento, com exportação em CSV.
 - Reajuste anual pelo IPCA.
 - Contrato com termos de uso e acordo de tratamento de dados (LGPD): a loja é a controladora dos dados dos clientes
-  dela e nós somos operadores.
+  dela e o Lucas é o operador.
 
 ## Pesquisa de concorrentes (preços de 2026)
 
@@ -132,23 +155,22 @@ Confirmar na página de preços de cada um antes de usar em material de venda.
 Também a observar: a Meta lançou o **Business Agent** dentro do app WhatsApp Business, grátis por enquanto, com
 assinatura paga anunciada ([Algoritmo Diário](https://algoritmodiario.com/artigos/ferramentas-ia-atendimento-whatsapp-pme.php),
 [Forbes Brasil](https://forbes.com.br/forbes-tech/2026/02/whatsapp-business-lanca-ia-agentica-para-pmes/)). Ele
-responde dúvidas, mas não conhece o estoque, o frete nem os pedidos da loja: é mais um motivo para vender o
-sistema pela parte de **gestão + venda**, não só pelo robô.
+responde dúvidas, mas não conhece o estoque, o frete nem os pedidos da loja: é mais um motivo para vender o sistema
+pela parte de **gestão + venda**, não só pelo robô.
 
-**Conclusão da pesquisa:** a mensalidade de R$ 400 a 700 estimada antes está dentro do mercado (é a faixa do plano
-do meio). A implantação de R$ 1.500 a 3.000 fica acima do que o pequeno varejo encontra nos concorrentes, que em
-geral não cobram: faz sentido só enquanto a configuração for manual, e deve cair para zero com o autoatendimento.
+**Conclusão da pesquisa:** a faixa de R$ 297 a 797 com IA incluída fica no meio do mercado (FalaMais R$ 499,
+SocialHub R$ 299 a 899) e bem abaixo do Yavendió (R$ 999 por 1.500 conversas), entregando também a gestão. Taxa de
+implantação não é praxe no pequeno varejo, por isso ela sai no autoatendimento.
 
-## Público para começar
+## Segmentos
 
-O robô, os textos e o cadastro hoje falam de **peixes, espécies e tanques**. Sugestão: começar vendendo para
-**lojas de aquarismo e pet shops com peixes**, onde o sistema já encaixa sem mudança e a experiência da ECS Fish
-serve de caso de sucesso. Abrir para outros segmentos (plantas, pet em geral, varejo pequeno) exige generalizar os
-nomes e o jeito do robô falar, como descrito na fase 6 do [plano-saas.md](plano-saas.md).
+O sistema vai ser **generalizado para qualquer varejo pequeno que vende pelo WhatsApp** (fase 4 do
+[plano-saas.md](plano-saas.md)): no cadastro o cliente escolhe o tipo de loja (ex.: pet e aquarismo, plantas e
+jardinagem, moda, cosméticos, alimentos, peças) e o painel e o robô passam a falar "produto" em vez de "peixe" e
+"espécie". A ECS Fish continua como primeiro caso de sucesso.
 
 ## Decisões para o Lucas
 
-1. Os três planos e os preços acima, ou outro desenho (ex.: só dois planos)?
-2. Cobrar implantação agora (R$ 990 a 2.490) ou já entrar sem taxa para ganhar os primeiros clientes?
-3. Começar pelo nicho de aquarismo ou já generalizar para outros segmentos?
-4. Abrir CNPJ próprio para o produto (necessário para a Meta, o Mercado Pago, a nota fiscal e o contrato).
+1. Os três planos e os preços acima, ou outro desenho?
+2. Limites de produtos por plano (300, 2.000, sem limite) fazem sentido para os segmentos que você quer atingir?
+3. Abrir CNPJ próprio para o produto (necessário para a Meta, o Mercado Pago, a nota fiscal e o contrato).
