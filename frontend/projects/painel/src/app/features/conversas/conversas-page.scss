@@ -467,6 +467,14 @@ footer {
       background: var(--mat-sys-secondary-container);
       color: var(--mat-sys-on-secondary-container);
     }
+
+    // Tem conversa esperando alguém pegar.
+    &.pendente:not(.ativo) {
+      border-color: var(--sv-alerta-borda);
+      background: var(--sv-alerta-fundo);
+      color: var(--sv-alerta);
+      font-weight: 600;
+    }
   }
 }
 
