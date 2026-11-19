@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SistemaVendas.Application.Atendimento;
 using SistemaVendas.Infrastructure.Dados;
+using SistemaVendas.Infrastructure.Email;
 using SistemaVendas.Infrastructure.IA;
 using SistemaVendas.Infrastructure.Pagamentos;
 using SistemaVendas.Infrastructure.Seguranca;
@@ -26,6 +27,8 @@ public static class DependencyInjection
         services.AddSingleton<Cofre>();
         services.AddScoped<ServicoCredenciais>();
         services.AddScoped<CredenciaisDaLoja>();
+        services.Configure<EmailOptions>(config.GetSection(EmailOptions.Secao));
+        services.AddSingleton<IEnvioEmail, EnvioEmailSmtp>();
         services.AddScoped<ServicoFunil>();
         services.AddScoped<ServicoReservas>();
         services.AddScoped<ServicoPedidos>();

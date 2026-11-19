@@ -2,8 +2,23 @@ using SistemaVendas.Domain.Comum;
 
 namespace SistemaVendas.Domain.Lojas;
 
+public enum StatusLoja
+{
+    /// <summary>Em uso.</summary>
+    Ativa,
+    /// <summary>Cadastrada pelo site, esperando o dono confirmar o e-mail.</summary>
+    AguardandoConfirmacao,
+    /// <summary>Suspensa pelo administrador da plataforma: ninguém entra, a vitrine some e o robô para.</summary>
+    Suspensa
+}
+
 public class Loja : Entidade
 {
+    public StatusLoja Status { get; set; } = StatusLoja.Ativa;
+
+    /// <summary>Tipo de loja escolhido no cadastro (ex.: "Aquarismo", "Roupas"). Usado na fase 4 para o robô.</summary>
+    public string? Segmento { get; set; }
+
     public required string Nome { get; set; }
 
     /// <summary>Identificador usado na URL do catálogo público.</summary>

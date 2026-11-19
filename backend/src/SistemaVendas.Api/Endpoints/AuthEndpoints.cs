@@ -39,6 +39,12 @@ public static class AuthEndpoints
                 return Results.Problem("E-mail ou senha inválidos.", statusCode: StatusCodes.Status401Unauthorized);
 
             var loja = await db.Lojas.AsNoTracking().FirstAsync(l => l.Id == usuario.LojaId, ct);
+            if (loja.Status == StatusLoja.AguardandoConfirmacao)
+                return Results.Problem("Confirme o seu e-mail pelo link que enviamos para entrar. Não chegou? Peça outro.",
+                    statusCode: StatusCodes.Status403Forbidden, extensions: new Dictionary<string, object?> { ["codigo"] = "email_nao_confirmado" });
+            if (loja.Status == StatusLoja.Suspensa)
+                return Results.Problem("Esta loja está suspensa. Fale com o suporte.", statusCode: StatusCodes.Status403Forbidden,
+                    extensions: new Dictionary<string, object?> { ["codigo"] = "loja_suspensa" });
             await Sessao.EntrarAsync(http, usuario, loja);
             return Results.Ok(DoPrincipal(http.User));
         })

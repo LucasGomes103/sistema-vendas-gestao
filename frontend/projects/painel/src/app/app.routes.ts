@@ -11,6 +11,17 @@ export const routes: Routes = [
     loadComponent: () => import('./features/login/login-page').then((m) => m.LoginPage),
   },
   {
+    path: 'cadastro',
+    title: 'Cadastre a sua loja',
+    canActivate: [somenteVisitante],
+    loadComponent: () => import('./features/cadastro/cadastro-page').then((m) => m.CadastroPage),
+  },
+  {
+    path: 'confirmar-email',
+    title: 'Confirmar e-mail',
+    loadComponent: () => import('./features/cadastro/confirmar-email-page').then((m) => m.ConfirmarEmailPage),
+  },
+  {
     path: '',
     component: Shell,
     canActivate: [exigeLogin],

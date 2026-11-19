@@ -26,6 +26,9 @@ public class PlataformaOptions
     /// PrimeiraLoja__Slug, depois WhatsApp__Local__LojaSlug e, sem nenhum, a loja mais antiga do banco.
     /// </summary>
     public string? LojaOriginal { get; set; }
+
+    /// <summary>Endereço do painel, usado nos links dos e-mails (confirmação de cadastro).</summary>
+    public string UrlPainel { get; set; } = "https://sistema-vendas-gestao.pages.dev/painel";
 }
 
 /// <summary>Credencial da WhatsApp Cloud API de uma loja.</summary>

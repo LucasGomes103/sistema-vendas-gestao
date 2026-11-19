@@ -43,6 +43,13 @@
 
     @if (erro(); as mensagem) {
       <div class="erro" role="alert"><mat-icon>error</mat-icon> {{ mensagem }}</div>
+      @if (auth.codigoErro() === 'email_nao_confirmado') {
+        @if (reenviado()) {
+          <p class="sub">Se o cadastro estiver pendente, um link novo chega em instantes em {{ email }}.</p>
+        } @else {
+          <button mat-stroked-button type="button" (click)="reenviar()" [disabled]="enviando()">Reenviar o link de confirmação</button>
+        }
+      }
     }
 
     <button mat-flat-button type="submit" class="entrar" [disabled]="enviando()">
@@ -52,5 +59,7 @@
         Entrar
       }
     </button>
+
+    <p class="rodape">Ainda não tem conta? <a routerLink="/cadastro">Cadastre a sua loja</a></p>
   </form>
 </div>

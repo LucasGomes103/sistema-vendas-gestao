@@ -249,6 +249,16 @@ teste (só muda o selo no painel). O endereço público vem do `RENDER_EXTERNAL_
   nunca envia mensagem de outra loja. `WhatsApp__AccessToken` no Render vale só para a loja original.
 - Na fase 2 isto vira o botão "Conectar WhatsApp" (Embedded Signup da Meta).
 
+## Cadastro de loja pelo site (SaaS fase 1)
+
+- `/painel/cadastro` (link "Cadastre a sua loja" na tela de entrar): nome da loja, endereço da vitrine (sugerido a
+  partir do nome e conferido na hora), tipo de loja, nome do dono, e-mail, senha e aceite dos termos.
+- A loja nasce **aguardando confirmação**. O dono recebe um e-mail com um link que vale 48 h; ao abrir, a loja fica
+  ativa e ele já entra no painel. Antes disso o login responde "Confirme o seu e-mail", com o botão de reenviar o link.
+- Endereço da vitrine único e com palavras reservadas (painel, api, admin, termos...); e-mail único entre todas as lojas.
+- A loja nova começa vazia: não vê nada das outras (coberto pelos testes de isolamento).
+- E-mail por SMTP (Gmail com senha de app, grátis). Sem SMTP configurado, o link vai para o log do Render.
+
 ## Equipe: quem atendeu e quem vendeu
 
 - **Responsável pela conversa:** quem assume ou responde primeiro fica com a conversa e segue o atendimento. Todos veem

@@ -70,6 +70,27 @@
   }
 }
 
+.rodape {
+  margin: 16px 0 0;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+
+  a {
+    color: var(--mat-sys-primary);
+    font-weight: 600;
+  }
+}
+
+.ok {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+}
+
 .erro {
   display: flex;
   align-items: center;
@@ -127,4 +148,12 @@
     place-items: start center;
     padding: 32px 20px;
   }
+}
+
+mat-hint.ruim {
+  color: var(--mat-sys-error);
+}
+
+mat-checkbox a {
+  color: var(--mat-sys-primary);
 }

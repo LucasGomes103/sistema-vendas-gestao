@@ -18,6 +18,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
     /// <summary>Chaves que assinam os cookies de login: no banco, um deploy novo não desloga ninguém.</summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
     public DbSet<CredencialLoja> CredenciaisLoja => Set<CredencialLoja>();
+    public DbSet<TokenEmail> TokensEmail => Set<TokenEmail>();
     public DbSet<Loja> Lojas => Set<Loja>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<ZonaEntrega> ZonasEntrega => Set<ZonaEntrega>();
@@ -62,6 +63,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
             e.HasIndex(x => x.PhoneNumberId).IsUnique().HasFilter("phone_number_id IS NOT NULL");
             e.Property(x => x.Nome).HasMaxLength(120);
             e.Property(x => x.Slug).HasMaxLength(60);
+            e.Property(x => x.Segmento).HasMaxLength(60);
+            e.Property(x => x.Status).HasMaxLength(30).HasDefaultValue(StatusLoja.Ativa).HasSentinel((StatusLoja)(-1));
+        });
+
+        modelBuilder.Entity<TokenEmail>(e =>
+        {
+            e.ToTable("token_email");
+            e.HasIndex(x => x.Hash).IsUnique();
+            e.HasIndex(x => x.UsuarioId);
+            e.HasOne<Usuario>().WithMany().HasForeignKey(x => x.UsuarioId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<DataProtectionKey>(e => e.ToTable("chave_protecao"));

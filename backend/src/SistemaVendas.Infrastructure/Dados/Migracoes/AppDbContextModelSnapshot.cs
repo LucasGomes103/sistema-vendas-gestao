@@ -1295,11 +1295,24 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasColumnType("text")
                         .HasColumnName("pix_nome");
 
+                    b.Property<string>("Segmento")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("segmento");
+
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(60)
                         .HasColumnType("character varying(60)")
                         .HasColumnName("slug");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("Ativa")
+                        .HasColumnName("status");
 
                     b.Property<string>("WhatsAppNumero")
                         .HasColumnType("text")
@@ -1318,6 +1331,47 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasDatabaseName("ix_loja_slug");
 
                     b.ToTable("loja", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Lojas.TokenEmail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<DateTimeOffset>("ExpiraEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expira_em");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("hash");
+
+                    b.Property<DateTimeOffset?>("UsadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("usado_em");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_token_email");
+
+                    b.HasIndex("Hash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_token_email_hash");
+
+                    b.HasIndex("UsuarioId")
+                        .HasDatabaseName("ix_token_email_usuario_id");
+
+                    b.ToTable("token_email", (string)null);
                 });
 
             modelBuilder.Entity("SistemaVendas.Domain.Lojas.Usuario", b =>
@@ -1339,6 +1393,10 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("email");
+
+                    b.Property<DateTimeOffset?>("EmailConfirmadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("email_confirmado_em");
 
                     b.Property<Guid>("LojaId")
                         .HasColumnType("uuid")
@@ -1953,6 +2011,16 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_credencial_loja_loja_loja_id");
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Lojas.TokenEmail", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Lojas.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_token_email_usuarios_usuario_id");
                 });
 
             modelBuilder.Entity("SistemaVendas.Domain.Lojas.Usuario", b =>
