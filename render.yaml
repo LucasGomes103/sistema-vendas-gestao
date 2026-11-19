@@ -36,6 +36,16 @@ services:
       # Chave que cifra as credenciais de cada loja (openssl rand -base64 32). Guarde uma cópia: perder = recadastrar
       - key: Plataforma__ChaveMestra
         sync: false
+      # E-mail de login de quem administra todas as lojas (Lojas da plataforma)
+      - key: Plataforma__Admins
+        sync: false
+      # E-mail do cadastro de loja (Gmail: smtp.gmail.com, 587, seu Gmail e uma senha de app)
+      - key: Email__Smtp__Host
+        sync: false
+      - key: Email__Smtp__Usuario
+        sync: false
+      - key: Email__Smtp__Senha
+        sync: false
       # Cartão pelo Mercado Pago (opcional): sem o token, só Pix. Ver docs/funcionalidades.md
       - key: MercadoPago__AccessToken
         sync: false

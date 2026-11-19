@@ -46,7 +46,9 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(AuthEndpoints.PoliticaEquipe, p => p.RequireRole(nameof(Papel.Dono), nameof(Papel.Vendedor)))
     .AddPolicy(AuthEndpoints.PoliticaDono, p => p.RequireRole(nameof(Papel.Dono)))
-    .AddPolicy(AuthEndpoints.PoliticaEntregas, p => p.RequireRole(nameof(Papel.Dono), nameof(Papel.Vendedor), nameof(Papel.Entregador)));
+    .AddPolicy(AuthEndpoints.PoliticaEntregas, p => p.RequireRole(nameof(Papel.Dono), nameof(Papel.Vendedor), nameof(Papel.Entregador)))
+    .AddPolicy(AdminEndpoints.PoliticaAdmin, p => p.RequireAuthenticatedUser().AddRequirements(new AdminPlataformaRequisito()));
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, AdminPlataformaHandler>();
 
 builder.Services.AddRateLimiter(o =>
 {
@@ -118,6 +120,7 @@ app.MapPaginasPublicasEndpoints();
 var v1 = app.MapGroup("/api/v1");
 v1.MapAuthEndpoints();
 v1.MapCadastroEndpoints();
+v1.MapAdminEndpoints();
 v1.MapUsuarioEndpoints();
 v1.MapCatalogoPublicoEndpoints();
 v1.MapEspecieEndpoints();

@@ -92,6 +92,12 @@ public class ProcessadorWebhook(AppDbContext db, ILojaAtual lojaAtual, ServicoFu
         var slug = prefixo is null ? null : m.PhoneNumberId[prefixo.Length..];
         var loja = await db.Lojas.FirstOrDefaultAsync(l => slug != null ? l.Slug == slug : l.PhoneNumberId == m.PhoneNumberId, ct)
             ?? throw new InvalidOperationException($"Nenhuma loja com o número {m.PhoneNumberId}.");
+        // Loja suspensa pelo administrador da plataforma: a mensagem não entra (o robô fica parado).
+        if (loja.Status == Domain.Lojas.StatusLoja.Suspensa)
+        {
+            logger.LogInformation("Mensagem para a loja suspensa {Slug} ignorada.", loja.Slug);
+            return;
+        }
         lojaAtual.Definir(loja.Id);
 
         if (await db.Mensagens.AnyAsync(x => x.Wamid == m.Wamid, ct))

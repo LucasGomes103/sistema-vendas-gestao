@@ -64,6 +64,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
             e.Property(x => x.Nome).HasMaxLength(120);
             e.Property(x => x.Slug).HasMaxLength(60);
             e.Property(x => x.Segmento).HasMaxLength(60);
+            e.Property(x => x.MotivoSuspensao).HasMaxLength(300);
             e.Property(x => x.Status).HasMaxLength(30).HasDefaultValue(StatusLoja.Ativa).HasSentinel((StatusLoja)(-1));
         });
 

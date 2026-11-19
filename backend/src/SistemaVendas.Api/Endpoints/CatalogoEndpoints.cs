@@ -16,7 +16,8 @@ public static class CatalogoEndpoints
         app.MapGet("/public/{slug}/catalogo", async (string slug, AppDbContext db, ILojaAtual lojaAtual, CancellationToken ct) =>
         {
             var loja = await db.Lojas.AsNoTracking().FirstOrDefaultAsync(x => x.Slug == slug, ct);
-            if (loja is null)
+            // Vitrine só de loja ativa: não confirmada ou suspensa não aparece.
+            if (loja is null || loja.Status != Domain.Lojas.StatusLoja.Ativa)
                 return Results.NotFound();
 
             lojaAtual.Definir(loja.Id);

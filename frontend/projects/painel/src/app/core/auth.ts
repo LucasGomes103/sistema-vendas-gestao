@@ -16,6 +16,8 @@ export class Auth {
   readonly usuario = this._usuario.asReadonly();
   readonly logado = computed(() => this._usuario() !== null);
   readonly ehDono = computed(() => this._usuario()?.papel === 'Dono');
+  /** Administrador da plataforma (todas as lojas). */
+  readonly ehAdmin = computed(() => this._usuario()?.adminPlataforma === true);
   /** Entregador só usa a agenda de entregas. */
   readonly ehEntregador = computed(() => this._usuario()?.papel === 'Entregador');
 
