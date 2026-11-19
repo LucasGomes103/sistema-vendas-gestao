@@ -77,6 +77,24 @@ public record RespostaAtendente(string Texto, bool ChamarVendedor, string? Motiv
     public SistemaVendas.Domain.Entregas.EnderecoEntrega? Endereco { get; init; }
 }
 
+/// <summary>
+/// A IA às vezes copia da conversa um link antigo da vitrine (ex.: o do Netlify, antes da troca de domínio).
+/// Qualquer endereço que termine no slug da loja vira o link atual.
+/// </summary>
+public static class LinkCatalogoAtual
+{
+    public static string Corrigir(string texto, string? link)
+    {
+        if (string.IsNullOrWhiteSpace(link) || string.IsNullOrEmpty(texto))
+            return texto;
+        var slug = link.TrimEnd('/').Split('/')[^1];
+        if (slug.Length == 0)
+            return texto;
+        var padrao = $@"https?://[^\s/]+(?:/[^\s]*)?/{System.Text.RegularExpressions.Regex.Escape(slug)}(?![\w-])/?";
+        return System.Text.RegularExpressions.Regex.Replace(texto, padrao, link, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    }
+}
+
 /// <summary>Primeira resposta a um cliente: já leva o link da vitrine, para ele ver o que tem e montar o pedido.</summary>
 public static class CatalogoNaPrimeiraResposta
 {

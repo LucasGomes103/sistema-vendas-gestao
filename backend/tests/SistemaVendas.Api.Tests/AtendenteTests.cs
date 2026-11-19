@@ -129,6 +129,19 @@ public class AtendenteTests
     }
 
     [Fact]
+    public void Link_antigo_da_vitrine_vira_o_atual()
+    {
+        const string atual = "https://sistema-vendas-gestao.pages.dev/auto-pecas-marrone";
+        var texto = LinkCatalogoAtual.Corrigir(
+            "Claro! Aqui está o link: https://subtle-faun-9fb444.netlify.app/auto-pecas-marrone", atual);
+        Assert.Equal($"Claro! Aqui está o link: {atual}", texto);
+        // Outros links e o próprio link atual ficam como estão.
+        Assert.Equal("Veja https://exemplo.com/outra", LinkCatalogoAtual.Corrigir("Veja https://exemplo.com/outra", atual));
+        Assert.Equal($"Veja {atual}.", LinkCatalogoAtual.Corrigir($"Veja {atual}.", atual));
+        Assert.Equal("https://x.app/auto-pecas-marrone-2", LinkCatalogoAtual.Corrigir("https://x.app/auto-pecas-marrone-2", atual));
+    }
+
+    [Fact]
     public void Link_do_catalogo_usa_o_emoji_do_tipo_de_loja()
     {
         var aquario = CatalogoNaPrimeiraResposta.Aplicar("Olá!", "https://loja.test/ecsfish", Vocabulario.Aquarismo.Emoji);
