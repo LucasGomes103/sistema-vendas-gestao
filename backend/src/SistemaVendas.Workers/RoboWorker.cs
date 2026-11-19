@@ -1,3 +1,4 @@
+using SistemaVendas.Domain.Lojas;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -72,7 +73,8 @@ public class RoboWorker(IServiceScopeFactory scopes, EstadoWorkers estado, ILogg
         var ferramentas = sp.GetRequiredService<IFerramentasAtendimento>();
 
         var conversa = await db.Conversas.FirstAsync(c => c.Id == conversaId, ct);
-        var nomeLoja = await db.Lojas.Where(l => l.Id == conversa.LojaId).Select(l => l.Nome).FirstAsync(ct);
+        var loja = await db.Lojas.Where(l => l.Id == conversa.LojaId).Select(l => new { l.Nome, l.Segmento }).FirstAsync(ct);
+        var nomeLoja = loja.Nome;
 
         var falas = (await db.Mensagens.AsNoTracking()
                 .Where(m => m.ConversaId == conversaId)
@@ -96,7 +98,7 @@ public class RoboWorker(IServiceScopeFactory scopes, EstadoWorkers estado, ILogg
         var primeiraResposta = !await db.Mensagens.AnyAsync(m => m.ConversaId == conversaId && m.Direcao == DirecaoMensagem.Saida, ct);
         var resposta = await atendente.ResponderAsync(nomeLoja, falas, ferramentas, ct);
         if (primeiraResposta && !resposta.ChamarVendedor)
-            resposta = resposta with { Texto = CatalogoNaPrimeiraResposta.Aplicar(resposta.Texto, await ferramentas.LinkCatalogoAsync(ct)) };
+            resposta = resposta with { Texto = CatalogoNaPrimeiraResposta.Aplicar(resposta.Texto, await ferramentas.LinkCatalogoAsync(ct), Vocabulario.Para(loja.Segmento).Emoji) };
         var agora = DateTimeOffset.UtcNow;
 
         // Vendedor pode ter assumido enquanto a IA pensava: nesse caso o robô não fala.

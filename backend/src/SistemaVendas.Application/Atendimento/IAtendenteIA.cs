@@ -80,11 +80,12 @@ public record RespostaAtendente(string Texto, bool ChamarVendedor, string? Motiv
 /// <summary>Primeira resposta a um cliente: já leva o link da vitrine, para ele ver o que tem e montar o pedido.</summary>
 public static class CatalogoNaPrimeiraResposta
 {
-    public static string Aplicar(string texto, string? link)
+    // O emoji vem do tipo de loja: peixe só no aquarismo, sacola nas outras.
+    public static string Aplicar(string texto, string? link, string emoji = "🛍️")
     {
         if (string.IsNullOrWhiteSpace(link) || texto.Contains(link, StringComparison.OrdinalIgnoreCase))
             return texto;
-        return $"{texto.TrimEnd()}\n\n🐠 Veja o que temos disponível agora e monte seu pedido: {link}";
+        return $"{texto.TrimEnd()}\n\n{emoji} Veja o que temos disponível agora e monte seu pedido: {link}";
     }
 }
 
