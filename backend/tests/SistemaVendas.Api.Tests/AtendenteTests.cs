@@ -1,3 +1,4 @@
+using SistemaVendas.Domain.Lojas;
 using SistemaVendas.Application.Atendimento;
 using SistemaVendas.Domain.Atendimento;
 using SistemaVendas.Domain.Entregas;
@@ -125,6 +126,16 @@ public class AtendenteTests
         var texto = CatalogoNaPrimeiraResposta.Aplicar("Olá! Qual peixe você procura?", "https://loja.test/ecsfish");
         Assert.StartsWith("Olá! Qual peixe você procura?", texto);
         Assert.EndsWith("https://loja.test/ecsfish", texto);
+    }
+
+    [Fact]
+    public void Link_do_catalogo_usa_o_emoji_do_tipo_de_loja()
+    {
+        var aquario = CatalogoNaPrimeiraResposta.Aplicar("Olá!", "https://loja.test/ecsfish", Vocabulario.Aquarismo.Emoji);
+        Assert.Contains(Vocabulario.Aquarismo.Emoji + " Veja", aquario);
+        var outra = CatalogoNaPrimeiraResposta.Aplicar("Olá!", "https://loja.test/pecas", Vocabulario.Geral("autopeças").Emoji);
+        Assert.DoesNotContain(Vocabulario.Aquarismo.Emoji, outra);
+        Assert.Contains(Vocabulario.Geral(null).Emoji + " Veja", outra);
     }
 
     [Fact]

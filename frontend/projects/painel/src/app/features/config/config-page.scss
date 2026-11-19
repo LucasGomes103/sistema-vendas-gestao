@@ -16,8 +16,9 @@ form {
 
 .bloco {
   display: grid;
-  gap: 4px;
-  padding: 16px 20px 8px;
+  // As dicas dos campos crescem quando o texto é longo (subscriptSizing="dynamic"), sem cobrir o campo de baixo.
+  gap: 14px;
+  padding: 16px 20px 16px;
 
   h2 {
     display: flex;
