@@ -97,8 +97,10 @@ public class RoboWorker(IServiceScopeFactory scopes, EstadoWorkers estado, ILogg
 
         var primeiraResposta = !await db.Mensagens.AnyAsync(m => m.ConversaId == conversaId && m.Direcao == DirecaoMensagem.Saida, ct);
         var resposta = await atendente.ResponderAsync(nomeLoja, falas, ferramentas, ct);
+        var linkCatalogo = await ferramentas.LinkCatalogoAsync(ct);
+        resposta = resposta with { Texto = LinkCatalogoAtual.Corrigir(resposta.Texto, linkCatalogo) };
         if (primeiraResposta && !resposta.ChamarVendedor)
-            resposta = resposta with { Texto = CatalogoNaPrimeiraResposta.Aplicar(resposta.Texto, await ferramentas.LinkCatalogoAsync(ct), Vocabulario.Para(loja.Segmento).Emoji) };
+            resposta = resposta with { Texto = CatalogoNaPrimeiraResposta.Aplicar(resposta.Texto, linkCatalogo, Vocabulario.Para(loja.Segmento).Emoji) };
         var agora = DateTimeOffset.UtcNow;
 
         // Vendedor pode ter assumido enquanto a IA pensava: nesse caso o robô não fala.
