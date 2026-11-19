@@ -1,8 +1,9 @@
 # Plano técnico: sistema multi-cliente com autoatendimento (SaaS)
 
-Avaliação feita em **18/11/2026** sobre o código da `main` (depois do PR #26). Objetivo: o cliente entra no site,
+Avaliação feita em **18/11/2026** sobre o código da `main` (depois do PR #26), **revisada em 19/11/2026** com as
+decisões do Lucas: SaaS é o caminho, qualquer segmento de varejo, e o que é da plataforma fica na conta do Lucas. Objetivo: o cliente entra no site,
 escolhe o plano, paga a assinatura e um assistente coleta os dados dele (catálogo, WhatsApp oficial, Mercado Pago,
-IA). Tudo fica no ar **sem o Lucas mexer no servidor**. Os planos e preços estão em [proposta.md](proposta.md).
+Pix). Tudo fica no ar **sem o Lucas mexer no servidor**. Os planos e preços estão em [proposta.md](proposta.md).
 
 Este documento é só o plano, para aprovação. Nada foi implementado.
 
@@ -16,8 +17,22 @@ O que limita o prazo não é o código: é a **aprovação da Meta** para o Luca
 tecnologia) do WhatsApp, que exige empresa verificada (CNPJ, domínio, site) e revisão do app com vídeos. Sem isso,
 o cadastro do número pelo próprio cliente (Embedded Signup) não funciona para clientes de fora.
 
-Esforço estimado: **10 a 12 semanas de desenvolvimento** em 6 fases, com o prazo de calendário de **3 a 4 meses**
+Esforço estimado: **11 a 13 semanas de desenvolvimento** em 6 fases (contando a generalização para outros
+segmentos), com o prazo de calendário de **3 a 4 meses**
 por causa das aprovações da Meta, que correm em paralelo.
+
+## Divisão de contas
+
+| Conta do Lucas (plataforma, um só para todas as lojas) | Conta de cada cliente (conectada no assistente) |
+| --- | --- |
+| Render (API e workers), Supabase (banco e backups), Cloudflare (painel e vitrine) | WhatsApp oficial: conta (WABA), número e cartão para as mensagens, pelo Embedded Signup |
+| Gemini (IA do robô), com uso medido por loja | Mercado Pago: conta da loja, por OAuth |
+| Serviço de mapas do frete | Chave Pix da loja |
+| App da Meta (Tech Provider) e app do Mercado Pago (OAuth) | Catálogo, horário, endereço, CNPJ/CPF |
+| Mercado Pago do Lucas para cobrar as mensalidades | Domínio próprio (opcional) |
+| E-mail transacional, monitor | |
+
+O custo da coluna da esquerda entra na mensalidade ([proposta.md](proposta.md)); o da direita o cliente paga direto.
 
 ## O que o código já tem
 
@@ -49,14 +64,14 @@ Site de vendas /planos ──► Cadastro (loja + dono) ──► Assinatura (Me
                                     │
                                     ▼
                          Assistente de configuração (painel)
-   1 Dados da loja ─ 2 Catálogo ─ 3 Pix ─ 4 WhatsApp (Embedded Signup) ─ 5 Mercado Pago (OAuth) ─ 6 IA ─ 7 Teste
+   1 Dados e tipo de loja ─ 2 Catálogo ─ 3 Pix ─ 4 WhatsApp (Embedded Signup) ─ 5 Mercado Pago (OAuth) ─ 6 Teste
                                     │
                                     ▼
             Tabela credencial_loja (criptografada): token Meta da loja, WABA, phone_number_id,
-            token/refresh do Mercado Pago da loja, chave própria de IA (opcional)
+            token/refresh do Mercado Pago da loja
 
-API: WhatsAppCliente, MercadoPagoCliente e GeminiAtendente passam a pegar a credencial DA LOJA
-     (hoje pegam das variáveis do servidor). Ficam no servidor só os segredos da plataforma:
+API: WhatsAppCliente e MercadoPagoCliente passam a pegar a credencial DA LOJA
+     (hoje pegam das variáveis do servidor). GeminiAtendente continua com a chave da plataforma. Ficam no servidor só os segredos da plataforma:
      app da Meta (AppSecret, VerifyToken), app do Mercado Pago (client_id/secret), chave de IA da plataforma,
      chave mestra de criptografia.
 ```
@@ -96,9 +111,18 @@ API: WhatsAppCliente, MercadoPagoCliente e GeminiAtendente passam a pegar a cred
 
 ### IA
 
-- Padrão: **IA da plataforma** (chave do Lucas, projeto pago do Gemini), incluída no plano. Cada chamada grava
-  tokens e loja numa tabela de uso, que alimenta o limite de conversas e o relatório de custo.
-- Opcional: a loja coloca a **própria chave** (Gemini); aí o uso de IA não conta no limite.
+- **IA da plataforma** (chave do Lucas, projeto pago do Gemini), incluída no plano; o cliente não configura nada.
+  Cada chamada grava tokens e loja numa tabela de uso, que alimenta o limite de conversas e o relatório de custo.
+- Proteções de custo: limite de conversas por plano (ao acabar, o robô passa para atendimento humano e o painel
+  oferece o pacote extra), teto de respostas por conversa, alerta de orçamento no Google Cloud.
+- Fixar o modelo por configuração (`IA__Gemini__Modelo`) para o preço não mudar sozinho.
+
+### Mapas do frete
+
+Hoje o frete usa BrasilAPI, Nominatim e OSRM públicos, com cache de CEP. O Nominatim público tem limite de uso e não
+serve para muitas lojas. Na plataforma, trocar por um serviço pago de geocodificação e rotas na conta do Lucas (a
+escolher, com custo estimado de R$ 5 a 20 por loja por mês com o cache), mantendo o cache compartilhado entre lojas:
+um CEP consultado por uma loja serve para todas.
 
 ## Fases
 
@@ -106,13 +130,13 @@ API: WhatsAppCliente, MercadoPagoCliente e GeminiAtendente passam a pegar a cred
 | --- | --- | --- |
 | **0. Pré-requisitos (Lucas, em paralelo)** | CNPJ do produto, domínio e site com política de privacidade e termos; Meta Business verificada; app da Meta e pedido de revisão como Tech Provider; app no Mercado Pago com OAuth; conta paga do Gemini; contador (enquadramento no Simples) | 2 a 6 semanas de espera, pouco trabalho |
 | **1. Fundação multi-cliente** | Tabela `credencial_loja` criptografada (chave mestra no Render); chaves dos cookies no banco (para de deslogar a cada deploy); clientes de WhatsApp, Mercado Pago e IA lendo a credencial da loja; cadastro público de loja + dono com confirmação de e-mail; slug único; testes automáticos de isolamento (uma loja nunca vê dado da outra, inclusive nos pontos com `IgnoreQueryFilters`); painel do administrador da plataforma (lista de lojas, status, uso, suspender) | 2 semanas |
-| **2. Integrações pelo cliente** | Botão "Conectar Mercado Pago" (OAuth e renovação automática do token); botão "Conectar WhatsApp" (Embedded Signup v4, registro do número, webhooks); IA da plataforma com medição por loja e chave própria opcional; tirar a ponte por QR do produto (fica só o simulador para teste) | 2 a 3 semanas |
+| **2. Integrações pelo cliente** | Botão "Conectar Mercado Pago" (OAuth e renovação automática do token); botão "Conectar WhatsApp" (Embedded Signup v4, registro do número, webhooks); IA da plataforma com medição e limite por loja; serviço de mapas pago com cache compartilhado; tirar a ponte por QR do produto (fica só o simulador para teste) | 2 a 3 semanas |
 | **3. Planos e cobrança** | Tabelas de plano e assinatura; assinatura recorrente no Mercado Pago da plataforma com webhook; teste grátis de 7 dias; limites por plano (conversas, usuários, recursos como cartão, entregas e domínio próprio); carência e bloqueio por atraso (robô para, painel só leitura); e-mails de cobrança e aviso de limite (Resend ou similar na camada grátis) | 2 semanas |
-| **4. Assistente de configuração** | Passo a passo no primeiro acesso, com barra de progresso e opção de pular e voltar: dados da loja, horário e endereço (para o frete); catálogo com importação por planilha e fotos; chave Pix; WhatsApp; Mercado Pago; IA; teste no simulador; publicar. Página pública de planos com botão de assinar | 2 semanas |
-| **5. Piloto e endurecimento** | 2 ou 3 lojas piloto com implantação assistida; monitor e alertas por loja (webhook parado, token vencido, assinatura recusada); limite de requisições por loja; backup e exportação dos dados da loja no cancelamento; revisão de segurança e LGPD | 2 semanas |
-| **6. Outros segmentos (opcional)** | Generalizar "espécie/tanque/peixe" para "produto/local/item" nos textos do painel e do robô, com o tipo de loja escolhido no cadastro; prompt do robô montado a partir do cadastro | 1 a 2 semanas |
+| **4. Qualquer segmento** | Tipo de loja escolhido no cadastro; trocar "espécie/tanque/peixe" por "produto/local/item" no painel, na vitrine e no banco (renomear com migração, sem perder dados da ECS Fish); campos opcionais por produto (tamanho, cor, variação); prompt e textos do robô montados a partir do tipo de loja e do cadastro; teste do robô com catálogos de 3 segmentos diferentes | 1 a 2 semanas |
+| **5. Assistente de configuração** | Passo a passo no primeiro acesso, com barra de progresso e opção de pular e voltar: dados e tipo de loja, horário e endereço (para o frete); catálogo com importação por planilha e fotos; chave Pix; WhatsApp; Mercado Pago; teste no simulador; publicar. Página pública de planos com botão de assinar | 2 semanas |
+| **6. Piloto e endurecimento** | 2 ou 3 lojas piloto de segmentos diferentes com implantação assistida; monitor e alertas por loja (webhook parado, token vencido, assinatura recusada, limite de IA); limite de requisições por loja; backup e exportação dos dados da loja no cancelamento; revisão de segurança e LGPD | 2 semanas |
 
-Total das fases 1 a 5: **10 a 11 semanas**; com a 6, até 13. As fases 1 e 2 podem começar antes da aprovação da
+Total das fases 1 a 6: **11 a 13 semanas**. As fases 1 e 2 podem começar antes da aprovação da
 Meta: em modo de desenvolvimento, o app da Meta funciona com as contas do próprio Lucas.
 
 ## Infraestrutura com várias lojas
@@ -122,11 +146,11 @@ Meta: em modo de desenvolvimento, o app da Meta funciona com as contas do própr
 | API (Render) | Starter US$ 7 | Standard US$ 25 (2 GB), depois 2 instâncias |
 | Banco (Supabase) | Pro US$ 25 | Pro + instância Small/Medium |
 | Front (Cloudflare) | Workers Paid US$ 5 (o kanban de várias lojas estoura a cota grátis) | igual |
-| Mapas do frete | BrasilAPI/Nominatim/OSRM públicos com cache | Nominatim público não aguenta volume: serviço pago de mapas ou servidor próprio |
+| Mapas do frete | serviço pago com cache (≈ R$ 50 a 100 no total) | ≈ R$ 5 a 20 por loja |
 | E-mail transacional | camada grátis | plano básico |
-| Total aproximado | **≈ R$ 250 a 300/mês** | **≈ R$ 450 a 700/mês** |
+| Total aproximado (sem IA) | **≈ R$ 300 a 400/mês** | **≈ R$ 450 a 700/mês + mapas** |
 
-Custo que cresce por loja: IA (≈ R$ 0,05 por conversa) e espaço de fotos no banco. WhatsApp e Mercado Pago são
+Custo que cresce por loja: IA (≈ R$ 0,05 por conversa), mapas e espaço de fotos no banco. WhatsApp e Mercado Pago são
 pagos pela própria loja.
 
 ## Riscos
