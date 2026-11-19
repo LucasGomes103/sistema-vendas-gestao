@@ -71,6 +71,8 @@ public class Pedido : EntidadeDaLoja
     public string? MotivoCancelamento { get; set; }
 
     public Guid? CriadoPor { get; set; }
+    /// <summary>Vendedor que fica com a venda: o responsável pela conversa quando o pedido foi feito (ou quem o criou).</summary>
+    public Guid? VendedorId { get; set; }
     public string? Observacao { get; set; }
 
     public List<ItemDoPedido> Itens { get; set; } = [];
@@ -94,7 +96,8 @@ public static partial class RegrasPedido
     private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
 
     /// <summary>Monta o pedido a partir da reserva ativa, com os itens somados por espécie.</summary>
-    public static Pedido CriarDaReserva(Reserva reserva, Guid clienteId, int numero, DadosEntrega entrega, Guid? usuarioId)
+    public static Pedido CriarDaReserva(Reserva reserva, Guid clienteId, int numero, DadosEntrega entrega, Guid? usuarioId,
+        Guid? vendedorId = null)
     {
         if (reserva.Status != StatusReserva.Ativa)
             throw new RegraException("A reserva já foi encerrada; separe o peixe de novo para montar o pedido.");
@@ -121,6 +124,7 @@ public static partial class RegrasPedido
             Frete = entrega.Tipo == TipoEntrega.Entrega ? entrega.Frete : 0,
             ExpiraEm = reserva.ExpiraEm,
             CriadoPor = usuarioId,
+            VendedorId = vendedorId ?? usuarioId,
             Observacao = string.IsNullOrWhiteSpace(entrega.Observacao) ? null : entrega.Observacao.Trim()
         };
         pedido.Itens = reserva.Itens

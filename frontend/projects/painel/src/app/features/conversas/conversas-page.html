@@ -42,8 +42,14 @@
       <mat-progress-bar mode="indeterminate" />
     }
 
+    <div class="filtros" role="group" aria-label="Filtrar conversas">
+      <button [class.ativo]="filtro() === 'todas'" (click)="filtro.set('todas')">Todas</button>
+      <button [class.ativo]="filtro() === 'minhas'" (click)="filtro.set('minhas')">Minhas@if (minhas() > 0) { · {{ minhas() }}}</button>
+      <button [class.ativo]="filtro() === 'livres'" (click)="filtro.set('livres')">Sem responsável</button>
+    </div>
+
     <ul>
-      @for (c of conversas.value() ?? []; track c.id) {
+      @for (c of lista(); track c.id) {
         <li>
           <a [routerLink]="['/conversas', c.id]" [class.ativa]="c.id === id()" [class.quente]="c.chamouVendedor">
             <span class="avatar">{{ iniciais(c.cliente) }}</span>
@@ -65,8 +71,15 @@
                   <span class="badge">{{ c.naoLidas }}</span>
                 }
               </div>
-              @if (c.chamouVendedor) {
+              @if (c.chamouVendedor && !c.responsavelId) {
                 <span class="aviso-quente"><mat-icon>local_fire_department</mat-icon>Quente · chamar já</span>
+              } @else if (c.chamouVendedor) {
+                <span class="aviso-quente"><mat-icon>local_fire_department</mat-icon>Quente</span>
+              }
+              @if (c.responsavelId) {
+                <span class="responsavel" [class.meu]="c.responsavelId === auth.usuario()?.id">
+                  <mat-icon>person</mat-icon>Com {{ nomeResponsavel(c) }}
+                </span>
               }
             </div>
           </a>
@@ -75,7 +88,7 @@
         @if (conversas.hasValue()) {
           <li class="sv-vazio">
             <mat-icon>forum</mat-icon>
-            <p>Nenhuma conversa ainda.</p>
+            <p>{{ filtro() === 'minhas' ? 'Nenhuma conversa com você agora.' : filtro() === 'livres' ? 'Todas as conversas têm responsável.' : 'Nenhuma conversa ainda.' }}</p>
           </li>
         }
       }
@@ -104,6 +117,10 @@
         @if (auth.ehDono()) {
           <button mat-icon-button [matMenuTriggerFor]="menuConversa" aria-label="Mais opções"><mat-icon>more_vert</mat-icon></button>
           <mat-menu #menuConversa="matMenu" xPosition="before">
+            <button mat-menu-item [matMenuTriggerFor]="menuTransferir">
+              <mat-icon>swap_horiz</mat-icon>
+              <span>Transferir atendimento</span>
+            </button>
             <button mat-menu-item (click)="excluir(c)">
               <mat-icon>{{ c.simulada ? 'delete' : 'archive' }}</mat-icon>
               <span>{{ c.simulada ? 'Excluir conversa' : 'Arquivar conversa' }}</span>
@@ -115,12 +132,47 @@
               </button>
             }
           </mat-menu>
+          <mat-menu #menuTransferir="matMenu">
+            @for (a of atendentes.value() ?? []; track a.id) {
+              <button mat-menu-item [disabled]="a.id === c.responsavelId" (click)="transferir(c, a)">
+                <mat-icon>{{ a.id === c.responsavelId ? 'check' : 'person' }}</mat-icon>
+                <span>{{ a.nome }}{{ a.id === auth.usuario()?.id ? ' (você)' : '' }}</span>
+              </button>
+            }
+            @if (c.responsavelId) {
+              <button mat-menu-item (click)="transferir(c, null)">
+                <mat-icon>person_off</mat-icon>
+                <span>Deixar sem responsável</span>
+              </button>
+            }
+          </mat-menu>
         }
       </header>
 
       <!-- Quem está atendendo: o robô responde até o vendedor assumir. -->
-      <div class="atendimento" [class.quente]="c.chamouVendedor" [class.vendedor]="c.roboPausado && !c.chamouVendedor">
-        @if (c.chamouVendedor) {
+      <div class="atendimento" [class.quente]="c.chamouVendedor && !c.responsavelId" [class.vendedor]="c.roboPausado && (!c.chamouVendedor || !!c.responsavelId)">
+        @if (comOutro()) {
+          <mat-icon>visibility</mat-icon>
+          <span>
+            <strong>Conversa com {{ c.responsavel }}</strong>@if (c.responsavelDesde) { desde {{ c.responsavelDesde | date: 'dd/MM HH:mm' }}}.
+            Você acompanha, mas só {{ c.responsavel }} responde. Para assumir, peça ao dono para transferir.
+          </span>
+        } @else if (c.responsavelId && c.roboPausado) {
+          <mat-icon>support_agent</mat-icon>
+          <span>
+            @if (c.responsavelId === auth.usuario()?.id) {
+              <strong>Você está atendendo.</strong>
+            } @else {
+              <strong>{{ c.responsavel }} está atendendo.</strong> Você pode responder como dono; a conversa continua com {{ c.responsavel }}.
+            }
+            @if (c.chamouVendedor) { {{ c.motivoVendedor }}. }
+            O robô está pausado.
+          </span>
+          @if (auth.ehDono() && c.responsavelId !== auth.usuario()?.id) {
+            <button mat-stroked-button (click)="assumir(c)">Assumir eu</button>
+          }
+          <button mat-stroked-button (click)="devolver(c)">Devolver ao robô</button>
+        } @else if (c.chamouVendedor) {
           <mat-icon>local_fire_department</mat-icon>
           @if (c.roboPausado) {
             <span><strong>Cliente quente:</strong> {{ c.motivoVendedor }}. O robô parou de responder.</span>
@@ -147,6 +199,8 @@
           <div class="bolha" [class.saida]="m.direcao === 'Saida'" [class.robo]="m.autor === 'Robo'">
             @if (m.autor === 'Robo') {
               <span class="autor"><mat-icon>smart_toy</mat-icon>Robô</span>
+            } @else if (m.autor === 'Vendedor' && m.usuario) {
+              <span class="autor"><mat-icon>person</mat-icon>{{ m.usuarioId === auth.usuario()?.id ? 'Você' : m.usuario }}</span>
             }
             <p>{{ m.conteudo }}</p>
             <span class="meta">
@@ -172,13 +226,13 @@
       <footer>
         <textarea
           rows="1"
-          placeholder="{{ c.dentroDaJanela ? 'Escreva uma mensagem' : 'Janela de 24 h fechada' }}"
-          [disabled]="!c.dentroDaJanela"
+          placeholder="{{ comOutro() ? 'Conversa com ' + c.responsavel : c.dentroDaJanela ? 'Escreva uma mensagem' : 'Janela de 24 h fechada' }}"
+          [disabled]="!c.dentroDaJanela || comOutro()"
           [value]="texto()"
           (input)="texto.set($any($event.target).value)"
           (keydown)="teclaEnviar($event)"
         ></textarea>
-        <button mat-fab class="enviar" aria-label="Enviar" [disabled]="!texto().trim() || enviando() || !c.dentroDaJanela" (click)="enviar()">
+        <button mat-fab class="enviar" aria-label="Enviar" [disabled]="!texto().trim() || enviando() || !c.dentroDaJanela || comOutro()" (click)="enviar()">
           <mat-icon>send</mat-icon>
         </button>
       </footer>

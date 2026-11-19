@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { API, mensagemDeErro } from '../../core/api';
 
@@ -73,6 +74,22 @@ interface Relatorio {
     diferencaGaveta: number;
   };
   entregas: { entregues: number; retiradas: number; diasAteEntregar: number | null; emAberto: number; atrasadas: number };
+  /** Desempenho de cada pessoa da equipe no período (sempre a loja toda). Id nulo = vendas sem vendedor. */
+  vendedores: Vendedor[];
+  vendedorId: string | null;
+  vendedor: string | null;
+}
+
+interface Vendedor {
+  id: string | null;
+  nome: string;
+  conversasAtendidas: number;
+  mensagens: number;
+  vendas: number;
+  receita: number;
+  ticketMedio: number;
+  cancelados: number;
+  emAtendimento: number;
 }
 
 type Atalho = '7' | '30' | 'mes' | 'mesAnterior' | '90' | 'personalizado';
@@ -103,6 +120,7 @@ const RELATORIOS = [
   { id: 'estoque', nome: 'Estoque por tanque (giro)', icone: 'water' },
   { id: 'fornecedores', nome: 'Mortalidade por fornecedor', icone: 'local_shipping' },
   { id: 'caixa', nome: 'Lançamentos do caixa', icone: 'point_of_sale' },
+  { id: 'vendedores', nome: 'Desempenho por vendedor', icone: 'badge' },
 ];
 
 function iso(d: Date): string {
@@ -126,6 +144,7 @@ function iso(d: Date): string {
     MatInputModule,
     MatMenuModule,
     MatProgressBarModule,
+    MatSelectModule,
     MatTooltipModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -141,8 +160,13 @@ export class MetricasPage {
   protected readonly de = signal(iso(new Date(Date.now() - 29 * 864e5)));
   protected readonly ate = signal(iso(new Date()));
   protected readonly simuladas = signal(false);
+  /** Vazio = loja toda. */
+  protected readonly vendedorId = signal('');
 
-  private readonly consulta = computed(() => `de=${this.de()}&ate=${this.ate()}${this.simuladas() ? '&simuladas=true' : ''}`);
+  private readonly consulta = computed(
+    () =>
+      `de=${this.de()}&ate=${this.ate()}${this.simuladas() ? '&simuladas=true' : ''}${this.vendedorId() ? '&vendedorId=' + this.vendedorId() : ''}`,
+  );
   protected readonly dados = httpResource<Relatorio>(() => (this.de() && this.ate() ? `${API}/metricas?${this.consulta()}` : undefined));
   protected readonly erro = computed(() => (this.dados.error() ? mensagemDeErro(this.dados.error(), 'Não foi possível carregar as métricas.') : null));
 
@@ -214,5 +238,11 @@ export class MetricasPage {
   protected readonly especiesComMorte = computed(() =>
     (this.dados.value()?.especies ?? []).filter((e) => e.mortes > 0).sort((a, b) => b.mortes - a.mortes),
   );
+  /** Quem aparece no filtro: a equipe que vem no quadro por vendedor. */
+  protected readonly opcoesVendedor = computed(() =>
+    (this.dados.value()?.vendedores ?? []).filter((v): v is Vendedor & { id: string } => v.id !== null).sort((a, b) => a.nome.localeCompare(b.nome)),
+  );
+  protected readonly maiorReceitaVendedor = computed(() => Math.max(0, ...(this.dados.value()?.vendedores ?? []).map((v) => v.receita)));
+
   protected readonly algumaSemCusto = computed(() => this.especiesVendidas().some((e) => !e.custoCompleto));
 }

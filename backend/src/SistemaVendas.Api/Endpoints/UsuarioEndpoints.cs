@@ -63,6 +63,8 @@ public static class UsuarioEndpoints
             usuario.Email = email;
             usuario.Papel = entrada.Papel;
             usuario.Ativo = entrada.Ativo;
+            if (!usuario.Ativo || usuario.Papel == Papel.Entregador)
+                await LiberarConversasAsync(db, usuario.Id, ct);
             await db.SaveChangesAsync(ct);
 
             // Editou a si mesmo: o cookie passa a mostrar o nome e o e-mail novos.
@@ -107,9 +109,18 @@ public static class UsuarioEndpoints
                 return Results.Problem(erro, statusCode: StatusCodes.Status422UnprocessableEntity);
 
             db.Usuarios.Remove(usuario);
+            await LiberarConversasAsync(db, usuario.Id, ct);
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
         });
+    }
+
+    /// <summary>Quem saiu da equipe (bloqueado, excluído ou virou entregador) deixa as conversas sem responsável, para outro pegar.</summary>
+    private static async Task LiberarConversasAsync(AppDbContext db, Guid usuarioId, CancellationToken ct)
+    {
+        var agora = DateTimeOffset.UtcNow;
+        foreach (var c in await db.Conversas.Where(c => c.ResponsavelId == usuarioId).ToListAsync(ct))
+            c.Transferir(null, agora);
     }
 
     private static Guid IdDe(ClaimsPrincipal user) => Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);

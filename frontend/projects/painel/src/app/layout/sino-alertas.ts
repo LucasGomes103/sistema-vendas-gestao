@@ -33,7 +33,7 @@ import { AlertasQuentes } from '../core/alertas';
           <mat-icon [class.urgente]="a.nivel === 2">{{ a.nivel === 2 ? 'priority_high' : 'local_fire_department' }}</mat-icon>
           <span class="item">
             <strong>{{ a.cliente }}</strong>
-            <small>há {{ tempo(alertas.minutos(a)) }}{{ a.motivo ? ' · ' + a.motivo : '' }}</small>
+            <small>há {{ tempo(alertas.minutos(a)) }}{{ a.motivo ? ' · ' + a.motivo : '' }}{{ a.responsavel ? ' · com ' + a.responsavel : '' }}</small>
           </span>
         </button>
       } @empty {

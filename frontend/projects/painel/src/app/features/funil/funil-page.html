@@ -51,9 +51,15 @@
               @if (card.simulada) {
                 <mat-icon class="mini" matTooltip="Conversa do simulador">science</mat-icon>
               }
-              <mat-icon class="mini" [matTooltip]="card.roboPausado ? 'Vendedor atendendo' : 'Robô atendendo'">
-                {{ card.roboPausado ? 'support_agent' : 'smart_toy' }}
-              </mat-icon>
+              @if (card.responsavel) {
+                <span class="responsavel" [matTooltip]="'Conversa com ' + card.responsavel">
+                  <mat-icon class="mini">support_agent</mat-icon>{{ card.responsavel }}
+                </span>
+              } @else {
+                <mat-icon class="mini" [matTooltip]="card.roboPausado ? 'Vendedor atendendo' : 'Robô atendendo'">
+                  {{ card.roboPausado ? 'support_agent' : 'smart_toy' }}
+                </mat-icon>
+              }
             </div>
           </article>
         } @empty {

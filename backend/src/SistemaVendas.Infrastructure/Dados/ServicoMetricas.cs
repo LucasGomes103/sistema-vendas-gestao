@@ -39,16 +39,27 @@ public record CaixaMetrica(decimal Entradas, decimal Saidas, decimal Saldo, List
 
 public record EntregasMetrica(int Entregues, int Retiradas, decimal? DiasAteEntregar, int EmAberto, int Atrasadas);
 
+/// <summary>
+/// Desempenho de cada pessoa da equipe no período: conversas em que respondeu, mensagens enviadas, vendas pagas que
+/// ficaram com ela (o vendedor do pedido) e as conversas abertas que estão com ela agora. Id nulo = vendas sem vendedor.
+/// </summary>
+public record VendedorMetrica(Guid? Id, string Nome, int ConversasAtendidas, int Mensagens, int Vendas, decimal Receita,
+    decimal TicketMedio, int Cancelados, int EmAtendimento);
+
+/// <summary>Quem aparece no filtro por vendedor (inclui quem já saiu, se tem histórico no período).</summary>
+public record OpcaoVendedor(Guid Id, string Nome);
+
 public record RelatorioMetricas(
     DateOnly De, DateOnly Ate, DateOnly Hoje, string Agrupamento, bool IncluiSimuladas,
     ResumoMetricas Atual, ResumoMetricas Anterior, DateOnly AnteriorDe, DateOnly AnteriorAte,
     List<PontoVendas> Vendas, List<EtapaFunilMetrica> Funil, List<MotivoPerdaMetrica> MotivosPerda,
     List<OrigemMetrica> Origens, List<FormaMetrica> Formas, List<EspecieMetrica> Especies,
-    List<TanqueMetrica> Tanques, List<FornecedorMetrica> Fornecedores, CaixaMetrica Caixa, EntregasMetrica Entregas);
+    List<TanqueMetrica> Tanques, List<FornecedorMetrica> Fornecedores, CaixaMetrica Caixa, EntregasMetrica Entregas,
+    List<VendedorMetrica> Vendedores, Guid? VendedorId = null, string? Vendedor = null);
 
 /// <summary>Pedido pago no período, já com a origem e o dia do pagamento no fuso da loja (para relatório e CSV).</summary>
 public record PedidoPagoLinha(int Numero, DateOnly Dia, DateTimeOffset PagoEm, string Cliente, string Telefone, string Itens, decimal Subtotal,
-    decimal Frete, decimal Total, string Forma, string Tipo, string Origem);
+    decimal Frete, decimal Total, string Forma, string Tipo, string Origem, Guid? VendedorId = null, string? Vendedor = null);
 
 /// <summary>
 /// Métricas e relatórios da loja atual. No volume atual tudo é somado em memória, como o estoque;
@@ -63,7 +74,12 @@ public class ServicoMetricas(AppDbContext db)
         return (Periodo.Criar(de, ate, hoje), hoje, fuso);
     }
 
-    public async Task<RelatorioMetricas> GerarAsync(DateOnly? de, DateOnly? ate, Agrupamento? agrupar, bool simuladas, CancellationToken ct)
+    /// <summary>
+    /// Com vendedorId, vendas, funil e perdas mostram só o que é dele (pedidos em que ficou como vendedor e conversas em
+    /// que respondeu ou é o responsável). Estoque, fornecedores, caixa e entregas são da loja toda.
+    /// </summary>
+    public async Task<RelatorioMetricas> GerarAsync(DateOnly? de, DateOnly? ate, Agrupamento? agrupar, bool simuladas, CancellationToken ct,
+        Guid? vendedorId = null)
     {
         var (p, hoje, fuso) = await PeriodoAsync(de, ate, ct);
         var anterior = p.Anterior();
@@ -77,13 +93,18 @@ public class ServicoMetricas(AppDbContext db)
             .Where(c => c.CriadoEm >= inicioAnt && c.CriadoEm < fim && (simuladas || !c.Simulada))
             .Select(c => new { c.Id, c.CriadoEm })
             .ToListAsync(ct);
+        HashSet<Guid>? doVendedor = vendedorId is { } v ? await ConversasDoVendedorAsync(v, ct) : null;
+        if (doVendedor is not null)
+            conversas = conversas.Where(c => doVendedor.Contains(c.Id)).ToList();
         var conversasAtual = conversas.Where(c => c.CriadoEm >= inicio).Select(c => c.Id).ToList();
         var conversasAnterior = conversas.Count - conversasAtual.Count;
 
-        var pagosAtual = await PedidosPagosAsync(p, fuso, simuladasIds, ct);
-        var pagosAnterior = await PedidosPagosAsync(anterior, fuso, simuladasIds, ct);
-        var canceladosAtual = await CanceladosAsync(inicio, fim, simuladasIds, ct);
-        var canceladosAnterior = await CanceladosAsync(inicioAnt, inicio, simuladasIds, ct);
+        var pagosAtual = await PedidosPagosAsync(p, fuso, simuladasIds, ct, vendedorId);
+        var pagosAnterior = await PedidosPagosAsync(anterior, fuso, simuladasIds, ct, vendedorId);
+        var canceladosAtual = await CanceladosAsync(inicio, fim, simuladasIds, ct, vendedorId);
+        var canceladosAnterior = await CanceladosAsync(inicioAnt, inicio, simuladasIds, ct, vendedorId);
+        var equipe = await VendedoresAsync(inicio, fim, simuladas, simuladasIds, ct);
+        var motivosPerda = await MotivosPerdaAsync(inicio, fim, simuladasIds, ct, doVendedor);
 
         var vendas = RegrasMetricas.Grupos(p, agrupamento)
             .GroupJoin(pagosAtual.Linhas, g => g, l => RegrasMetricas.InicioDoGrupo(l.Dia, agrupamento),
@@ -97,7 +118,7 @@ public class ServicoMetricas(AppDbContext db)
             anterior.De, anterior.Ate,
             vendas,
             await FunilAsync(conversasAtual, ct),
-            await MotivosPerdaAsync(inicio, fim, simuladasIds, ct),
+            motivosPerda,
             pagosAtual.Linhas.GroupBy(l => l.Origem)
                 .Select(g => new OrigemMetrica(g.Key, g.Count(), g.Sum(l => l.Total))).OrderByDescending(o => o.Receita).ToList(),
             pagosAtual.Linhas.GroupBy(l => l.Forma)
@@ -106,7 +127,67 @@ public class ServicoMetricas(AppDbContext db)
             await TanquesAsync(inicio, fim, ct),
             await FornecedoresAsync(inicio, fim, ct),
             await CaixaAsync(p, ct),
-            await EntregasAsync(inicio, fim, hoje, ct));
+            await EntregasAsync(inicio, fim, hoje, ct),
+            equipe,
+            vendedorId,
+            vendedorId is { } id ? equipe.FirstOrDefault(e => e.Id == id)?.Nome ?? await NomeAsync(id, ct) : null);
+    }
+
+    private async Task<string> NomeAsync(Guid id, CancellationToken ct) =>
+        await db.Usuarios.AsNoTracking().Where(u => u.Id == id).Select(u => u.Nome).FirstOrDefaultAsync(ct) ?? "Usuário removido";
+
+    /// <summary>Conversas em que o vendedor respondeu alguma vez ou que estão com ele agora.</summary>
+    private async Task<HashSet<Guid>> ConversasDoVendedorAsync(Guid vendedorId, CancellationToken ct)
+    {
+        var respondeu = await db.Mensagens.AsNoTracking()
+            .Where(m => m.UsuarioId == vendedorId && m.Autor == AutorMensagem.Vendedor)
+            .Select(m => m.ConversaId).Distinct().ToListAsync(ct);
+        var responsavel = await db.Conversas.AsNoTracking().Where(c => c.ResponsavelId == vendedorId).Select(c => c.Id).ToListAsync(ct);
+        return respondeu.Concat(responsavel).ToHashSet();
+    }
+
+    /// <summary>Quadro por vendedor no período (sempre a loja toda, para comparar).</summary>
+    private async Task<List<VendedorMetrica>> VendedoresAsync(DateTimeOffset inicio, DateTimeOffset fim, bool simuladas, List<Guid> simuladasIds,
+        CancellationToken ct)
+    {
+        var mensagens = await db.Mensagens.AsNoTracking()
+            .Where(m => m.Autor == AutorMensagem.Vendedor && m.UsuarioId != null && m.CriadoEm >= inicio && m.CriadoEm < fim)
+            .Where(m => !simuladasIds.Contains(m.ConversaId))
+            .Select(m => new { UsuarioId = m.UsuarioId!.Value, m.ConversaId })
+            .ToListAsync(ct);
+        var pedidos = await db.Pedidos.AsNoTracking()
+            .Where(x => (x.Status == StatusPedido.Pago && x.PagoEm >= inicio && x.PagoEm < fim)
+                        || (x.Status == StatusPedido.Cancelado && x.CanceladoEm >= inicio && x.CanceladoEm < fim))
+            .Where(x => x.ConversaId == null || !simuladasIds.Contains(x.ConversaId.Value))
+            .Select(x => new { x.VendedorId, x.Status, x.Total })
+            .ToListAsync(ct);
+        var abertas = await db.Conversas.AsNoTracking()
+            .Where(c => c.Aberta && c.ResponsavelId != null && (simuladas || !c.Simulada))
+            .Select(c => c.ResponsavelId!.Value)
+            .ToListAsync(ct);
+        var ativos = await db.Usuarios.AsNoTracking()
+            .Where(u => u.Ativo && (u.Papel == Domain.Lojas.Papel.Dono || u.Papel == Domain.Lojas.Papel.Vendedor))
+            .Select(u => u.Id).ToListAsync(ct);
+
+        var ids = ativos.Concat(mensagens.Select(m => m.UsuarioId)).Concat(pedidos.Select(x => x.VendedorId).OfType<Guid>())
+            .Concat(abertas).Distinct().ToList();
+        var nomes = await db.Usuarios.AsNoTracking().Where(u => ids.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Nome, ct);
+
+        VendedorMetrica Linha(Guid? id, string nome)
+        {
+            var pagos = pedidos.Where(x => x.VendedorId == id && x.Status == StatusPedido.Pago).ToList();
+            var receita = pagos.Sum(x => x.Total);
+            return new VendedorMetrica(id, nome,
+                mensagens.Where(m => m.UsuarioId == id).Select(m => m.ConversaId).Distinct().Count(),
+                mensagens.Count(m => m.UsuarioId == id), pagos.Count, receita, RegrasMetricas.Media(receita, pagos.Count),
+                pedidos.Count(x => x.VendedorId == id && x.Status == StatusPedido.Cancelado),
+                id is { } u ? abertas.Count(a => a == u) : 0);
+        }
+
+        var linhas = ids.Select(id => Linha(id, nomes.GetValueOrDefault(id) ?? "Usuário removido")).ToList();
+        if (pedidos.Any(x => x.VendedorId is null))
+            linhas.Add(Linha(null, "Sem vendedor"));
+        return linhas.OrderByDescending(l => l.Receita).ThenByDescending(l => l.ConversasAtendidas).ThenBy(l => l.Nome).ToList();
     }
 
     private static ResumoMetricas Resumo(int conversas, PedidosPagos pagos, (int Quantidade, decimal Valor) cancelados)
@@ -122,14 +203,18 @@ public class ServicoMetricas(AppDbContext db)
     private sealed record PedidosPagos(List<PedidoPagoLinha> Linhas, List<Guid> Ids, List<Guid> Origens, int Itens);
 
     /// <summary>Pedidos pagos no período (dia do pagamento no fuso da loja), com a origem de cada venda.</summary>
-    private async Task<PedidosPagos> PedidosPagosAsync(Periodo p, TimeZoneInfo fuso, List<Guid> simuladasIds, CancellationToken ct)
+    private async Task<PedidosPagos> PedidosPagosAsync(Periodo p, TimeZoneInfo fuso, List<Guid> simuladasIds, CancellationToken ct,
+        Guid? vendedorId = null)
     {
         var (inicio, fim) = p.EmUtc(fuso);
         var pedidos = await db.Pedidos.AsNoTracking().Include(x => x.Itens)
             .Where(x => x.Status == StatusPedido.Pago && x.PagoEm >= inicio && x.PagoEm < fim)
             .Where(x => x.ConversaId == null || !simuladasIds.Contains(x.ConversaId.Value))
+            .Where(x => vendedorId == null || x.VendedorId == vendedorId)
             .OrderBy(x => x.PagoEm)
             .ToListAsync(ct);
+        var vendedorIds = pedidos.Select(x => x.VendedorId).OfType<Guid>().Distinct().ToList();
+        var vendedores = await db.Usuarios.AsNoTracking().Where(u => vendedorIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Nome, ct);
 
         var clienteIds = pedidos.Select(x => x.ClienteId).Distinct().ToList();
         var clientes = await db.Clientes.AsNoTracking().Where(c => clienteIds.Contains(c.Id))
@@ -153,7 +238,8 @@ public class ServicoMetricas(AppDbContext db)
                 x.ConversaId is { } c2 ? followups.GetValueOrDefault(c2) : 0);
             return new PedidoPagoLinha(
                 x.Numero, RegrasCaixa.Hoje(x.PagoEm!.Value, fuso), x.PagoEm.Value, nome ?? "", telefone ?? "", RegrasPedido.Resumo(x),
-                x.Subtotal, x.Frete, x.Total, RotuloForma(x.FormaPagamento), x.TipoEntrega == TipoEntrega.Entrega ? "Entrega" : "Retirada", origem);
+                x.Subtotal, x.Frete, x.Total, RotuloForma(x.FormaPagamento), x.TipoEntrega == TipoEntrega.Entrega ? "Entrega" : "Retirada", origem,
+                x.VendedorId, x.VendedorId is { } v ? vendedores.GetValueOrDefault(v) ?? "Usuário removido" : null);
         }).ToList();
 
         return new PedidosPagos(linhas, pedidos.Select(x => x.Id).ToList(),
@@ -161,17 +247,20 @@ public class ServicoMetricas(AppDbContext db)
     }
 
     /// <summary>Lista para o CSV de pedidos.</summary>
-    public async Task<List<PedidoPagoLinha>> PedidosPagosAsync(Periodo p, TimeZoneInfo fuso, bool simuladas, CancellationToken ct)
+    public async Task<List<PedidoPagoLinha>> PedidosPagosAsync(Periodo p, TimeZoneInfo fuso, bool simuladas, CancellationToken ct,
+        Guid? vendedorId = null)
     {
         var simuladasIds = simuladas ? [] : await db.Conversas.AsNoTracking().Where(c => c.Simulada).Select(c => c.Id).ToListAsync(ct);
-        return (await PedidosPagosAsync(p, fuso, simuladasIds, ct)).Linhas;
+        return (await PedidosPagosAsync(p, fuso, simuladasIds, ct, vendedorId)).Linhas;
     }
 
-    private async Task<(int, decimal)> CanceladosAsync(DateTimeOffset inicio, DateTimeOffset fim, List<Guid> simuladasIds, CancellationToken ct)
+    private async Task<(int, decimal)> CanceladosAsync(DateTimeOffset inicio, DateTimeOffset fim, List<Guid> simuladasIds, CancellationToken ct,
+        Guid? vendedorId = null)
     {
         var totais = await db.Pedidos.AsNoTracking()
             .Where(x => x.Status == StatusPedido.Cancelado && x.CanceladoEm >= inicio && x.CanceladoEm < fim)
             .Where(x => x.ConversaId == null || !simuladasIds.Contains(x.ConversaId.Value))
+            .Where(x => vendedorId == null || x.VendedorId == vendedorId)
             .Select(x => x.Total).ToListAsync(ct);
         return (totais.Count, totais.Sum());
     }
@@ -189,11 +278,14 @@ public class ServicoMetricas(AppDbContext db)
     }
 
     /// <summary>Conversas que foram para Perdido no período, pelo motivo gravado no card.</summary>
-    private async Task<List<MotivoPerdaMetrica>> MotivosPerdaAsync(DateTimeOffset inicio, DateTimeOffset fim, List<Guid> simuladasIds, CancellationToken ct)
+    private async Task<List<MotivoPerdaMetrica>> MotivosPerdaAsync(DateTimeOffset inicio, DateTimeOffset fim, List<Guid> simuladasIds, CancellationToken ct,
+        HashSet<Guid>? soEstas = null)
     {
         var ids = await db.CardEventos.AsNoTracking()
             .Where(e => e.ParaEtapa == EtapaCard.Perdido && e.CriadoEm >= inicio && e.CriadoEm < fim && !simuladasIds.Contains(e.ConversaId))
             .Select(e => e.ConversaId).Distinct().ToListAsync(ct);
+        if (soEstas is not null)
+            ids = ids.Where(soEstas.Contains).ToList();
         var motivos = await db.Conversas.AsNoTracking().Where(c => ids.Contains(c.Id)).Select(c => c.MotivoPerda).ToListAsync(ct);
         return motivos.GroupBy(m => m?.ToString() ?? "SemMotivo")
             .Select(g => new MotivoPerdaMetrica(g.Key, g.Count()))

@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { firstValueFrom } from 'rxjs';
-import { API, ConversaResumo, Mensagem, mensagemDeErro } from '../../core/api';
+import { API, Atendente, ConversaResumo, Mensagem, mensagemDeErro } from '../../core/api';
 import { Confirmar } from '../../core/confirmar';
 import { atualizarACada } from '../../core/atualizar';
 import { ReservasConversaComponent } from './reservas-conversa';
@@ -41,7 +41,31 @@ export class ConversasPage {
   protected readonly mensagens = httpResource<Mensagem[]>(() => (this.id() ? `${API}/conversas/${this.id()}/mensagens` : undefined));
   protected readonly whatsApp = httpResource<{ simulado: boolean; simuladorDisponivel: boolean; phoneNumberId: string | null; atendente: string; provedor: 'Meta' | 'Local' }>(() => `${API}/conversas/status-whatsapp`);
 
+  /** Dono e vendedores ativos, para o dono transferir a conversa. */
+  protected readonly atendentes = httpResource<Atendente[]>(() => (this.auth.ehDono() ? `${API}/conversas/atendentes` : undefined));
+
+  /** Todas, só as minhas ou as que ninguém pegou. Todos veem todas as conversas. */
+  protected readonly filtro = signal<'todas' | 'minhas' | 'livres'>('todas');
+  protected readonly lista = computed(() => {
+    const todas = this.conversas.value() ?? [];
+    const eu = this.auth.usuario()?.id;
+    switch (this.filtro()) {
+      case 'minhas':
+        return todas.filter((c) => c.responsavelId === eu);
+      case 'livres':
+        return todas.filter((c) => !c.responsavelId);
+      default:
+        return todas;
+    }
+  });
+  protected readonly minhas = computed(() => (this.conversas.value() ?? []).filter((c) => c.responsavelId === this.auth.usuario()?.id).length);
+
   protected readonly aberta = computed(() => this.conversas.value()?.find((c) => c.id === this.id()));
+  /** A conversa aberta está com outro vendedor: dá para acompanhar, mas não responder (o dono pode). */
+  protected readonly comOutro = computed(() => {
+    const c = this.aberta();
+    return !!c?.responsavelId && c.responsavelId !== this.auth.usuario()?.id && !this.auth.ehDono();
+  });
   protected readonly texto = signal('');
   protected readonly enviando = signal(false);
   protected readonly erro = signal<string | null>(null);
@@ -126,13 +150,36 @@ export class ConversasPage {
   }
 
   protected async assumir(c: ConversaResumo): Promise<void> {
-    await firstValueFrom(this.http.post(`${API}/conversas/${c.id}/assumir`, {}));
-    this.conversas.reload();
+    await this.acao(() => firstValueFrom(this.http.post(`${API}/conversas/${c.id}/assumir`, {})));
   }
 
   protected async devolver(c: ConversaResumo): Promise<void> {
-    await firstValueFrom(this.http.post(`${API}/conversas/${c.id}/devolver`, {}));
+    await this.acao(() => firstValueFrom(this.http.post(`${API}/conversas/${c.id}/devolver`, {})));
+  }
+
+  /** Dono passa a conversa para outra pessoa da equipe (ou deixa sem responsável, com null). */
+  protected async transferir(c: ConversaResumo, a: Atendente | null): Promise<void> {
+    if (a?.id === c.responsavelId) return;
+    const pergunta = a
+      ? `Passar a conversa com ${c.cliente} para ${a.nome}? ${a.nome} segue o atendimento${c.responsavel ? ` e ${c.responsavel} deixa de responder` : ''}.`
+      : `Deixar a conversa com ${c.cliente} sem responsável? Ela volta para a fila e o primeiro vendedor que responder fica com ela.`;
+    if (!await this.confirmar.perguntar(pergunta, { botao: a ? 'Transferir' : 'Liberar' })) return;
+    await this.acao(() => firstValueFrom(this.http.post(`${API}/conversas/${c.id}/transferir`, { usuarioId: a?.id ?? null })));
+  }
+
+  private async acao(fazer: () => Promise<unknown>): Promise<void> {
+    this.erro.set(null);
+    try {
+      await fazer();
+    } catch (e) {
+      this.erro.set(mensagemDeErro(e));
+    }
     this.conversas.reload();
+  }
+
+  /** "você" quando a conversa é de quem está logado. */
+  protected nomeResponsavel(c: ConversaResumo): string {
+    return c.responsavelId === this.auth.usuario()?.id ? 'você' : (c.responsavel ?? '');
   }
 
   protected async excluir(c: ConversaResumo, apagar = false): Promise<void> {

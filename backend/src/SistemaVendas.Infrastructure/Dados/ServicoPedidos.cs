@@ -68,7 +68,7 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
         var cliente = await db.Clientes.FirstAsync(c => c.Id == conversa.ClienteId, ct);
         var numero = (await db.Pedidos.MaxAsync(p => (int?)p.Numero, ct) ?? 0) + 1;
 
-        var pedido = RegrasPedido.CriarDaReserva(reserva, cliente.Id, numero, entrega, usuarioId);
+        var pedido = RegrasPedido.CriarDaReserva(reserva, cliente.Id, numero, entrega, usuarioId, conversa.ResponsavelId);
         db.Pedidos.Add(pedido);
 
         // Dado mínimo: endereço só fica guardado quando há entrega.
@@ -81,7 +81,7 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
         conversa.ValorEstimado = pedido.Total;
         if (conversa.Etapa is not (EtapaCard.AguardandoPagamento or EtapaCard.Pago or EtapaCard.Entregue))
             funil.Registrar(conversa, MotorFunil.Mover(conversa, EtapaCard.AguardandoPagamento, null), OrigemEvento.Usuario, usuarioId);
-        conversa.Assumir();
+        conversa.Assumir(usuarioId: usuarioId);
 
         var loja = await db.Lojas.AsNoTracking().FirstAsync(l => l.Id == reserva.LojaId, ct);
         if (PixPronto(loja))
@@ -149,7 +149,7 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
             conversa.ValorEstimado = pedido.Total;
             if (conversa.Etapa != EtapaCard.Pago)
                 funil.Registrar(conversa, MotorFunil.Mover(conversa, EtapaCard.Pago, null), origem, usuarioId);
-            conversa.Assumir(agora);
+            conversa.Assumir(agora, usuarioId);
             conversa.EncerrarAlerta(); // venda fechada: não é mais cliente quente esperando alguém
             if (avisarCliente)
                 resultado = Avisar(pedido, conversa, [RegrasPedido.MensagemPago(pedido)], agora, usuarioId);

@@ -35,6 +35,15 @@
       </mat-form-field>
     </span>
   }
+  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="vendedor">
+    <mat-label>Vendedor</mat-label>
+    <mat-select [value]="vendedorId()" (selectionChange)="vendedorId.set($event.value)">
+      <mat-option value="">Loja toda</mat-option>
+      @for (v of opcoesVendedor(); track v.id) {
+        <mat-option [value]="v.id">{{ v.nome }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
   <mat-checkbox [checked]="simuladas()" (change)="simuladas.set($event.checked)" matTooltip="Conversas e pedidos feitos pelo simulador do painel">
     Incluir simulações
   </mat-checkbox>
@@ -55,6 +64,16 @@
     {{ dataLocal(r.de) | date: "dd/MM/yyyy" }} a {{ dataLocal(r.ate) | date: "dd/MM/yyyy" }} · comparado com
     {{ dataLocal(r.anteriorDe) | date: "dd/MM" }} a {{ dataLocal(r.anteriorAte) | date: "dd/MM" }}
   </p>
+  @if (r.vendedor) {
+    <p class="filtro-vendedor">
+      <mat-icon>badge</mat-icon>
+      <span>
+        Mostrando só <strong>{{ r.vendedor }}</strong>: vendas que ficaram com essa pessoa e conversas em que ela respondeu.
+        Estoque, fornecedores, caixa e entregas são da loja toda.
+      </span>
+      <button mat-button (click)="vendedorId.set('')">Ver loja toda</button>
+    </p>
+  }
 
   <!-- Números do período -->
   <div class="kpis">
@@ -127,6 +146,53 @@
       </div>
     } @else {
       <p class="vazio">Nenhuma venda paga no período.</p>
+    }
+  </section>
+
+  <!-- Equipe -->
+  <section class="sv-card bloco">
+    <h2>Por vendedor</h2>
+    @if (r.vendedores.length) {
+      <div class="rolagem">
+        <table class="vendedores">
+          <thead>
+            <tr>
+              <th>Vendedor</th>
+              <th class="num" matTooltip="Conversas em que respondeu no período">Conversas atendidas</th>
+              <th class="num">Mensagens</th>
+              <th class="num">Vendas pagas</th>
+              <th class="num">Receita</th>
+              <th class="num">Ticket médio</th>
+              <th class="num">Cancelados</th>
+              <th class="num" matTooltip="Conversas abertas que estão com a pessoa agora">Atendendo agora</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (v of r.vendedores; track v.id ?? 'sem') {
+              <tr [class.selecionado]="v.id && v.id === r.vendedorId">
+                <td>
+                  @if (v.id) {
+                    <button class="link" (click)="vendedorId.set(v.id === r.vendedorId ? '' : v.id)" matTooltip="Filtrar as métricas por esta pessoa">{{ v.nome }}</button>
+                  } @else {
+                    <span class="sem">{{ v.nome }}</span>
+                  }
+                  <span class="barra-vendedor" [style.width.%]="largura(v.receita, maiorReceitaVendedor())"></span>
+                </td>
+                <td class="num">{{ v.conversasAtendidas }}</td>
+                <td class="num">{{ v.mensagens }}</td>
+                <td class="num">{{ v.vendas }}</td>
+                <td class="num">{{ v.receita | currency: 'BRL' }}</td>
+                <td class="num">{{ v.vendas ? (v.ticketMedio | currency: 'BRL') : '—' }}</td>
+                <td class="num">{{ v.cancelados }}</td>
+                <td class="num">{{ v.emAtendimento }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="nota">A venda fica com o responsável pela conversa quando o pedido foi feito; se o dono transferir a conversa, os pedidos em aberto passam junto.</p>
+    } @else {
+      <p class="vazio">Nenhum vendedor cadastrado.</p>
     }
   </section>
 
