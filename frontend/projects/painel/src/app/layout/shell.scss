@@ -44,17 +44,32 @@
   height: 100vh;
   height: 100dvh;
   padding: 16px 0;
-  // Em janelas baixas o menu rola sozinho, sem empurrar nem cortar o conteúdo principal.
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
+  overflow: hidden;
   background: var(--mat-sys-surface);
   border-right: 1px solid var(--mat-sys-outline-variant);
 
-  // Os itens mantêm o tamanho; quem cede é o espaço vazio.
   > * {
     flex-shrink: 0;
+  }
+
+  // Em janelas baixas só esta lista rola; logo em cima e sino/conta embaixo ficam fixos.
+  > .itens {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    margin-bottom: 8px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+
+    > * {
+      flex-shrink: 0;
+    }
   }
 
   .marca {
@@ -105,10 +120,6 @@
     opacity: 0.38;
     cursor: default;
   }
-}
-
-.espaco {
-  flex: 1;
 }
 
 .conteudo {
