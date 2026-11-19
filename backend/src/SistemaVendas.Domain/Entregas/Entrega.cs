@@ -1,3 +1,4 @@
+using SistemaVendas.Domain.Lojas;
 using System.Globalization;
 using SistemaVendas.Domain.Comum;
 using SistemaVendas.Domain.Estoque;
@@ -100,11 +101,16 @@ public static class RegrasEntrega
             : $"📅 Seu pedido #{e.NumeroPedido} estará separado para retirada na loja em {dia}{horario}.";
     }
 
-    public static string MensagemSaiu(Entrega e) =>
-        $"🚚 Seu pedido #{e.NumeroPedido} saiu para entrega! Ao receber, deixe o saquinho boiando no aquário por uns 20 minutos antes de soltar os peixes, para eles se acostumarem com a temperatura.";
+    /// <summary>Sem vocabulário, aquarismo (a dica do saquinho só vale para peixe).</summary>
+    public static string MensagemSaiu(Entrega e, Vocabulario? v = null) =>
+        (v ?? Vocabulario.Aquarismo).Aquario
+            ? $"🚚 Seu pedido #{e.NumeroPedido} saiu para entrega! Ao receber, deixe o saquinho boiando no aquário por uns 20 minutos antes de soltar os peixes, para eles se acostumarem com a temperatura."
+            : $"🚚 Seu pedido #{e.NumeroPedido} saiu para entrega! Avisamos por aqui se precisar de alguma coisa.";
 
-    public static string MensagemEntregue(Entrega e) =>
-        e.Tipo == TipoEntrega.Entrega
-            ? $"✅ Pedido #{e.NumeroPedido} entregue. Obrigado pela compra! Qualquer dúvida sobre os peixes, é só chamar aqui. 🐠"
-            : $"✅ Pedido #{e.NumeroPedido} retirado. Obrigado pela compra! Qualquer dúvida sobre os peixes, é só chamar aqui. 🐠";
+    public static string MensagemEntregue(Entrega e, Vocabulario? v = null)
+    {
+        var t = v ?? Vocabulario.Aquarismo;
+        var feito = e.Tipo == TipoEntrega.Entrega ? "entregue" : "retirado";
+        return $"✅ Pedido #{e.NumeroPedido} {feito}. Obrigado pela compra! Qualquer dúvida sobre os {t.Itens}, é só chamar aqui. {t.Emoji}";
+    }
 }

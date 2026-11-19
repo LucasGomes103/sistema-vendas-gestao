@@ -55,6 +55,9 @@ public class ConfigFunil : EntidadeDaLoja
     public string TextoFollowup1 { get; set; } =
         "Oi! Passando para saber se ficou alguma dúvida sobre os peixes. Se quiser, já separo para você 🐟";
 
+    /// <summary>Follow-up 1 padrão de loja que não é de aquário.</summary>
+    public const string Followup1Geral = "Oi! Passando para saber se ficou alguma dúvida. Se quiser, já separo para você 🙂";
+
     public string TextoFollowup2 { get; set; } =
         "Oi! Chegaram novidades aqui na loja. Quer que eu te mande o catálogo atualizado?";
 

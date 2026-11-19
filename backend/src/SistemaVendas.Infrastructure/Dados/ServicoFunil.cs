@@ -17,6 +17,10 @@ public class ServicoFunil(AppDbContext db)
             return cfg;
 
         cfg = new ConfigFunil { LojaId = lojaId };
+        // Loja que não é de aquário: o follow-up padrão não fala de peixe.
+        var segmento = await db.Lojas.AsNoTracking().Where(l => l.Id == lojaId).Select(l => l.Segmento).FirstOrDefaultAsync(ct);
+        if (!Domain.Lojas.Vocabulario.Para(segmento).Aquario)
+            cfg.TextoFollowup1 = ConfigFunil.Followup1Geral;
         db.ConfigsFunil.Add(cfg);
         return cfg;
     }

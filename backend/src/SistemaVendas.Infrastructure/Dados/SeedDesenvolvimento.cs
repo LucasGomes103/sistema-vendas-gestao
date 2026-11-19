@@ -21,7 +21,7 @@ public static class SeedDesenvolvimento
         if (await db.Lojas.AnyAsync(x => x.Slug == SlugDemo, ct))
             return;
 
-        var loja = new Loja { Id = IdLojaDemo, Nome = "Loja Demo", Slug = SlugDemo };
+        var loja = new Loja { Id = IdLojaDemo, Nome = "Loja Demo", Slug = SlugDemo, Segmento = "Aquarismo" };
         db.Lojas.Add(loja);
 
         var dono = new Usuario { LojaId = loja.Id, Nome = "Dono Demo", Email = EmailDonoDemo, Papel = Papel.Dono };

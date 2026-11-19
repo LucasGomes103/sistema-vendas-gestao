@@ -302,3 +302,18 @@ Para a ida à produção (custos, variáveis, segurança, LGPD), ver [producao/c
 - Gerar tokens novos da Meta quando for usá-la.
 - Trocar o login `dono@demo.local` em produção (pela tela Usuários).
 - O Supabase grátis pausa após dias sem uso; recomendado um monitor externo chamando `/health` a cada 5 min.
+
+## Qualquer segmento (SaaS fase 4)
+
+- O **tipo de loja** (escolhido no cadastro ou editado pelo administrador) define as palavras do sistema. Se o tipo
+  fala de aquário ou peixe, a loja é de **aquarismo** e tudo continua como na ECS Fish (espécie, tanque, quarentena,
+  nome científico, dica do saquinho na entrega). Qualquer outro tipo usa **produto**, **local**, "marca ou modelo" e
+  "separado (não vende)".
+- As lojas criadas antes do cadastro público (ECS Fish e a demo) ficaram com o tipo "Aquarismo".
+- O **robô** se apresenta conforme o tipo ("uma loja do ramo de roupas"), busca produtos pelo nome ou marca e não fala
+  de peixe nem de quarentena em loja que não é de aquário. As mensagens de pedido, pagamento e entrega usam termos
+  neutros ("seu pedido fica separado até..."); a dica de aclimatar o peixe só vai para loja de aquário.
+- Loja que não é de aquário começa com o follow-up "ficou alguma dúvida?" (sem peixe) e com "Compra de mercadoria" no
+  lugar de "Compra de peixes" nas categorias do caixa.
+- Por dentro (banco e código) o produto continua se chamando espécie e o local, tanque: nada foi renomeado no banco,
+  então os dados da ECS Fish não mudam.

@@ -54,6 +54,12 @@ public static class RegrasCaixa
     public static readonly string[] CategoriasSaida =
         ["Compra de peixes", "Ração e insumos", "Energia e água", "Aluguel", "Embalagem e entrega", "Manutenção", "Outras despesas"];
 
+    /// <summary>Categorias de saída de uma loja que não é de aquário.</summary>
+    public static readonly string[] CategoriasSaidaGeral =
+        ["Compra de mercadoria", "Insumos", "Energia e água", "Aluguel", "Embalagem e entrega", "Manutenção", "Outras despesas"];
+
+    public static string[] CategoriasSaidaPara(Lojas.Vocabulario v) => v.Aquario ? CategoriasSaida : CategoriasSaidaGeral;
+
     public static LancamentoCaixa Lancar(Guid lojaId, TipoLancamento tipo, string? categoria, decimal valor, string? descricao,
         FormaPagamento forma, DateOnly data, bool diaFechado, Guid? usuarioId)
     {

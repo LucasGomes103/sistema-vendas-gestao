@@ -1,3 +1,4 @@
+using SistemaVendas.Domain.Lojas;
 namespace SistemaVendas.Application.Atendimento;
 
 /// <summary>Uma fala do histórico, sem dados pessoais: só quem falou e o texto.</summary>
@@ -45,8 +46,14 @@ public record FreteCalculado(string Cep, bool Atende, string? Regiao, decimal? V
         : $"O CEP {Cep} fica fora da área em que calculo o frete sozinho{(Regiao is null ? "" : $" ({Regiao})")}, então um atendente vai ver a entrega para você.";
 }
 
-/// <summary>Textos da loja para o robô. CartaoLigado: a loja tem Mercado Pago, a cobrança leva link do cartão.</summary>
-public record TextosProntos(string Frete, string ChamarVendedor, bool CartaoLigado = false);
+/// <summary>
+/// Textos da loja para o robô. CartaoLigado: a loja tem Mercado Pago, a cobrança leva link do cartão.
+/// Vocabulario: palavras do tipo de loja (sem ele, aquarismo, como a ECS Fish).
+/// </summary>
+public record TextosProntos(string Frete, string ChamarVendedor, bool CartaoLigado = false, Vocabulario? Vocabulario = null)
+{
+    public Vocabulario Termos => Vocabulario ?? Vocabulario.Aquarismo;
+}
 
 /// <summary>Mensagem montada pela vitrine quando o cliente toca em "Enviar pedido pelo WhatsApp".</summary>
 public static class PedidoCatalogo
