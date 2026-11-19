@@ -41,7 +41,7 @@ public class IntegracoesPorLojaTests(BancoDeTeste banco) : IClassFixture<BancoDe
     private const string TokenLojaB = "APP_USR-token-da-loja-b-1111";
     private static readonly string Chave = Convert.ToBase64String(Enumerable.Range(10, 32).Select(i => (byte)i).ToArray());
 
-    private WebApplicationFactory<Program> Fabrica(MercadoPagoFalso? mp = null) => new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
+    private WebApplicationFactory<Program> Fabrica(MercadoPagoFalso? mp = null, string? lojaOriginal = null) => new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
     {
         b.UseEnvironment("Testing")
             .UseSetting("Banco:MigrarAoIniciar", "false")
@@ -49,7 +49,8 @@ public class IntegracoesPorLojaTests(BancoDeTeste banco) : IClassFixture<BancoDe
             .UseSetting("Plataforma:ChaveMestra", Chave)
             .UseSetting("MercadoPago:AccessToken", TokenServidor)
             .UseSetting("WhatsApp:Provedor", "Local")
-            .UseSetting("WhatsApp:Local:LojaSlug", "loja-a");
+            .UseSetting("WhatsApp:Local:LojaSlug", "loja-a")
+            .UseSetting("Plataforma:LojaOriginal", lojaOriginal);
         if (mp is not null)
             b.ConfigureTestServices(s => s.AddHttpClient<IMercadoPago, MercadoPagoCliente>().ConfigurePrimaryHttpMessageHandler(() => mp));
     });
@@ -72,6 +73,16 @@ public class IntegracoesPorLojaTests(BancoDeTeste banco) : IClassFixture<BancoDe
         // Loja B sem token próprio: cartão desligado, nunca o token do servidor.
         Assert.Null(await credenciais.MercadoPagoAsync(banco.B.Id, default));
         Assert.False(await scope.ServiceProvider.GetRequiredService<IMercadoPago>().ConfiguradoAsync(banco.B.Id, default));
+    }
+
+    [FactComBanco]
+    public async Task Loja_original_pode_ser_escolhida_pelo_slug()
+    {
+        await using var app = Fabrica(lojaOriginal: "loja-b");
+        using var scope = app.Services.CreateScope();
+        var credenciais = scope.ServiceProvider.GetRequiredService<CredenciaisDaLoja>();
+        Assert.Equal(banco.B.Id, await credenciais.LojaOriginalAsync(default));
+        Assert.Null(await credenciais.MercadoPagoAsync(banco.A.Id, default));
     }
 
     [FactComBanco]
@@ -101,9 +112,10 @@ public class IntegracoesPorLojaTests(BancoDeTeste banco) : IClassFixture<BancoDe
         await using (var db = banco.Criar(banco.A.Id))
             Assert.NotEqual(StatusPedido.Pago, (await db.Pedidos.SingleAsync(p => p.Id == banco.A.PedidoId)).Status);
 
-        // Configuração do cartão da loja B mostra o token dela, só o resumo.
         using var scope2 = app.Services.CreateScope();
         Assert.True(await scope2.ServiceProvider.GetRequiredService<IMercadoPago>().ConfiguradoAsync(banco.B.Id, default));
+        // Os outros testes desta classe contam com a loja B sem token.
+        await scope2.ServiceProvider.GetRequiredService<ServicoCredenciais>().RemoverAsync<CredencialMercadoPago>(banco.B.Id, default);
     }
 
     [FactComBanco]
