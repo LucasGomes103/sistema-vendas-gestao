@@ -30,7 +30,7 @@ public class ServicoEntregas(AppDbContext db, ServicoFunil funil)
         if (e is null)
             return null;
         RegrasEntrega.SaiuParaEntrega(e, DateTimeOffset.UtcNow, usuarioId);
-        return await ConcluirAsync(e, avisar ? RegrasEntrega.MensagemSaiu(e) : null, usuarioId, ct);
+        return await ConcluirAsync(e, avisar ? RegrasEntrega.MensagemSaiu(e, await TermosAsync(ct)) : null, usuarioId, ct);
     }
 
     public async Task<ResultadoEntrega?> EntregueAsync(Guid id, bool avisar, Guid? usuarioId, CancellationToken ct)
@@ -43,7 +43,7 @@ public class ServicoEntregas(AppDbContext db, ServicoFunil funil)
         if (e.ConversaId is { } cid && await db.Conversas.FirstOrDefaultAsync(c => c.Id == cid, ct) is { } conversa && conversa.Etapa != EtapaCard.Entregue)
             funil.Registrar(conversa, MotorFunil.Mover(conversa, EtapaCard.Entregue, null), OrigemEvento.Usuario, usuarioId);
 
-        return await ConcluirAsync(e, avisar ? RegrasEntrega.MensagemEntregue(e) : null, usuarioId, ct);
+        return await ConcluirAsync(e, avisar ? RegrasEntrega.MensagemEntregue(e, await TermosAsync(ct)) : null, usuarioId, ct);
     }
 
     public async Task<DateOnly> HojeAsync(CancellationToken ct)
@@ -52,6 +52,9 @@ public class ServicoEntregas(AppDbContext db, ServicoFunil funil)
         var fuso = await db.Lojas.AsNoTracking().Where(l => l.Id == loja).Select(l => l.Fuso).FirstAsync(ct);
         return RegrasCaixa.Hoje(DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(fuso));
     }
+
+    private async Task<Domain.Lojas.Vocabulario> TermosAsync(CancellationToken ct) =>
+        Domain.Lojas.Vocabulario.Para(await db.Lojas.AsNoTracking().Where(l => l.Id == db.LojaAtualId).Select(l => l.Segmento).FirstOrDefaultAsync(ct));
 
     private async Task<ResultadoEntrega> ConcluirAsync(Entrega e, string? mensagem, Guid? usuarioId, CancellationToken ct)
     {

@@ -66,7 +66,7 @@ public static class RegrasEstoque
         Lote lote, Guid origemId, Guid destinoId, int saldoNaOrigem, int quantidade, Guid? usuarioId)
     {
         if (origemId == destinoId)
-            throw new RegraException("Escolha um tanque de destino diferente do atual.");
+            throw new RegraException("Escolha um destino diferente do atual.");
         ValidarSaida(saldoNaOrigem, quantidade);
 
         MovimentoEstoque Mov(Guid tanque, int qtd) => new()
@@ -90,7 +90,7 @@ public static class RegrasEstoque
         if (string.IsNullOrWhiteSpace(observacao))
             throw new RegraException("Explique o motivo do ajuste.");
         if (saldoNoTanque + quantidade < 0)
-            throw new RegraException($"O ajuste deixaria o saldo negativo (há {saldoNoTanque} no tanque).");
+            throw new RegraException($"O ajuste deixaria o saldo negativo (há {saldoNoTanque} neste lugar).");
 
         return new MovimentoEstoque
         {
@@ -108,7 +108,7 @@ public static class RegrasEstoque
     public static void Liberar(Lote lote)
     {
         if (lote.Status != StatusLote.Quarentena)
-            throw new RegraException("Este lote não está em quarentena.");
+            throw new RegraException("Este lote não está separado (fora da venda).");
         lote.Status = StatusLote.Liberado;
         lote.QuarentenaAte = null;
     }
@@ -118,6 +118,6 @@ public static class RegrasEstoque
         if (quantidade <= 0)
             throw new RegraException("A quantidade precisa ser maior que zero.");
         if (quantidade > saldo)
-            throw new RegraException($"Só há {saldo} neste tanque.");
+            throw new RegraException($"Só há {saldo} neste lugar.");
     }
 }

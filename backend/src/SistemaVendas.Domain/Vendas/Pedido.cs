@@ -100,7 +100,7 @@ public static partial class RegrasPedido
         Guid? vendedorId = null)
     {
         if (reserva.Status != StatusReserva.Ativa)
-            throw new RegraException("A reserva já foi encerrada; separe o peixe de novo para montar o pedido.");
+            throw new RegraException("A reserva já foi encerrada; separe os itens de novo para montar o pedido.");
         if (entrega.Frete < 0)
             throw new RegraException("O frete não pode ser negativo.");
 
@@ -217,22 +217,22 @@ public static partial class RegrasPedido
             linhas.Add($"💳 *Cartão de crédito ou débito*: pague por este link do Mercado Pago (pode parcelar). A confirmação chega aqui sozinha.\n{link}");
         }
         if (pedido.ExpiraEm is { } expira)
-            linhas.Add($"\nO peixe fica separado até {TimeZoneInfo.ConvertTime(expira, fuso):dd/MM 'às' HH:mm}.");
+            linhas.Add($"\nSeu pedido fica separado até {TimeZoneInfo.ConvertTime(expira, fuso):dd/MM 'às' HH:mm}.");
         return string.Join('\n', linhas);
     }
 
     /// <summary>Sem aviso automático de Pix: o cliente manda o comprovante e um atendente confirma.</summary>
     public const string PedidoDoComprovante =
-        "Depois de pagar, envie o *comprovante* aqui na conversa (print ou PDF). Um atendente confere e confirma o seu pagamento. 🐠";
+        "Depois de pagar, envie o *comprovante* aqui na conversa (print ou PDF). Um atendente confere e confirma o seu pagamento.";
 
     public static string MensagemPago(Pedido pedido) =>
         pedido.TipoEntrega == TipoEntrega.Entrega
             ? $"✅ Pagamento do pedido #{pedido.Numero} confirmado! Já vamos combinar a entrega com você."
-            : $"✅ Pagamento do pedido #{pedido.Numero} confirmado! Seu peixe está separado para a retirada na loja.";
+            : $"✅ Pagamento do pedido #{pedido.Numero} confirmado! Seu pedido está separado para a retirada na loja.";
 
     /// <summary>Pagamento do cartão aprovado, mas a reserva tinha vencido: o vendedor resolve com o cliente.</summary>
     public static string MensagemCartaoForaDoPrazo(Pedido pedido) =>
-        $"Recebemos o pagamento no cartão do pedido #{pedido.Numero}! 🙌 Um atendente confere a separação do seu peixe e fala com você por aqui.";
+        $"Recebemos o pagamento no cartão do pedido #{pedido.Numero}! 🙌 Um atendente confere a separação do seu pedido e fala com você por aqui.";
 
     /// <summary>
     /// Pagamento aprovado no Mercado Pago bate com o pedido? Aceita só valor igual ou maior que o total

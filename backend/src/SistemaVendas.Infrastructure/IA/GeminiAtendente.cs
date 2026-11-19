@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SistemaVendas.Application.Atendimento;
 using SistemaVendas.Domain.Entregas;
+using SistemaVendas.Domain.Lojas;
 using SistemaVendas.Domain.Vendas;
 
 namespace SistemaVendas.Infrastructure.IA;
@@ -83,15 +84,15 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
 
                 switch (nome)
                 {
-                    case "buscar_especie":
+                    case "buscar_produto" or "buscar_especie":
                         var achadas = await ferramentas.BuscarEspecieAsync(args["texto"]?.GetValue<string>() ?? "", ct);
                         resultado = new JsonObject
                         {
-                            ["especies"] = new JsonArray(achadas.Select(e => (JsonNode)new JsonObject
+                            ["produtos"] = new JsonArray(achadas.Select(e => (JsonNode)new JsonObject
                             {
-                                ["especie_id"] = e.Id.ToString(),
-                                ["nome_popular"] = e.NomePopular,
-                                ["nome_cientifico"] = e.NomeCientifico,
+                                ["produto_id"] = e.Id.ToString(),
+                                ["nome"] = e.NomePopular,
+                                ["nome_secundario"] = e.NomeCientifico,
                                 ["tamanho_cm"] = e.TamanhoCm,
                                 ["preco"] = e.Preco.ToString("C", PtBr),
                                 ["disponivel"] = e.Disponivel
@@ -100,9 +101,9 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
                         break;
 
                     case "consultar_estoque":
-                        resultado = Guid.TryParse(args["especie_id"]?.GetValue<string>(), out var id)
+                        resultado = Guid.TryParse((args["produto_id"] ?? args["especie_id"])?.GetValue<string>(), out var id)
                             ? new JsonObject { ["disponivel"] = await ferramentas.ConsultarEstoqueAsync(id, ct) }
-                            : new JsonObject { ["erro"] = "especie_id inválido; use buscar_especie antes" };
+                            : new JsonObject { ["erro"] = "produto_id inválido; use buscar_produto antes" };
                         break;
 
                     case "calcular_frete":
@@ -125,17 +126,17 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
                     case "criar_reserva":
                         foreach (var item in args["itens"]?.AsArray() ?? [])
                         {
-                            if (Guid.TryParse(item?["especie_id"]?.GetValue<string>(), out var especieId)
+                            if (Guid.TryParse((item?["produto_id"] ?? item?["especie_id"])?.GetValue<string>(), out var especieId)
                                 && item?["quantidade"] is { } q && int.TryParse(q.ToString(), out var quantidade) && quantidade > 0)
                                 reservar.Add(new ItemPedido(especieId, quantidade));
                         }
                         motivoVendedor ??= "Cliente quer reservar";
                         resultado = reservar.Count == 0
-                            ? new JsonObject { ["erro"] = "informe itens com especie_id (de buscar_especie) e quantidade" }
+                            ? new JsonObject { ["erro"] = "informe itens com produto_id (de buscar_produto) e quantidade" }
                             : new JsonObject
                             {
                                 ["ok"] = true,
-                                ["instrucao"] = "O sistema separa os peixes por 24 h e acrescenta a confirmação com os itens no fim da sua resposta. Não repita a lista; diga só que vai separar e que um atendente confirma o pagamento."
+                                ["instrucao"] = $"O sistema separa os {textos.Termos.Itens} por 24 h e acrescenta a confirmação com os itens no fim da sua resposta. Não repita a lista; diga só que vai separar e que um atendente confirma o pagamento."
                             };
                         break;
 
@@ -188,7 +189,7 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
         {
             ["systemInstruction"] = new JsonObject { ["parts"] = new JsonArray(new JsonObject { ["text"] = InstrucaoSistema(nomeLoja, textos, textos.CartaoLigado) }) },
             ["contents"] = conteudos.DeepClone(),
-            ["tools"] = JsonNode.Parse(Ferramentas),
+            ["tools"] = JsonNode.Parse(Ferramentas(textos.Termos)),
             ["generationConfig"] = new JsonObject { ["temperature"] = 0.3, ["maxOutputTokens"] = 400 }
         };
 
@@ -213,23 +214,26 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
     private static JsonObject Parte(string papel, JsonObject parte) =>
         new() { ["role"] = papel, ["parts"] = new JsonArray(parte) };
 
-    private static string InstrucaoSistema(string nomeLoja, TextosProntos textos, bool aceitaCartao) => $"""
-        Você é o atendente virtual da {nomeLoja}, uma loja de peixes ornamentais, conversando pelo WhatsApp.
+    public static string InstrucaoSistema(string nomeLoja, TextosProntos textos, bool aceitaCartao)
+    {
+        var v = textos.Termos;
+        return $"""
+        Você é o atendente virtual da {nomeLoja}, {v.DescricaoLoja}, conversando pelo WhatsApp.
         Regras:
         - Responda em português do Brasil, curto e simpático (no máximo 3 frases), como num WhatsApp.
-        - Preço e disponibilidade SÓ podem vir das ferramentas. Nunca invente espécie, preço ou quantidade.
-        - Quando o cliente citar um peixe, use buscar_especie. Se não houver estoque, diga que no momento não tem.
-        - Peixe em quarentena não aparece no estoque e não pode ser oferecido.
+        - Preço e disponibilidade SÓ podem vir das ferramentas. Nunca invente produto, preço ou quantidade.
+        - Quando o cliente citar um produto, use buscar_produto. Se não houver estoque, diga que no momento não tem.
+        {(v.Aquario ? "- Peixe em quarentena não aparece no estoque e não pode ser oferecido." : "- Só ofereça o que buscar_produto trouxer com disponível maior que zero.")}
         - Se pedirem catálogo, lista, fotos ou "o que vocês têm", use link_catalogo e envie o link completo,
           explicando que lá dá para escolher as quantidades e enviar o pedido pelo WhatsApp.
         - Mensagem que contém "{PedidoCatalogo.Marcador}" é um pedido montado na vitrine: confira cada item com
-          buscar_especie, use criar_reserva com os itens e quantidades, peça o endereço completo de entrega com CEP e use chamar_vendedor
+          buscar_produto, use criar_reserva com os itens e quantidades, peça o endereço completo de entrega com CEP e use chamar_vendedor
           com o motivo "Pedido pelo catálogo".
-        - Quando o cliente disser que quer reservar ou comprar uma quantidade de um peixe com estoque, use criar_reserva
-          (especie_id vindo de buscar_especie) e depois chamar_vendedor. A reserva vale 24 h.
+        - Quando o cliente disser que quer reservar ou comprar uma quantidade de um produto com estoque, use criar_reserva
+          (produto_id vindo de buscar_produto) e depois chamar_vendedor. A reserva vale 24 h.
         - Se a conversa já tem "Separei para você por 24 h", a reserva já existe: não use criar_reserva de novo ao
           receber CEP ou endereço. Só use de novo se o cliente pedir para mudar os itens, e então mande a lista completa
-          (todos os itens, com especie_id de buscar_especie), porque a nova reserva substitui a anterior.
+          (todos os itens, com produto_id de buscar_produto), porque a nova reserva substitui a anterior.
         - Frete e entrega: se o cliente ainda não mandou o CEP, peça o endereço completo de entrega numa mensagem só:
           rua, número, complemento, bairro e CEP. Nunca peça só o CEP. Quando o CEP chegar, use calcular_frete,
           informe valor e prazo e use chamar_vendedor com o resumo_para_vendedor no motivo. Se atende vier false
@@ -252,19 +256,20 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
             : "Pix. Se perguntarem de cartão, diga que um atendente vê a possibilidade e use chamar_vendedor.")}
           Nunca mande link de pagamento por conta própria.
         """;
+    }
 
-    private const string Ferramentas = """
+    public static string Ferramentas(Vocabulario v) => $$"""
         [{
           "functionDeclarations": [
             {
-              "name": "buscar_especie",
-              "description": "Busca espécies do catálogo da loja por nome popular ou científico. Devolve preço e quantidade disponível para venda.",
-              "parameters": { "type": "object", "properties": { "texto": { "type": "string", "description": "Nome ou parte do nome do peixe" } }, "required": ["texto"] }
+              "name": "buscar_produto",
+              "description": "Busca {{v.Produtos.ToLowerInvariant()}} do catálogo da loja pelo nome ou {{v.NomeSecundario.ToLowerInvariant()}}. Devolve preço e quantidade disponível para venda.",
+              "parameters": { "type": "object", "properties": { "texto": { "type": "string", "description": "Nome ou parte do nome do produto" } }, "required": ["texto"] }
             },
             {
               "name": "consultar_estoque",
-              "description": "Quantidade disponível agora de uma espécie, já descontando reservas e quarentena.",
-              "parameters": { "type": "object", "properties": { "especie_id": { "type": "string" } }, "required": ["especie_id"] }
+              "description": "Quantidade disponível agora de um produto, já descontando reservas e o que não está à venda.",
+              "parameters": { "type": "object", "properties": { "produto_id": { "type": "string" } }, "required": ["produto_id"] }
             },
             {
               "name": "calcular_frete",
@@ -289,7 +294,7 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
             },
             {
               "name": "criar_reserva",
-              "description": "Separa peixes para o cliente por 24 h (sai do disponível até o vendedor confirmar a venda ou a reserva vencer).",
+              "description": "Separa {{v.Itens}} para o cliente por 24 h (sai do disponível até o vendedor confirmar a venda ou a reserva vencer).",
               "parameters": {
                 "type": "object",
                 "properties": {
@@ -297,8 +302,8 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
                     "type": "array",
                     "items": {
                       "type": "object",
-                      "properties": { "especie_id": { "type": "string" }, "quantidade": { "type": "integer" } },
-                      "required": ["especie_id", "quantidade"]
+                      "properties": { "produto_id": { "type": "string" }, "quantidade": { "type": "integer" } },
+                      "required": ["produto_id", "quantidade"]
                     }
                   }
                 },

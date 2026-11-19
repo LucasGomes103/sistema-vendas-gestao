@@ -132,7 +132,7 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
         RegrasPedido.ConfirmarPagamento(pedido, forma, agora, usuarioId);
         var reserva = pedido.ReservaId is { } rid ? await db.Reservas.Include(r => r.Itens).FirstOrDefaultAsync(r => r.Id == rid, ct) : null;
         if (reserva is not { Status: StatusReserva.Ativa })
-            throw new RegraException("A reserva deste pedido já foi encerrada, então o peixe pode ter voltado ao estoque. Separe de novo e monte outro pedido.");
+            throw new RegraException("A reserva deste pedido já foi encerrada, então os itens podem ter voltado ao estoque. Separe de novo e monte outro pedido.");
         // A reserva vira venda: o peixe sai do estoque.
         db.Movimentos.AddRange(RegrasReserva.Encerrar(reserva, StatusReserva.Confirmada, agora, usuarioId));
 

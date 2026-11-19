@@ -25,7 +25,9 @@ public class FerramentasAtendimento(AppDbContext db, ILojaAtual lojaAtual, IOpti
     public async Task<TextosProntos> TextosAsync(CancellationToken ct)
     {
         var cfg = await funil.ConfigAsync(lojaAtual.LojaId!.Value, ct);
-        return new TextosProntos(cfg.TextoFrete, cfg.TextoChamarVendedor, await mercadoPago.ConfiguradoAsync(lojaAtual.LojaId!.Value, ct));
+        var segmento = await db.Lojas.Where(l => l.Id == lojaAtual.LojaId).Select(l => l.Segmento).FirstOrDefaultAsync(ct);
+        return new TextosProntos(cfg.TextoFrete, cfg.TextoChamarVendedor, await mercadoPago.ConfiguradoAsync(lojaAtual.LojaId!.Value, ct),
+            Domain.Lojas.Vocabulario.Para(segmento));
     }
 
     public async Task<string?> LinkCatalogoAsync(CancellationToken ct)

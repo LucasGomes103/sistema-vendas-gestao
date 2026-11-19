@@ -14,7 +14,8 @@ namespace SistemaVendas.Api.Endpoints;
 
 public record LoginEntrada(string Email, string Senha);
 
-public record UsuarioLogado(Guid Id, string Nome, string Email, string Papel, Guid LojaId, string Loja, string LojaSlug, bool AdminPlataforma = false);
+/// <summary>Termos: palavras do tipo de loja (espécie/tanque no aquarismo, produto/local nas outras).</summary>
+public record UsuarioLogado(Guid Id, string Nome, string Email, string Papel, Guid LojaId, string Loja, string LojaSlug, bool AdminPlataforma, Vocabulario Termos);
 
 public static class AuthEndpoints
 {
@@ -48,7 +49,7 @@ public static class AuthEndpoints
                 return Results.Problem("Esta loja está suspensa. Fale com o suporte.", statusCode: StatusCodes.Status403Forbidden,
                     extensions: new Dictionary<string, object?> { ["codigo"] = "loja_suspensa" });
             await Sessao.EntrarAsync(http, usuario, loja);
-            return Results.Ok(DoPrincipal(http.User, plataforma.CurrentValue));
+            return Results.Ok(DoPrincipal(http.User, plataforma.CurrentValue, Vocabulario.Para(loja.Segmento)));
         })
         .RequireRateLimiting(LimiteLogin);
 
@@ -58,7 +59,12 @@ public static class AuthEndpoints
             return Results.NoContent();
         });
 
-        grupo.MapGet("/eu", (ClaimsPrincipal user, IOptionsMonitor<PlataformaOptions> plataforma) => Results.Ok(DoPrincipal(user, plataforma.CurrentValue)))
+        grupo.MapGet("/eu", async (ClaimsPrincipal user, AppDbContext db, IOptionsMonitor<PlataformaOptions> plataforma, CancellationToken ct) =>
+            {
+                var lojaId = Guid.Parse(user.FindFirstValue(LojaAtualDaRequisicao.ClaimLoja)!);
+                var segmento = await db.Lojas.AsNoTracking().Where(l => l.Id == lojaId).Select(l => l.Segmento).FirstOrDefaultAsync(ct);
+                return Results.Ok(DoPrincipal(user, plataforma.CurrentValue, Vocabulario.Para(segmento)));
+            })
             .RequireAuthorization();
 
         // Qualquer usuário troca a própria senha, confirmando a atual. A sessão é renovada com o carimbo novo.
@@ -87,7 +93,7 @@ public static class AuthEndpoints
         .RequireRateLimiting(LimiteLogin);
     }
 
-    private static UsuarioLogado DoPrincipal(ClaimsPrincipal user, PlataformaOptions plataforma) => new(
+    private static UsuarioLogado DoPrincipal(ClaimsPrincipal user, PlataformaOptions plataforma, Vocabulario termos) => new(
         Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!),
         user.FindFirstValue(ClaimTypes.Name)!,
         user.FindFirstValue(ClaimTypes.Email)!,
@@ -95,5 +101,6 @@ public static class AuthEndpoints
         Guid.Parse(user.FindFirstValue(LojaAtualDaRequisicao.ClaimLoja)!),
         user.FindFirstValue("loja_nome")!,
         user.FindFirstValue("loja_slug")!,
-        plataforma.EhAdmin(user.FindFirstValue(ClaimTypes.Email)));
+        plataforma.EhAdmin(user.FindFirstValue(ClaimTypes.Email)),
+        termos);
 }

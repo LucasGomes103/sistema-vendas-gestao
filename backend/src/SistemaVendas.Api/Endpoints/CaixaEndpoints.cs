@@ -46,7 +46,8 @@ public static class CaixaEndpoints
                 fechamento is null ? null : new FechamentoSaida(fechamento.Entradas, fechamento.Saidas, fechamento.Saldo, fechamento.DinheiroEsperado,
                     fechamento.DinheiroContado, fechamento.Diferenca, fechamento.Observacao, fechamento.CriadoEm,
                     fechamento.FechadoPor is { } f ? nomes.GetValueOrDefault(f) : null),
-                RegrasCaixa.CategoriasEntrada, RegrasCaixa.CategoriasSaida);
+                RegrasCaixa.CategoriasEntrada, RegrasCaixa.CategoriasSaidaPara(Domain.Lojas.Vocabulario.Para(
+                    await db.Lojas.AsNoTracking().Where(l => l.Id == lojaAtual.LojaId).Select(l => l.Segmento).FirstOrDefaultAsync(ct))));
         });
 
         grupo.MapPost("/lancamentos", async (LancamentoEntrada e, AppDbContext db, ILojaAtual lojaAtual, ClaimsPrincipal user, CancellationToken ct) =>

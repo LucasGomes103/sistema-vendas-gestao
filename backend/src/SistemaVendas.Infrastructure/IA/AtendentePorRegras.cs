@@ -107,11 +107,14 @@ public class AtendentePorRegras : IAtendenteIA
                 ChamarVendedor: false, MotivoVendedor: null);
         }
 
+        var termos = (await ferramentas.TextosAsync(ct)).Termos;
         var primeira = historico.Count(f => f.DoCliente) <= 1;
         return new RespostaAtendente(
             primeira
-                ? $"Olá! Aqui é o atendimento da {nomeLoja}. Me diga qual peixe você procura que eu confiro preço e disponibilidade."
-                : "Não encontrei esse peixe no catálogo. Pode me dizer o nome popular ou científico? Se preferir, peço para um atendente falar com você.",
+                ? $"Olá! Aqui é o atendimento da {nomeLoja}. Me diga qual {(termos.Aquario ? "peixe" : "produto")} você procura que eu confiro preço e disponibilidade."
+                : termos.Aquario
+                    ? "Não encontrei esse peixe no catálogo. Pode me dizer o nome popular ou científico? Se preferir, peço para um atendente falar com você."
+                    : "Não encontrei esse produto no catálogo. Pode me dizer o nome ou a marca? Se preferir, peço para um atendente falar com você.",
             ChamarVendedor: false, MotivoVendedor: null);
     }
 

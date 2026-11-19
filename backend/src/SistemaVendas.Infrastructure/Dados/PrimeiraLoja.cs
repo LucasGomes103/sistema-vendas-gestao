@@ -29,7 +29,7 @@ public static class PrimeiraLoja
             return;
         }
 
-        var loja = new Loja { Nome = nome.Trim(), Slug = slug.Trim().ToLowerInvariant() };
+        var loja = new Loja { Nome = nome.Trim(), Slug = slug.Trim().ToLowerInvariant(), Segmento = secao["Segmento"] is { Length: > 0 } seg ? seg.Trim() : null };
         db.Lojas.Add(loja);
 
         var dono = new Usuario { LojaId = loja.Id, Nome = secao["DonoNome"] ?? "Dono", Email = email, Papel = Papel.Dono };
