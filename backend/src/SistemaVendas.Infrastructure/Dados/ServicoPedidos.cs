@@ -54,7 +54,7 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
             detalhe?.Frete is { Atende: true } f ? f.Valor : null,
             detalhe?.Frete.Resumo,
             PixPronto(loja),
-            mercadoPago.Configurado);
+            await mercadoPago.ConfiguradoAsync(loja.Id, ct));
     }
 
     public async Task<ResultadoAviso> CriarAsync(Guid reservaId, DadosEntrega entrega, bool enviarPix, Guid? usuarioId, CancellationToken ct)
@@ -252,11 +252,11 @@ public class ServicoPedidos(AppDbContext db, ServicoFunil funil, ServicoFrete fr
     /// </summary>
     private async Task<string?> GerarLinkCartaoAsync(Pedido pedido, Domain.Lojas.Loja loja, CancellationToken ct)
     {
-        if (!mercadoPago.Configurado)
+        if (!await mercadoPago.ConfiguradoAsync(loja.Id, ct))
             return null;
         try
         {
-            var link = await mercadoPago.CriarLinkAsync(pedido, loja.Nome, ct);
+            var link = await mercadoPago.CriarLinkAsync(loja.Id, pedido, loja.Nome, ct);
             pedido.LinkCartao = link.Url;
             pedido.MpOrderId = link.OrderId;
             return null;

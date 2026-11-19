@@ -2,9 +2,12 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SistemaVendas.Application.Atendimento;
+using SistemaVendas.Infrastructure.Seguranca;
 
 namespace SistemaVendas.Infrastructure.WhatsApp;
 
@@ -39,7 +42,10 @@ public class WhatsAppOptions
         public string LojaSlug { get; set; } = "demo";
     }
 
-    /// <summary>Token de acesso do app na Meta. Vazio = envio simulado.</summary>
+    /// <summary>
+    /// Token de acesso na Meta, só para a loja original (a mais antiga). Cada loja nova tem o token dela, cifrado em
+    /// credencial_loja. Sem token para a loja, o envio é simulado.
+    /// </summary>
     public string? AccessToken { get; set; }
 
     /// <summary>Segredo do app, usado para validar o X-Hub-Signature-256 dos webhooks.</summary>
@@ -73,12 +79,15 @@ public static class AssinaturaWebhook
     }
 }
 
-public class WhatsAppCloudCliente(HttpClient http, IOptions<WhatsAppOptions> opcoes) : IWhatsAppCliente
+/// <summary>WhatsApp Cloud API com o token de cada loja. Loja sem token: envio simulado, como em desenvolvimento.</summary>
+public class WhatsAppCloudCliente(HttpClient http, IOptions<WhatsAppOptions> opcoes, CredenciaisDaLoja credenciais, WhatsAppSimulado simulado) : IWhatsAppCliente
 {
-    public bool Simulado => false;
+    public async Task<bool> SimuladoAsync(Guid lojaId, CancellationToken ct) => await credenciais.WhatsAppAsync(lojaId, ct) is null;
 
-    public async Task<string> EnviarTextoAsync(string phoneNumberId, string para, string texto, CancellationToken ct)
+    public async Task<string> EnviarTextoAsync(Guid lojaId, string phoneNumberId, string para, string texto, CancellationToken ct)
     {
+        if (await credenciais.WhatsAppAsync(lojaId, ct) is not { } credencial)
+            return await simulado.EnviarTextoAsync(lojaId, phoneNumberId, para, texto, ct);
         if (string.IsNullOrEmpty(phoneNumberId))
             throw new InvalidOperationException("A loja ainda não tem número do WhatsApp configurado.");
 
@@ -93,7 +102,7 @@ public class WhatsAppCloudCliente(HttpClient http, IOptions<WhatsAppOptions> opc
                 text = new { preview_url = false, body = texto }
             })
         };
-        req.Headers.Authorization = new("Bearer", o.AccessToken);
+        req.Headers.Authorization = new("Bearer", credencial.Valor.AccessToken);
 
         using var resp = await http.SendAsync(req, ct);
         var corpo = await resp.Content.ReadAsStringAsync(ct);
@@ -111,9 +120,9 @@ public class WhatsAppCloudCliente(HttpClient http, IOptions<WhatsAppOptions> opc
 /// </summary>
 public class WhatsAppLocalCliente(HttpClient http, IOptions<WhatsAppOptions> opcoes) : IWhatsAppCliente
 {
-    public bool Simulado => false;
+    public Task<bool> SimuladoAsync(Guid lojaId, CancellationToken ct) => Task.FromResult(false);
 
-    public async Task<string> EnviarTextoAsync(string phoneNumberId, string para, string texto, CancellationToken ct)
+    public async Task<string> EnviarTextoAsync(Guid lojaId, string phoneNumberId, string para, string texto, CancellationToken ct)
     {
         var local = opcoes.Value.Local;
         using var req = new HttpRequestMessage(HttpMethod.Post, $"{local.Url.TrimEnd('/')}/enviar")
@@ -132,12 +141,61 @@ public class WhatsAppLocalCliente(HttpClient http, IOptions<WhatsAppOptions> opc
     }
 }
 
+/// <summary>Confere na Meta se o token enxerga o número (prova de que o número é da conta da loja).</summary>
+public class VerificadorWhatsApp(HttpClient http, IOptions<WhatsAppOptions> opcoes)
+{
+    /// <summary>Devolve o número de telefone exibido pela Meta, ou o erro.</summary>
+    public async Task<(string? Numero, string? Erro)> ConferirAsync(string phoneNumberId, string token, CancellationToken ct)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get,
+            $"https://graph.facebook.com/{opcoes.Value.ApiVersion}/{phoneNumberId}?fields=display_phone_number,verified_name");
+        req.Headers.Authorization = new("Bearer", token);
+        try
+        {
+            using var resp = await http.SendAsync(req, ct);
+            if (!resp.IsSuccessStatusCode)
+                return (null, $"A Meta recusou o token para este número ({(int)resp.StatusCode}). Confira o Phone Number ID e o token.");
+            using var json = JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
+            return (json.RootElement.TryGetProperty("display_phone_number", out var n) ? n.GetString() : phoneNumberId, null);
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            return (null, "Não deu para falar com a Meta agora. Tente de novo em instantes.");
+        }
+    }
+}
+
+/// <summary>
+/// Escolhe por onde sai a mensagem de cada loja: a loja da ponte local (WhatsApp__Local__LojaSlug, só quando o
+/// provedor é "Local") sai pela ponte; todas as outras pela Cloud API com o token delas (ou simulado, sem token).
+/// Assim a ponte da ECS Fish nunca envia mensagem de outra loja.
+/// </summary>
+public class WhatsAppRoteador(IOptions<WhatsAppOptions> opcoes, Dados.AppDbContext db, IServiceProvider servicos) : IWhatsAppCliente
+{
+    private async Task<IWhatsAppCliente> ClienteAsync(Guid lojaId, CancellationToken ct)
+    {
+        var o = opcoes.Value;
+        if (o.UsaPonteLocal)
+        {
+            var slug = await db.Lojas.Where(l => l.Id == lojaId).Select(l => l.Slug).FirstOrDefaultAsync(ct);
+            if (string.Equals(slug, o.Local.LojaSlug, StringComparison.OrdinalIgnoreCase))
+                return servicos.GetRequiredService<WhatsAppLocalCliente>();
+        }
+        return servicos.GetRequiredService<WhatsAppCloudCliente>();
+    }
+
+    public async Task<bool> SimuladoAsync(Guid lojaId, CancellationToken ct) => await (await ClienteAsync(lojaId, ct)).SimuladoAsync(lojaId, ct);
+
+    public async Task<string> EnviarTextoAsync(Guid lojaId, string phoneNumberId, string para, string texto, CancellationToken ct) =>
+        await (await ClienteAsync(lojaId, ct)).EnviarTextoAsync(lojaId, phoneNumberId, para, texto, ct);
+}
+
 /// <summary>Usado em desenvolvimento enquanto não há token da Meta: registra e devolve um wamid falso.</summary>
 public class WhatsAppSimulado(ILogger<WhatsAppSimulado> logger) : IWhatsAppCliente
 {
-    public bool Simulado => true;
+    public Task<bool> SimuladoAsync(Guid lojaId, CancellationToken ct) => Task.FromResult(true);
 
-    public Task<string> EnviarTextoAsync(string phoneNumberId, string para, string texto, CancellationToken ct)
+    public Task<string> EnviarTextoAsync(Guid lojaId, string phoneNumberId, string para, string texto, CancellationToken ct)
     {
         logger.LogInformation("[WhatsApp simulado] envio para {Para}: {Texto}", Domain.Atendimento.RegrasAtendimento.MascararTelefone(para), texto);
         return Task.FromResult($"sim.{Guid.CreateVersion7():N}");

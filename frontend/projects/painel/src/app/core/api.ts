@@ -323,13 +323,28 @@ export interface ConfigPix {
   configurado: boolean;
 }
 
-/** Cartão pelo Mercado Pago: só leitura, as credenciais ficam no Render. */
+/**
+ * Cartão pelo Mercado Pago da loja. O token nunca volta do servidor: só o resumo.
+ * origem: 'Loja' (salvo no painel, cifrado) ou 'Servidor' (variáveis do Render, só a loja original).
+ */
 export interface ConfigCartao {
   configurado: boolean;
   modoTeste: boolean;
   webhookPronto: boolean;
   assinaturaConferida: boolean;
   urlWebhook: string | null;
+  origem: 'Loja' | 'Servidor' | null;
+  resumo: string | null;
+  podeSalvar: boolean;
+}
+
+/** WhatsApp oficial (Cloud API da Meta) da loja: o token nunca volta, só o resumo. */
+export interface WhatsAppOficial {
+  configurado: boolean;
+  origem: 'Loja' | 'Servidor' | null;
+  phoneNumberId: string | null;
+  resumo: string | null;
+  podeSalvar: boolean;
 }
 
 export type TipoLancamento = 'Entrada' | 'Saida';

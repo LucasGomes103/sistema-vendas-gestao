@@ -1308,6 +1308,11 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.HasKey("Id")
                         .HasName("pk_loja");
 
+                    b.HasIndex("PhoneNumberId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_loja_phone_number_id")
+                        .HasFilter("phone_number_id IS NOT NULL");
+
                     b.HasIndex("Slug")
                         .IsUnique()
                         .HasDatabaseName("ix_loja_slug");

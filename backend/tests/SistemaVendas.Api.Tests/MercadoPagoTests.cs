@@ -74,15 +74,15 @@ public class MercadoPagoTests(WebApplicationFactory<Program> factory) : IClassFi
     }
 
     [Fact]
-    public async Task Webhook_sem_cartao_configurado_responde_indisponivel()
+    public async Task Webhook_de_outro_topico_e_ignorado_sem_consultar_nada()
     {
         var client = factory.WithWebHostBuilder(b => b
                 .UseEnvironment("Testing")
                 .UseSetting("ConnectionStrings:Banco", "Host=localhost;Database=nao_usado"))
             .CreateClient();
 
-        var resposta = await client.PostAsync("/api/v1/webhooks/mercadopago?type=order&data.id=ORD1", new StringContent("{}", Encoding.UTF8, "application/json"));
+        var resposta = await client.PostAsync("/api/v1/webhooks/mercadopago?type=payment&data.id=123", new StringContent("{}", Encoding.UTF8, "application/json"));
 
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, resposta.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
     }
 }

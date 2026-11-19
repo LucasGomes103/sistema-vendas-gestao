@@ -7,6 +7,7 @@ using SistemaVendas.Domain.Atendimento;
 using SistemaVendas.Infrastructure.Dados;
 using SistemaVendas.Application.Comum;
 using SistemaVendas.Infrastructure.Pagamentos;
+using SistemaVendas.Infrastructure.Seguranca;
 using SistemaVendas.Infrastructure.WhatsApp;
 
 namespace SistemaVendas.Api.Endpoints;
@@ -61,17 +62,25 @@ public static class WebhookEndpoints
         });
 
         // Aviso do Mercado Pago (API de Orders, cartão): ?type=order&data.id=ORD..., com x-signature. O aviso só
-        // diz "olhe a order X": status, valor e pedido vêm da API do Mercado Pago com o nosso token, então um aviso
-        // falso não confirma nada. Com a assinatura secreta configurada, aviso com x-signature inválida é recusado.
-        grupo.MapPost("/mercadopago", async (HttpRequest req, IOptions<MercadoPagoOptions> opcoes, IMercadoPago mp,
+        // diz "olhe a order X": status, valor e pedido vêm da API do Mercado Pago com o token DA LOJA, então um aviso
+        // falso não confirma nada. Com a assinatura secreta da loja, aviso com x-signature inválida é recusado.
+        grupo.MapPost("/mercadopago", async (HttpRequest req, IMercadoPago mp, CredenciaisDaLoja credenciais,
             ILojaAtual lojaAtual, AppDbContext db, ServicoPedidos pedidos, ILoggerFactory logs, CancellationToken ct) =>
         {
-            if (!mp.Configurado)
-                return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
             var log = logs.CreateLogger("MercadoPago");
-
             var (tipo, id) = await LerAvisoMercadoPagoAsync(req, ct);
-            var segredo = opcoes.Value.WebhookSecret;
+            // "order" (e "orders_v2", nome que aparece em parte da documentação). Outros tópicos não interessam.
+            if (tipo is not ("order" or "orders_v2") || string.IsNullOrEmpty(id))
+                return Results.Ok();
+
+            // A order não diz a loja: acha pelo pedido que guardou o id da order. Link antigo (trocado por "Enviar
+            // cobrança" de novo) não está mais no pedido: só a loja original, com o token do servidor, cai aqui.
+            var lojaId = await db.Pedidos.IgnoreQueryFilters().Where(p => p.MpOrderId == id).Select(p => (Guid?)p.LojaId).FirstOrDefaultAsync(ct)
+                ?? await credenciais.LojaOriginalAsync(ct);
+            if (lojaId is not { } loja || await credenciais.MercadoPagoAsync(loja, ct) is not { } credencial)
+                return Results.Ok();
+
+            var segredo = credencial.Valor.WebhookSecret;
             var assinatura = req.Headers["x-signature"].ToString();
             if (!string.IsNullOrEmpty(segredo) && assinatura.Length > 0
                 && !AssinaturaMercadoPago.Valida(assinatura, req.Headers["x-request-id"], req.Query["data.id"].FirstOrDefault() ?? id, segredo))
@@ -79,18 +88,18 @@ public static class WebhookEndpoints
                 log.LogWarning("Aviso do Mercado Pago com assinatura inválida (order {Id})", id);
                 return Results.Unauthorized();
             }
-            // "order" (e "orders_v2", nome que aparece em parte da documentação). Outros tópicos não interessam.
-            if (tipo is not ("order" or "orders_v2") || string.IsNullOrEmpty(id))
-                return Results.Ok();
 
-            var order = await mp.BuscarOrderAsync(id, ct);
+            var order = await mp.BuscarOrderAsync(loja, id, ct);
             if (order?.PedidoId is not { } pedidoId)
                 return Results.Ok(); // order de fora do sistema (ou o teste do painel do MP)
 
-            // A order não diz a loja: acha pelo pedido (id único entre lojas).
-            var lojaId = await db.Pedidos.IgnoreQueryFilters().Where(p => p.Id == pedidoId).Select(p => (Guid?)p.LojaId).FirstOrDefaultAsync(ct);
-            if (lojaId is not { } loja)
+            // O pedido da order tem de ser da mesma loja do token que a buscou.
+            var lojaDoPedido = await db.Pedidos.IgnoreQueryFilters().Where(p => p.Id == pedidoId).Select(p => (Guid?)p.LojaId).FirstOrDefaultAsync(ct);
+            if (lojaDoPedido != loja)
+            {
+                log.LogWarning("Order {Id} aponta para pedido de outra loja: ignorada", id);
                 return Results.Ok();
+            }
             lojaAtual.Definir(loja);
             var resultado = await pedidos.AoPagarNoCartaoAsync(pedidoId, order, ct);
             log.LogInformation("Mercado Pago order {Id} ({Status}): {Resultado}", order.Id, order.Status, resultado);

@@ -6,6 +6,7 @@ using SistemaVendas.Domain.Vendas;
 using Microsoft.Extensions.Options;
 using SistemaVendas.Infrastructure.Dados;
 using SistemaVendas.Infrastructure.Pagamentos;
+using SistemaVendas.Infrastructure.Seguranca;
 
 namespace SistemaVendas.Api.Endpoints;
 
@@ -33,8 +34,15 @@ public record ConfigPixSaida(string? Chave, string? TipoChave, string? Nome, str
 
 public record ConfigPixEntrada(string? Chave, string? Nome, string? Cidade);
 
-/// <summary>Cartão pelo Mercado Pago: só leitura (as credenciais ficam no Render, nunca no banco).</summary>
-public record ConfigCartaoSaida(bool Configurado, bool ModoTeste, bool WebhookPronto, bool AssinaturaConferida, string? UrlWebhook);
+/// <summary>
+/// Cartão pelo Mercado Pago da loja. O token nunca volta para o painel: só o Resumo. Origem "Servidor" = a loja
+/// original usando as variáveis do Render; "Loja" = salvo (cifrado) pelo dono no painel.
+/// </summary>
+public record ConfigCartaoSaida(bool Configurado, bool ModoTeste, bool WebhookPronto, bool AssinaturaConferida, string? UrlWebhook,
+    string? Origem = null, string? Resumo = null, bool PodeSalvar = false);
+
+/// <summary>Token e assinatura secreta do Mercado Pago da loja. Assinatura vazia ao editar mantém a anterior.</summary>
+public record ConfigCartaoEntrada(string? AccessToken, string? WebhookSecret, bool ModoTeste);
 
 /// <summary>Pedidos e cobrança por Pix com a chave comum da loja (sem provedor, sem custo).</summary>
 public static class PedidoEndpoints
@@ -125,17 +133,53 @@ public static class PedidoEndpoints
         })
         .RequireAuthorization(AuthEndpoints.PoliticaDono);
 
-        app.MapGet("/config/cartao", (IOptions<MercadoPagoOptions> opcoes) =>
+        var cartao = app.MapGroup("/config/cartao").WithTags("Pedidos");
+
+        cartao.MapGet("/", async (IOptions<MercadoPagoOptions> opcoes, CredenciaisDaLoja credenciais, ServicoCredenciais cofre, ILojaAtual lojaAtual, CancellationToken ct) =>
         {
+            var lojaId = lojaAtual.LojaId!.Value;
             var o = opcoes.Value;
-            var token = o.AccessToken ?? "";
+            var emUso = await credenciais.MercadoPagoAsync(lojaId, ct);
+            var c = emUso?.Valor;
             // Credencial de teste: TEST-... (antiga) ou a de produção de um usuário de teste (aparece como teste no painel do MP).
-            var teste = token.StartsWith("TEST-", StringComparison.Ordinal) || o.ModoTeste;
-            return new ConfigCartaoSaida(o.Configurado, o.Configurado && teste, o.UrlWebhook?.StartsWith("https://") == true,
-                !string.IsNullOrWhiteSpace(o.WebhookSecret), o.UrlWebhook);
+            var teste = c is not null && (c.AccessToken.StartsWith("TEST-", StringComparison.Ordinal) || c.ModoTeste);
+            var resumo = emUso?.Origem == OrigemCredencial.Loja
+                ? (await cofre.ResumosAsync(lojaId, ct)).GetValueOrDefault(Domain.Lojas.TipoCredencial.MercadoPago).Resumo
+                : null;
+            return new ConfigCartaoSaida(c is not null, teste, o.UrlWebhook?.StartsWith("https://") == true,
+                !string.IsNullOrWhiteSpace(c?.WebhookSecret), o.UrlWebhook, emUso?.Origem.ToString(), resumo, cofre.Disponivel);
         })
-        .WithTags("Pedidos")
         .RequireAuthorization(AuthEndpoints.PoliticaEquipe);
+
+        // O dono cola o Access Token e a assinatura secreta da conta do Mercado Pago DA LOJA (na fase 2, OAuth).
+        cartao.MapPut("/", async (ConfigCartaoEntrada e, ServicoCredenciais cofre, ILojaAtual lojaAtual, CancellationToken ct) =>
+        {
+            var lojaId = lojaAtual.LojaId!.Value;
+            var token = e.AccessToken?.Trim() ?? "";
+            if (token.Length is < 20 or > 300 || token.Any(char.IsWhiteSpace) || !(token.StartsWith("APP_USR-") || token.StartsWith("TEST-")))
+                return Results.Problem("Cole o Access Token do Mercado Pago (começa com APP_USR- ou TEST-).", statusCode: StatusCodes.Status422UnprocessableEntity);
+            var segredo = string.IsNullOrWhiteSpace(e.WebhookSecret)
+                ? (await cofre.LerAsync<CredencialMercadoPago>(lojaId, ct))?.WebhookSecret
+                : e.WebhookSecret.Trim();
+            try
+            {
+                await cofre.SalvarAsync(lojaId, new CredencialMercadoPago(token, segredo, e.ModoTeste),
+                    $"token {ServicoCredenciais.Final(token)}" + (segredo is null ? "" : ", com assinatura"), ct);
+            }
+            catch (RegraException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status422UnprocessableEntity);
+            }
+            return Results.NoContent();
+        })
+        .RequireAuthorization(AuthEndpoints.PoliticaDono);
+
+        cartao.MapDelete("/", async (ServicoCredenciais cofre, ILojaAtual lojaAtual, CancellationToken ct) =>
+        {
+            await cofre.RemoverAsync<CredencialMercadoPago>(lojaAtual.LojaId!.Value, ct);
+            return Results.NoContent();
+        })
+        .RequireAuthorization(AuthEndpoints.PoliticaDono);
     }
 
     private static Guid? Usuario(ClaimsPrincipal user) =>

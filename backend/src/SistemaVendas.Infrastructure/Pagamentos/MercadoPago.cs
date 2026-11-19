@@ -8,13 +8,14 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 using SistemaVendas.Domain.Estoque;
 using SistemaVendas.Domain.Vendas;
+using SistemaVendas.Infrastructure.Seguranca;
 
 namespace SistemaVendas.Infrastructure.Pagamentos;
 
 /// <summary>
-/// Credenciais do Mercado Pago, só por variável de ambiente (Render) ou user-secrets, nunca no código:
-/// MercadoPago__AccessToken e MercadoPago__WebhookSecret. Sem token, o cartão fica desligado e tudo
-/// segue só com Pix.
+/// Configuração do Mercado Pago no servidor. O token de cada loja fica cifrado em credencial_loja (painel →
+/// Configuração → Cartão). MercadoPago__AccessToken e MercadoPago__WebhookSecret, no Render, valem só para a loja
+/// original (a mais antiga), como antes. Sem token, o cartão fica desligado e tudo segue só com Pix.
 /// </summary>
 public class MercadoPagoOptions
 {
@@ -65,44 +66,51 @@ public record PagamentoMp(string Id, string Status, string? StatusDetalhe, strin
     public Guid? PedidoId => Guid.TryParseExact(ReferenciaExterna, "N", out var p) || Guid.TryParse(ReferenciaExterna, out p) ? p : null;
 }
 
+/// <summary>Cartão da loja pelo Mercado Pago. Cada chamada usa o token da loja dona do pedido.</summary>
 public interface IMercadoPago
 {
-    bool Configurado { get; }
+    /// <summary>A loja tem token do Mercado Pago (dela ou, na loja original, o do servidor).</summary>
+    Task<bool> ConfiguradoAsync(Guid lojaId, CancellationToken ct);
 
     /// <summary>Cria a order do Checkout Pro do pedido (só cartão; Pix segue pela chave da loja). Vence com a reserva.</summary>
-    Task<LinkCartao> CriarLinkAsync(Pedido pedido, string nomeLoja, CancellationToken ct);
+    Task<LinkCartao> CriarLinkAsync(Guid lojaId, Pedido pedido, string nomeLoja, CancellationToken ct);
 
-    Task<PagamentoMp?> BuscarOrderAsync(string id, CancellationToken ct);
+    Task<PagamentoMp?> BuscarOrderAsync(Guid lojaId, string id, CancellationToken ct);
 }
 
 /// <summary>Checkout Pro pela API de Orders (POST/GET /v1/orders) do Mercado Pago.</summary>
-public class MercadoPagoCliente(HttpClient http, IOptions<MercadoPagoOptions> opcoes) : IMercadoPago
+public class MercadoPagoCliente(HttpClient http, IOptions<MercadoPagoOptions> opcoes, CredenciaisDaLoja credenciais) : IMercadoPago
 {
     private readonly MercadoPagoOptions _op = opcoes.Value;
 
-    public bool Configurado => _op.Configurado;
+    public async Task<bool> ConfiguradoAsync(Guid lojaId, CancellationToken ct) => await credenciais.MercadoPagoAsync(lojaId, ct) is not null;
 
-    public async Task<LinkCartao> CriarLinkAsync(Pedido pedido, string nomeLoja, CancellationToken ct)
+    private async Task<string> TokenAsync(Guid lojaId, CancellationToken ct) =>
+        (await credenciais.MercadoPagoAsync(lojaId, ct))?.Valor.AccessToken
+        ?? throw new RegraException("Cartão desligado: a loja ainda não tem o token do Mercado Pago (Configuração → Cartão).");
+
+    public async Task<LinkCartao> CriarLinkAsync(Guid lojaId, Pedido pedido, string nomeLoja, CancellationToken ct)
     {
+        var token = await TokenAsync(lojaId, ct);
         var agora = DateTimeOffset.UtcNow;
         var corpo = MontarOrder(pedido, nomeLoja, _op, agora, excluirPix: true);
-        var (ok, codigo, texto) = await CriarAsync(corpo, ct);
+        var (ok, codigo, texto) = await CriarAsync(token, corpo, ct);
         if (!ok && codigo == 400)
         {
             // Se a conta não aceitar excluir o Pix do Mercado Pago, tenta de novo excluindo só o boleto.
             corpo = MontarOrder(pedido, nomeLoja, _op, agora, excluirPix: false);
-            (ok, codigo, texto) = await CriarAsync(corpo, ct);
+            (ok, codigo, texto) = await CriarAsync(token, corpo, ct);
         }
         if (!ok)
-            throw new RegraException($"O Mercado Pago recusou o link do cartão ({codigo}). Confira o MercadoPago__AccessToken no Render.");
+            throw new RegraException($"O Mercado Pago recusou o link do cartão ({codigo}). Confira o token do Mercado Pago em Configuração → Cartão.");
 
         var order = JsonSerializer.Deserialize<OrderResposta>(texto)!;
         return new LinkCartao(order.Id, order.CheckoutUrl ?? throw new RegraException("O Mercado Pago não devolveu o link do cartão."));
     }
 
-    private async Task<(bool Ok, int Codigo, string Texto)> CriarAsync(Dictionary<string, object?> corpo, CancellationToken ct)
+    private async Task<(bool Ok, int Codigo, string Texto)> CriarAsync(string token, Dictionary<string, object?> corpo, CancellationToken ct)
     {
-        using var req = Requisicao(HttpMethod.Post, "v1/orders");
+        using var req = Requisicao(token, HttpMethod.Post, "v1/orders");
         req.Headers.Add("X-Idempotency-Key", Guid.NewGuid().ToString());
         // Corpo com tamanho conhecido (sem chunked), como a API espera.
         req.Content = new StringContent(JsonSerializer.Serialize(corpo), Encoding.UTF8, "application/json");
@@ -110,11 +118,11 @@ public class MercadoPagoCliente(HttpClient http, IOptions<MercadoPagoOptions> op
         return (resp.IsSuccessStatusCode, (int)resp.StatusCode, await resp.Content.ReadAsStringAsync(ct));
     }
 
-    public async Task<PagamentoMp?> BuscarOrderAsync(string id, CancellationToken ct)
+    public async Task<PagamentoMp?> BuscarOrderAsync(Guid lojaId, string id, CancellationToken ct)
     {
         if (id.Length is 0 or > 64 || !id.All(char.IsAsciiLetterOrDigit))
             return null;
-        using var req = Requisicao(HttpMethod.Get, $"v1/orders/{id}");
+        using var req = Requisicao(await TokenAsync(lojaId, ct), HttpMethod.Get, $"v1/orders/{id}");
         using var resp = await http.SendAsync(req, ct);
         if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
             return null;
@@ -128,12 +136,10 @@ public class MercadoPagoCliente(HttpClient http, IOptions<MercadoPagoOptions> op
     private static decimal Valor(string? texto) =>
         decimal.TryParse(texto, NumberStyles.Number, CultureInfo.InvariantCulture, out var v) ? v : 0;
 
-    private HttpRequestMessage Requisicao(HttpMethod metodo, string caminho)
+    private HttpRequestMessage Requisicao(string token, HttpMethod metodo, string caminho)
     {
-        if (!_op.Configurado)
-            throw new RegraException("Cartão desligado: falta o MercadoPago__AccessToken no Render.");
         var req = new HttpRequestMessage(metodo, _op.UrlApi.TrimEnd('/') + "/" + caminho);
-        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _op.AccessToken);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return req;
     }
 

@@ -7,6 +7,8 @@ using SistemaVendas.Infrastructure.Dados;
 using SistemaVendas.Infrastructure.WhatsApp;
 using SistemaVendas.Domain.Lojas;
 using Microsoft.Extensions.Options;
+using SistemaVendas.Domain.Estoque;
+using SistemaVendas.Infrastructure.Seguranca;
 
 namespace SistemaVendas.Api.Endpoints;
 
@@ -41,6 +43,11 @@ public record ConfigFunilDto(
     string TextoFollowup2,
     string TextoFrete,
     string TextoChamarVendedor);
+
+/// <summary>WhatsApp oficial (Cloud API) da loja: o token nunca volta, só o resumo.</summary>
+public record WhatsAppOficialSaida(bool Configurado, string? Origem, string? PhoneNumberId, string? Resumo, bool PodeSalvar);
+
+public record WhatsAppOficialEntrada(string? PhoneNumberId, string? AccessToken);
 
 public record ConfigWhatsAppDto(bool AtenderTodos, List<string> NumerosPermitidos, string? WhatsAppNumero, string Provedor);
 
@@ -129,6 +136,49 @@ public static class FunilEndpoints
 
             await db.SaveChangesAsync(ct);
             return Results.Ok(new ConfigWhatsAppDto(l.AtenderTodos, l.NumerosPermitidos, l.WhatsAppNumero, wa.Value.UsaPonteLocal ? "Local" : "Meta"));
+        });
+
+        config.MapGet("/whatsapp-oficial", async (AppDbContext db, ILojaAtual loja, CredenciaisDaLoja credenciais, ServicoCredenciais cofre, CancellationToken ct) =>
+        {
+            var lojaId = loja.LojaId!.Value;
+            var phone = await db.Lojas.Where(l => l.Id == lojaId).Select(l => l.PhoneNumberId).FirstOrDefaultAsync(ct);
+            var emUso = await credenciais.WhatsAppAsync(lojaId, ct);
+            var resumo = emUso?.Origem == OrigemCredencial.Loja ? (await cofre.ResumosAsync(lojaId, ct)).GetValueOrDefault(TipoCredencial.WhatsApp).Resumo : null;
+            return new WhatsAppOficialSaida(emUso is not null, emUso?.Origem.ToString(), phone, resumo, cofre.Disponivel);
+        });
+
+        // O dono informa o Phone Number ID e o token da conta do WhatsApp DA LOJA (na fase 2, Embedded Signup).
+        // A Meta confere se o token enxerga o número antes de salvar, e um número só pode estar numa loja.
+        config.MapPut("/whatsapp-oficial", async (WhatsAppOficialEntrada e, AppDbContext db, ILojaAtual loja, ServicoCredenciais cofre,
+            VerificadorWhatsApp verificador, CancellationToken ct) =>
+        {
+            var lojaId = loja.LojaId!.Value;
+            var phone = e.PhoneNumberId?.Trim() ?? "";
+            var token = e.AccessToken?.Trim() ?? "";
+            if (phone.Length is < 5 or > 30 || !phone.All(char.IsAsciiDigit))
+                return Results.Problem("Informe o Phone Number ID (só números).", statusCode: StatusCodes.Status422UnprocessableEntity);
+            if (token.Length is < 20 or > 600 || token.Any(char.IsWhiteSpace))
+                return Results.Problem("Cole o token de acesso da Meta.", statusCode: StatusCodes.Status422UnprocessableEntity);
+            if (!cofre.Disponivel)
+                return Results.Problem("Falta a chave mestra (Plataforma__ChaveMestra) no servidor.", statusCode: StatusCodes.Status422UnprocessableEntity);
+            if (await db.Lojas.AnyAsync(l => l.PhoneNumberId == phone && l.Id != lojaId, ct))
+                return Results.Problem("Este número já está ligado a outra loja.", statusCode: StatusCodes.Status409Conflict);
+
+            var (numero, erro) = await verificador.ConferirAsync(phone, token, ct);
+            if (erro is not null)
+                return Results.Problem(erro, statusCode: StatusCodes.Status422UnprocessableEntity);
+
+            var l = await db.Lojas.FirstAsync(x => x.Id == lojaId, ct);
+            l.PhoneNumberId = phone;
+            await db.SaveChangesAsync(ct);
+            await cofre.SalvarAsync(lojaId, new CredencialWhatsApp(token), $"token {ServicoCredenciais.Final(token)}, número {numero}", ct);
+            return Results.NoContent();
+        });
+
+        config.MapDelete("/whatsapp-oficial", async (ILojaAtual loja, ServicoCredenciais cofre, CancellationToken ct) =>
+        {
+            await cofre.RemoverAsync<CredencialWhatsApp>(loja.LojaId!.Value, ct);
+            return Results.NoContent();
         });
 
         config.MapGet("/funil", async (ServicoFunil funil, AppDbContext db, ILojaAtual loja, CancellationToken ct) =>

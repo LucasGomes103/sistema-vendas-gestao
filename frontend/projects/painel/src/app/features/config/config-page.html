@@ -7,6 +7,9 @@
 
 <app-conexao-whatsapp />
 <app-config-whatsapp />
+@if (auth.ehDono()) {
+  <app-config-whatsapp-oficial />
+}
 <app-config-frete />
 <app-config-pix />
 <app-config-cartao />

@@ -225,10 +225,29 @@ Opcional e sem mensalidade: o Mercado Pago cobra uma taxa por venda no cartão. 
 - **Configuração → Cartão (Mercado Pago)** mostra se está ligado, se está em modo de teste e o endereço do aviso.
 - O robô (Gemini) passa a dizer que a loja aceita Pix e cartão, sem mandar link por conta própria.
 
-Variáveis no Render: `MercadoPago__AccessToken` (obrigatória), `MercadoPago__WebhookSecret` (assinatura secreta dos
+**Por loja (SaaS fase 1):** cada loja usa o Mercado Pago dela. O dono cola o Access Token e a assinatura secreta
+em **Configuração → Cartão**; o servidor guarda cifrado (tabela `credencial_loja`, chave `Plataforma__ChaveMestra`) e
+nunca devolve o token, só o final dele. O aviso de pagamento acha a loja pelo pedido que guardou a order e busca a order
+com o token dessa loja; order que aponta para pedido de outra loja é ignorada. As variáveis abaixo valem só para a
+loja original (a mais antiga do banco, a ECS Fish), que segue funcionando sem mudar nada. Uma loja nova sem token
+próprio fica sem cartão, nunca com o token do servidor.
+
+Variáveis no Render (só a loja original): `MercadoPago__AccessToken`, `MercadoPago__WebhookSecret` (assinatura secreta dos
 avisos; com ela, aviso com assinatura errada é recusado), `MercadoPago__ModoTeste=true` enquanto usar a conta de
 teste (só muda o selo no painel). O endereço público vem do `RENDER_EXTERNAL_URL`, que o Render preenche sozinho
 (ou `MercadoPago__UrlPublicaApi`); serve só para o painel mostrar a URL a cadastrar no Mercado Pago.
+
+## WhatsApp oficial por loja (SaaS fase 1)
+
+- **Configuração → WhatsApp oficial (Meta)**, só o dono: Phone Number ID e token de acesso da conta do WhatsApp da
+  loja. Antes de salvar, o sistema pergunta à Meta se o token enxerga o número; o token fica cifrado em
+  `credencial_loja` e o painel só mostra o final dele.
+- Um número só pode estar ligado a uma loja (índice único em `loja.phone_number_id`), senão as mensagens dele
+  iriam para a loja errada.
+- Envio: a loja da ponte por QR (`WhatsApp__Local__LojaSlug`, quando `WhatsApp__Provedor=Local`) continua saindo
+  pela ponte; todas as outras saem pela Cloud API com o token delas, ou ficam simuladas sem token. A ponte da ECS Fish
+  nunca envia mensagem de outra loja. `WhatsApp__AccessToken` no Render vale só para a loja original.
+- Na fase 2 isto vira o botão "Conectar WhatsApp" (Embedded Signup da Meta).
 
 ## Equipe: quem atendeu e quem vendeu
 

@@ -6,9 +6,9 @@ namespace SistemaVendas.Application.Atendimento;
 /// </summary>
 public interface IWhatsAppCliente
 {
-    /// <summary>True quando o envio é simulado (sem token da Meta configurado).</summary>
-    bool Simulado { get; }
+    /// <summary>True quando o envio da loja é simulado (sem token da Meta para ela).</summary>
+    Task<bool> SimuladoAsync(Guid lojaId, CancellationToken ct);
 
-    /// <summary>Envia texto livre e devolve o wamid da Meta.</summary>
-    Task<string> EnviarTextoAsync(string phoneNumberId, string para, string texto, CancellationToken ct);
+    /// <summary>Envia texto livre pelo número da loja, com o token da loja, e devolve o wamid da Meta.</summary>
+    Task<string> EnviarTextoAsync(Guid lojaId, string phoneNumberId, string para, string texto, CancellationToken ct);
 }
