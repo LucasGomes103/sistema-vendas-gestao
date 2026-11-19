@@ -7,6 +7,7 @@ import { Shell } from './layout/shell';
 export const routes: Routes = [
   {
     path: 'login',
+    title: 'Entrar',
     canActivate: [somenteVisitante],
     loadComponent: () => import('./features/login/login-page').then((m) => m.LoginPage),
   },
