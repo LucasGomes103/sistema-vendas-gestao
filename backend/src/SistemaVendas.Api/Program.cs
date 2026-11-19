@@ -69,13 +69,20 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
     o.KnownProxies.Clear();
 });
 
-// Chaves dos cookies num volume: reiniciar o contêiner não desloga ninguém.
+// Chaves dos cookies fora do contêiner: deploy ou reinício não desloga ninguém. Numa pasta (volume), se
+// ChavesProtecao__Pasta estiver definida; senão no banco (tabela chave_protecao), que é o caso do Render grátis.
+var protecao = builder.Services.AddDataProtection().SetApplicationName("sistema-vendas-gestao");
 if (builder.Configuration["ChavesProtecao:Pasta"] is { Length: > 0 } pastaChaves)
-    builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(pastaChaves));
+    protecao.PersistKeysToFileSystem(new DirectoryInfo(pastaChaves));
+else
+    protecao.PersistKeysToDbContext<AppDbContext>();
 
 var app = builder.Build();
 
 app.UseForwardedHeaders();
+
+// Lê a chave mestra já na subida: se estiver errada, o erro aparece logo no log do Render.
+app.Services.GetRequiredService<SistemaVendas.Infrastructure.Seguranca.Cofre>();
 
 if (app.Configuration.GetValue<bool>("Banco:MigrarAoIniciar"))
 {

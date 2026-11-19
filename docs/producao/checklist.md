@@ -75,7 +75,7 @@ Ordem sugerida para levar o sistema da versão teste para uma loja em operação
 
 Itens que melhoram a operação real e ainda não existem:
 
-1. **Chaves dos cookies no banco**: hoje, no Render, cada deploy desloga todo mundo (sem disco para `ChavesProtecao__Pasta`). Guardar as chaves no PostgreSQL resolve.
+1. ~~**Chaves dos cookies no banco**~~: feito na fase 1 do SaaS (tabela `chave_protecao`); deploy não desloga mais ninguém.
 2. **Modelos de mensagem da Meta**: lembrete de pagamento em 12 h, pedido confirmado e saiu para entrega fora da janela de 24 h (utilidade, R$ 0,035 cada).
 3. **Tirar a ponte por QR da imagem de produção** (e o auto-ping), deixando-a só para desenvolvimento.
 4. **Exclusão e exportação dos dados de um cliente** pelo painel (LGPD).

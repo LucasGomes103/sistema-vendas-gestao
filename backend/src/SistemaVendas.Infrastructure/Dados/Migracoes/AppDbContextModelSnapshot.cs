@@ -24,6 +24,29 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "pg_trgm");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("FriendlyName")
+                        .HasColumnType("text")
+                        .HasColumnName("friendly_name");
+
+                    b.Property<string>("Xml")
+                        .HasColumnType("text")
+                        .HasColumnName("xml");
+
+                    b.HasKey("Id")
+                        .HasName("pk_chave_protecao");
+
+                    b.ToTable("chave_protecao", (string)null);
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Atendimento.Cliente", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1173,6 +1196,50 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.ToTable("config_funil", (string)null);
                 });
 
+            modelBuilder.Entity("SistemaVendas.Domain.Lojas.CredencialLoja", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("AtualizadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("atualizado_em");
+
+                    b.Property<string>("Cifrado")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("cifrado");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_id");
+
+                    b.Property<string>("Resumo")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("resumo");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("tipo");
+
+                    b.HasKey("Id")
+                        .HasName("pk_credencial_loja");
+
+                    b.HasIndex("LojaId", "Tipo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_credencial_loja_loja_id_tipo");
+
+                    b.ToTable("credencial_loja", (string)null);
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Lojas.Loja", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1871,6 +1938,16 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_config_funil_loja_loja_id");
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Lojas.CredencialLoja", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_credencial_loja_loja_loja_id");
                 });
 
             modelBuilder.Entity("SistemaVendas.Domain.Lojas.Usuario", b =>

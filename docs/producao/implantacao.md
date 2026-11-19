@@ -64,7 +64,8 @@ Em .NET, `__` separa seções (`IA__Gemini__ApiKey` = `IA:Gemini:ApiKey`).
 | `ConnectionStrings__Banco` | sim | segredo | `Host=...pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.xxxx;Password=...;SSL Mode=Require` |
 | `Banco__MigrarAoIniciar` | sim | `true` | aplica migrações ao subir |
 | `Vitrine__UrlBase` | sim | `https://<dominio>` | link da vitrine que o robô envia |
-| `ChavesProtecao__Pasta` | não | — | pasta das chaves dos cookies; no Render não há disco persistente, então cada deploy desloga todos (ver próximos passos) |
+| `ChavesProtecao__Pasta` | não | — | pasta das chaves dos cookies. Vazia (o normal no Render), as chaves ficam no banco (tabela `chave_protecao`) e um deploy não desloga ninguém |
+| `Plataforma__ChaveMestra` | sim, para lojas novas | `openssl rand -base64 32` | chave que cifra as credenciais de cada loja (tabela `credencial_loja`). Guarde uma cópia fora do Render: trocar ou perder a chave invalida as credenciais salvas |
 | `Simulador__Habilitado` | não | `false` | desliga o simulador de cliente na produção |
 | `WhatsApp__Provedor` | sim | `Meta` (ou remover: o padrão é Meta) | `Local` = ponte por QR, só para teste |
 | `WhatsApp__AccessToken` | sim (Meta) | segredo | token **permanente** de usuário do sistema da Meta Business |
