@@ -268,6 +268,11 @@ teste (só muda o selo no painel). O endereço público vem do `RENDER_EXTERNAL_
 - **Suspender** (com motivo): ninguém da loja entra, quem está dentro sai em até 1 minuto, a vitrine sai do ar e as
   mensagens que chegam são ignoradas. **Reativar** devolve tudo, sem perder nada. **Ativar sem e-mail** libera uma
   loja cujo e-mail de confirmação não chegou. O administrador não suspende a própria loja.
+- **Editar**: nome, endereço da vitrine (o link antigo para de funcionar), tipo de loja e nome/e-mail de login do dono
+  (endereço e e-mail não podem repetir os de outra loja ou usuário).
+- **Excluir**: apaga a loja e todas as linhas dela (produtos, estoque, conversas, clientes, pedidos, caixa, usuários,
+  credenciais), numa transação só. Pede para digitar o endereço da loja. Não aparece para a própria loja do
+  administrador nem para a loja original (a que usa as chaves do servidor, a ECS Fish), e a API também recusa.
 
 ## Equipe: quem atendeu e quem vendeu
 

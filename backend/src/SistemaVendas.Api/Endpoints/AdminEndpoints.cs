@@ -17,6 +17,11 @@ public record LojaAdminSaida(
 
 public record SuspenderEntrada(string? Motivo);
 
+public record EditarLojaEntrada(string? Nome, string? Slug, string? Segmento, string? NomeDono, string? EmailDono);
+
+/// <summary>Para excluir, o administrador digita o endereço (slug) da loja: evita apagar a loja errada.</summary>
+public record ExcluirLojaEntrada(string? Confirmacao);
+
 /// <summary>Administrador da plataforma: e-mail listado em Plataforma__Admins (conta do Lucas).</summary>
 public class AdminPlataformaRequisito : IAuthorizationRequirement;
 
@@ -87,6 +92,67 @@ public static class AdminEndpoints
             loja.SuspensaEm = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(ct);
             logs.CreateLogger("Admin").LogWarning("Loja {Slug} suspensa por {Admin}: {Motivo}", loja.Slug, user.FindFirstValue(ClaimTypes.Email), loja.MotivoSuspensao);
+            return Results.NoContent();
+        });
+
+        grupo.MapPut("/lojas/{id:guid}", async (Guid id, EditarLojaEntrada e, AppDbContext db, ClaimsPrincipal user, ILoggerFactory logs, CancellationToken ct) =>
+        {
+            var loja = await db.Lojas.FirstOrDefaultAsync(l => l.Id == id, ct);
+            if (loja is null)
+                return Results.NotFound();
+            var nome = e.Nome?.Trim() ?? "";
+            var slug = e.Slug?.Trim().ToLowerInvariant() ?? "";
+            var segmento = string.IsNullOrWhiteSpace(e.Segmento) ? null : e.Segmento.Trim();
+            var nomeDono = e.NomeDono?.Trim() ?? "";
+            var email = e.EmailDono?.Trim().ToLowerInvariant() ?? "";
+
+            string? erro = null;
+            if (nome.Length is < 2 or > 120) erro = "O nome da loja precisa ter de 2 a 120 letras.";
+            else if (segmento is { Length: > 60 }) erro = "O tipo de loja pode ter até 60 letras.";
+            else if (slug != loja.Slug) erro = RegrasCadastro.ValidarSlug(slug);
+            if (erro is not null)
+                return Results.Problem(erro, statusCode: StatusCodes.Status422UnprocessableEntity);
+            if (slug != loja.Slug && await db.Lojas.AnyAsync(l => l.Slug == slug && l.Id != id, ct))
+                return Results.Problem("Este endereço já é de outra loja.", statusCode: StatusCodes.Status409Conflict);
+
+            var dono = await db.Usuarios.IgnoreQueryFilters().Where(u => u.LojaId == id && u.Papel == Papel.Dono)
+                .OrderBy(u => u.CriadoEm).FirstOrDefaultAsync(ct);
+            if (dono is not null)
+            {
+                if (nomeDono.Length is < 2 or > 120)
+                    return Results.Problem("O nome do dono precisa ter de 2 a 120 letras.", statusCode: StatusCodes.Status422UnprocessableEntity);
+                if (!RegrasCadastro.EmailValido(email))
+                    return Results.Problem("Informe um e-mail válido para o dono.", statusCode: StatusCodes.Status422UnprocessableEntity);
+                if (email != dono.Email && await db.Usuarios.IgnoreQueryFilters().AnyAsync(u => u.Email == email && u.Id != dono.Id, ct))
+                    return Results.Problem("Este e-mail já é de outro usuário.", statusCode: StatusCodes.Status409Conflict);
+                dono.Nome = nomeDono;
+                dono.Email = email;
+            }
+
+            var slugAntigo = loja.Slug;
+            loja.Nome = nome;
+            loja.Slug = slug;
+            loja.Segmento = segmento;
+            await db.SaveChangesAsync(ct);
+            logs.CreateLogger("Admin").LogWarning("Loja {Slug} (antes {SlugAntigo}) editada por {Admin}", slug, slugAntigo, user.FindFirstValue(ClaimTypes.Email));
+            return Results.NoContent();
+        });
+
+        // Apaga a loja e tudo dela (produtos, conversas, pedidos, usuários, credenciais). Não tem volta.
+        grupo.MapPost("/lojas/{id:guid}/excluir", async (Guid id, ExcluirLojaEntrada e, AppDbContext db, CredenciaisDaLoja credenciais, ClaimsPrincipal user, ILoggerFactory logs, CancellationToken ct) =>
+        {
+            var loja = await db.Lojas.AsNoTracking().FirstOrDefaultAsync(l => l.Id == id, ct);
+            if (loja is null)
+                return Results.NotFound();
+            if (Guid.TryParse(user.FindFirstValue(Comum.LojaAtualDaRequisicao.ClaimLoja), out var propria) && propria == id)
+                return Results.Problem("Você não pode excluir a sua própria loja.", statusCode: StatusCodes.Status422UnprocessableEntity);
+            if (await credenciais.LojaOriginalAsync(ct) == id)
+                return Results.Problem("A loja original (que usa as chaves do servidor) não pode ser excluída por aqui.", statusCode: StatusCodes.Status422UnprocessableEntity);
+            if (!string.Equals(e.Confirmacao?.Trim(), loja.Slug, StringComparison.Ordinal))
+                return Results.Problem($"Para confirmar, digite o endereço da loja: {loja.Slug}", statusCode: StatusCodes.Status422UnprocessableEntity);
+
+            var linhas = await ExclusaoDeLoja.ExcluirAsync(db, id, ct);
+            logs.CreateLogger("Admin").LogWarning("Loja {Slug} EXCLUÍDA por {Admin} ({Linhas} linhas apagadas)", loja.Slug, user.FindFirstValue(ClaimTypes.Email), linhas);
             return Results.NoContent();
         });
 
