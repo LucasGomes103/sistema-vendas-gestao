@@ -6,6 +6,7 @@ using SistemaVendas.Application.Atendimento;
 using SistemaVendas.Infrastructure.Dados;
 using SistemaVendas.Infrastructure.IA;
 using SistemaVendas.Infrastructure.Pagamentos;
+using SistemaVendas.Infrastructure.Seguranca;
 using SistemaVendas.Infrastructure.WhatsApp;
 
 namespace SistemaVendas.Infrastructure;
@@ -20,6 +21,10 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>(o => o
             .UseNpgsql(conexao)
             .UseSnakeCaseNamingConvention());
+        // Credenciais das lojas, cifradas com a chave mestra da plataforma (Plataforma__ChaveMestra).
+        services.Configure<PlataformaOptions>(config.GetSection(PlataformaOptions.Secao));
+        services.AddSingleton<Cofre>();
+        services.AddScoped<ServicoCredenciais>();
         services.AddScoped<ServicoFunil>();
         services.AddScoped<ServicoReservas>();
         services.AddScoped<ServicoPedidos>();

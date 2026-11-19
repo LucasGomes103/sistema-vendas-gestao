@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SistemaVendas.Application.Comum;
 using SistemaVendas.Domain.Atendimento;
@@ -12,8 +13,11 @@ using SistemaVendas.Domain.Vendas;
 
 namespace SistemaVendas.Infrastructure.Dados;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual lojaAtual) : DbContext(options)
+public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual lojaAtual) : DbContext(options), IDataProtectionKeyContext
 {
+    /// <summary>Chaves que assinam os cookies de login: no banco, um deploy novo não desloga ninguém.</summary>
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+    public DbSet<CredencialLoja> CredenciaisLoja => Set<CredencialLoja>();
     public DbSet<Loja> Lojas => Set<Loja>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<ZonaEntrega> ZonasEntrega => Set<ZonaEntrega>();
@@ -56,6 +60,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
             e.HasIndex(x => x.Slug).IsUnique();
             e.Property(x => x.Nome).HasMaxLength(120);
             e.Property(x => x.Slug).HasMaxLength(60);
+        });
+
+        modelBuilder.Entity<DataProtectionKey>(e => e.ToTable("chave_protecao"));
+
+        modelBuilder.Entity<CredencialLoja>(e =>
+        {
+            e.ToTable("credencial_loja");
+            e.HasIndex(x => new { x.LojaId, x.Tipo }).IsUnique();
+            e.Property(x => x.Resumo).HasMaxLength(200);
         });
 
         modelBuilder.Entity<Usuario>(e =>
@@ -294,6 +307,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
         modelBuilder.Entity<LancamentoCaixa>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<FechamentoCaixa>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<Entrega>().HasQueryFilter(x => x.LojaId == LojaId);
+        modelBuilder.Entity<CredencialLoja>().HasQueryFilter(x => x.LojaId == LojaId);
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
