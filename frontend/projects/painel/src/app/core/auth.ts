@@ -32,21 +32,31 @@ export class Auth {
     return this.logado();
   }
 
+  /** Código do último erro de login (ex.: 'email_nao_confirmado'), para a tela oferecer o próximo passo. */
+  readonly codigoErro = signal<string | null>(null);
+
   async entrar(email: string, senha: string): Promise<string | null> {
+    this.codigoErro.set(null);
     try {
       this._usuario.set(await firstValueFrom(this.http.post<UsuarioLogado>(`${API}/auth/login`, { email, senha })));
       this.verificado = true;
       return null;
     } catch (e) {
-      const status = (e as HttpErrorResponse).status;
+      const erro = e as HttpErrorResponse;
+      const status = erro.status;
       if (status === 401) return 'E-mail ou senha inválidos.';
+      if (status === 403) {
+        this.codigoErro.set(erro.error?.codigo ?? null);
+        return erro.error?.detail ?? 'Acesso bloqueado.';
+      }
       if (status === 429) return 'Muitas tentativas. Aguarde um minuto e tente de novo.';
       return 'Não foi possível conectar. A API está rodando?';
     }
   }
 
-  /** Atualiza nome e e-mail mostrados no menu depois que o próprio usuário se editou. */
+  /** Atualiza nome e e-mail mostrados no menu depois que o próprio usuário se editou (ou acabou de entrar). */
   async recarregar(): Promise<void> {
+    this.verificado = true;
     try {
       this._usuario.set(await firstValueFrom(this.http.get<UsuarioLogado>(`${API}/auth/eu`)));
     } catch {

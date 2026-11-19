@@ -117,6 +117,7 @@ app.MapPaginasPublicasEndpoints();
 
 var v1 = app.MapGroup("/api/v1");
 v1.MapAuthEndpoints();
+v1.MapCadastroEndpoints();
 v1.MapUsuarioEndpoints();
 v1.MapCatalogoPublicoEndpoints();
 v1.MapEspecieEndpoints();
