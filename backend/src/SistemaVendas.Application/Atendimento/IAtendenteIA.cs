@@ -4,7 +4,8 @@ namespace SistemaVendas.Application.Atendimento;
 /// <summary>Uma fala do histórico, sem dados pessoais: só quem falou e o texto.</summary>
 public record FalaConversa(bool DoCliente, string Texto);
 
-public record EspecieEncontrada(Guid Id, string NomePopular, string? NomeCientifico, decimal? TamanhoCm, decimal Preco, int Disponivel);
+/// <summary>Detalhes: campos opcionais do produto ("Tamanho: M · Cor: preto").</summary>
+public record EspecieEncontrada(Guid Id, string NomePopular, string? NomeCientifico, decimal? TamanhoCm, decimal Preco, int Disponivel, string? Detalhes = null);
 
 /// <summary>
 /// Ferramentas que o backend expõe para a IA. A IA conversa, mas não inventa dados:

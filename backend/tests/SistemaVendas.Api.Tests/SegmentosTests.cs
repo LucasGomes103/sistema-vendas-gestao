@@ -64,4 +64,13 @@ public class SegmentosTests
         Assert.Contains("Compra de mercadoria", RegrasCaixa.CategoriasSaidaPara(Vocabulario.Para("Autopeças")));
         Assert.Contains("Compra de peixes", RegrasCaixa.CategoriasSaidaPara(Vocabulario.Aquarismo));
     }
+
+    [Theory]
+    [InlineData("Roupas e acessórios", "Tamanho")]
+    [InlineData("Autopeças", "Aplicação (veículo e ano)")]
+    [InlineData("Pet shop", "Peso")]
+    [InlineData("Qualquer coisa", "Marca")]
+    [InlineData("Aquarismo", "Temperatura")]
+    public void Cada_ramo_sugere_os_campos_que_importam(string segmento, string campo) =>
+        Assert.Contains(campo, Vocabulario.Para(segmento).CamposSugeridos!);
 }

@@ -175,6 +175,15 @@ main {
   font-size: 12px;
 }
 
+.atributos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  width: 100%;
+  color: var(--sv-texto-suave);
+  font-size: 12px;
+}
+
 .vazio,
 .estado {
   display: grid;

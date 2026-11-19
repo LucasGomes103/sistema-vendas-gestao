@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -6,7 +6,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { firstValueFrom } from 'rxjs';
-import { API, Especie, EspecieEntrada } from '../../core/api';
+import { API, AtributoProduto, Especie, EspecieEntrada } from '../../core/api';
+import { MatIconModule } from '@angular/material/icon';
 import { Termos } from '../../core/termos';
 
 /** Espécie salva, para quem abriu já poder mostrá-la e selecioná-la sem recarregar a lista. */
@@ -14,7 +15,7 @@ export type EspecieSalva = Especie | undefined;
 
 @Component({
   selector: 'app-especie-dialog',
-  imports: [ReactiveFormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule],
+  imports: [ReactiveFormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <h2 mat-dialog-title>{{ especie ? 'Editar ' + tx.produtoMin() : tx.novoProduto() }}</h2>
@@ -55,6 +56,31 @@ export type EspecieSalva = Especie | undefined;
             [placeholder]="tx.aquario() ? 'Compatibilidade, parâmetros de água, cuidados' : 'Detalhes, medidas, cuidados'"
           ></textarea>
         </mat-form-field>
+        <div class="inteiro detalhes">
+          <span class="titulo-detalhes">Detalhes (opcional)</span>
+          <p class="ajuda">Aparecem no catálogo, na vitrine e o robô usa para responder.</p>
+          @for (c of campos(); track $index; let i = $index) {
+            <div class="linha">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Campo</mat-label>
+                <input matInput [value]="c.nome" (input)="alterarCampo(i, 'nome', $any($event.target).value)" maxlength="30" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Valor</mat-label>
+                <input matInput [value]="c.valor" (input)="alterarCampo(i, 'valor', $any($event.target).value)" maxlength="80" />
+              </mat-form-field>
+              <button mat-icon-button type="button" aria-label="Tirar campo" (click)="tirarCampo(i)"><mat-icon>close</mat-icon></button>
+            </div>
+          }
+          @if (campos().length < maximo) {
+            <div class="sugestoes">
+              @for (s of sugestoesLivres(); track s) {
+                <button mat-stroked-button type="button" (click)="adicionarCampo(s)"><mat-icon>add</mat-icon> {{ s }}</button>
+              }
+              <button mat-button type="button" (click)="adicionarCampo('')"><mat-icon>add</mat-icon> Outro campo</button>
+            </div>
+          }
+        </div>
         @if (erro()) {
           <p class="erro inteiro">{{ erro() }}</p>
         }
@@ -79,6 +105,30 @@ export type EspecieSalva = Especie | undefined;
       margin: 0;
       color: var(--mat-sys-error);
     }
+    .detalhes {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .titulo-detalhes {
+      font: var(--mat-sys-title-small);
+    }
+    .ajuda {
+      margin: -6px 0 0;
+      color: var(--mat-sys-on-surface-variant);
+      font: var(--mat-sys-body-small);
+    }
+    .linha {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+    .sugestoes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
   `,
 })
 export class EspecieDialog {
@@ -89,6 +139,26 @@ export class EspecieDialog {
 
   protected readonly salvando = signal(false);
   protected readonly erro = signal<string | null>(null);
+
+  /** Campos opcionais (Tamanho, Cor, Marca...). No máximo 8, como no servidor. */
+  protected readonly maximo = 8;
+  protected readonly campos = signal<AtributoProduto[]>((this.especie?.atributos ?? []).map((a) => ({ ...a })));
+  protected readonly sugestoesLivres = computed(() => {
+    const usados = new Set(this.campos().map((c) => c.nome.trim().toLowerCase()));
+    return this.tx.camposSugeridos().filter((s) => !usados.has(s.toLowerCase()));
+  });
+
+  protected adicionarCampo(nome: string): void {
+    this.campos.update((l) => [...l, { nome, valor: '' }]);
+  }
+
+  protected alterarCampo(i: number, chave: keyof AtributoProduto, valor: string): void {
+    this.campos.update((l) => l.map((c, j) => (j === i ? { ...c, [chave]: valor } : c)));
+  }
+
+  protected tirarCampo(i: number): void {
+    this.campos.update((l) => l.filter((_, j) => j !== i));
+  }
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     nomePopular: [this.especie?.nomePopular ?? '', [Validators.required, Validators.maxLength(120)]],
@@ -113,6 +183,9 @@ export class EspecieDialog {
       preco: Number(v.preco),
       tamanhoCm: v.tamanhoCm ? Number(v.tamanhoCm) : null,
       observacoes: v.observacoes || null,
+      atributos: this.campos()
+        .map((c) => ({ nome: c.nome.trim(), valor: c.valor.trim() }))
+        .filter((c) => c.nome && c.valor),
     };
 
     try {

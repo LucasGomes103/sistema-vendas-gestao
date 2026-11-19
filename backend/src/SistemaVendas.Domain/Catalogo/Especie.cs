@@ -11,7 +11,37 @@ public class Especie : EntidadeDaLoja
     public string? Observacoes { get; set; }
     public bool Ativo { get; set; } = true;
 
+    /// <summary>Campos livres do produto (Tamanho: M, Cor: preto, Marca: Bosch). Vão para o painel, a vitrine e o robô.</summary>
+    public List<AtributoProduto> Atributos { get; set; } = [];
+
     public List<Foto> Fotos { get; set; } = [];
+}
+
+/// <summary>Um campo opcional do produto: nome e valor escritos pelo dono.</summary>
+public class AtributoProduto
+{
+    public required string Nome { get; set; }
+    public required string Valor { get; set; }
+}
+
+public static class RegrasAtributos
+{
+    public const int Maximo = 8;
+    public const int TamanhoNome = 30;
+    public const int TamanhoValor = 80;
+
+    /// <summary>Limpa a lista: tira vazios e repetidos (pelo nome, sem diferenciar maiúsculas) e corta no máximo.</summary>
+    public static List<AtributoProduto> Normalizar(IEnumerable<AtributoProduto>? atributos) =>
+        (atributos ?? [])
+            .Select(a => new AtributoProduto { Nome = (a.Nome ?? "").Trim(), Valor = (a.Valor ?? "").Trim() })
+            .Where(a => a.Nome.Length > 0 && a.Valor.Length > 0)
+            .DistinctBy(a => a.Nome.ToLowerInvariant())
+            .Take(Maximo)
+            .ToList();
+
+    /// <summary>"Tamanho: M · Cor: preto".</summary>
+    public static string? Resumo(IEnumerable<AtributoProduto>? atributos) =>
+        atributos?.Any() == true ? string.Join(" · ", atributos.Select(a => $"{a.Nome}: {a.Valor}")) : null;
 }
 
 public class Foto : EntidadeDaLoja

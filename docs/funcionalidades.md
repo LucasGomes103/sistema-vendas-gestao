@@ -317,3 +317,13 @@ Para a ida à produção (custos, variáveis, segurança, LGPD), ver [producao/c
   lugar de "Compra de peixes" nas categorias do caixa.
 - Por dentro (banco e código) o produto continua se chamando espécie e o local, tanque: nada foi renomeado no banco,
   então os dados da ECS Fish não mudam.
+- **Painel e vitrine** usam as palavras da loja: "Novo produto", "Estoque por local", "Buscar produto", ícones de
+  caixa e prateleira em vez de peixe e água. Tamanho em cm, litros e dias de quarentena só aparecem no aquarismo;
+  "mortes" vira "perdas" nas métricas e no CSV.
+- **Cadastro** sugere o tipo de loja (Aquarismo, Pet shop, Roupas e acessórios, Autopeças...) e o campo passa a ser
+  obrigatório.
+- **Detalhes do produto (opcional):** até 8 campos livres por produto (ex.: Tamanho: M, Cor: preto, Marca: Bosch,
+  Aplicação: Gol 2015). O cadastro sugere os campos do ramo da loja (roupas: tamanho, cor, tecido; autopeças: marca,
+  aplicação, código; pet: marca, peso, porte...). Aparecem no catálogo e na vitrine, entram na busca da vitrine e o
+  robô recebe os detalhes ao buscar o produto (e acha o produto pelo valor, ex.: "tem em preto?").
+

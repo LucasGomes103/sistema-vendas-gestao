@@ -47,11 +47,12 @@ public class FerramentasAtendimento(AppDbContext db, ILojaAtual lojaAtual, IOpti
         var disponivel = Saldos.DisponivelPorEspecie(await Saldos.PorLoteAsync(db, ct));
 
         return especies
-            .Select(e => new { e, Nome = Normalizar($"{e.NomePopular} {e.NomeCientifico}") })
+            .Select(e => new { e, Nome = Normalizar($"{e.NomePopular} {e.NomeCientifico} {string.Join(' ', (e.Atributos ?? []).Select(a => a.Valor))}") })
             .Where(x => termos.Any(t => x.Nome.Contains(t) || x.Nome.Split(' ').Any(p => p.Length >= 3 && t.StartsWith(p))))
             .OrderByDescending(x => termos.Count(t => x.Nome.Contains(t)))
             .Take(5)
-            .Select(x => new EspecieEncontrada(x.e.Id, x.e.NomePopular, x.e.NomeCientifico, x.e.TamanhoCm, x.e.Preco, disponivel.GetValueOrDefault(x.e.Id)))
+            .Select(x => new EspecieEncontrada(x.e.Id, x.e.NomePopular, x.e.NomeCientifico, x.e.TamanhoCm, x.e.Preco, disponivel.GetValueOrDefault(x.e.Id),
+                Domain.Catalogo.RegrasAtributos.Resumo(x.e.Atributos)))
             .ToList();
     }
 

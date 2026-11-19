@@ -98,6 +98,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
             e.Property(x => x.TamanhoCm).HasPrecision(6, 1);
             e.HasIndex(x => x.NomePopular).HasMethod("gin").HasOperators("gin_trgm_ops");
             e.HasMany(x => x.Fotos).WithOne().HasForeignKey(x => x.EspecieId);
+            // Campos opcionais do produto numa coluna jsonb (lista curta, sempre lida junto).
+            e.OwnsMany(x => x.Atributos, a => a.ToJson("atributos"));
         });
 
         modelBuilder.Entity<Foto>(e => e.ToTable("foto"));

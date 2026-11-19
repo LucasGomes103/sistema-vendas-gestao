@@ -70,6 +70,13 @@
               <span class="tamanho"><mat-icon>straighten</mat-icon>{{ e.tamanhoCm }} cm</span>
             }
           </div>
+          @if (e.atributos?.length) {
+            <p class="atributos">
+              @for (a of e.atributos; track a.nome) {
+                <span><b>{{ a.nome }}:</b> {{ a.valor }}</span>
+              }
+            </p>
+          }
           <div class="rodape">
             @if (e.disponivel > 0) {
               <span class="sv-selo ok"><mat-icon>check_circle</mat-icon>{{ e.disponivel }} disponíveis</span>

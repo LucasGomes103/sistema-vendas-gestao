@@ -1,4 +1,5 @@
 using FluentValidation;
+using SistemaVendas.Domain.Catalogo;
 
 namespace SistemaVendas.Application.Catalogo;
 
@@ -7,7 +8,8 @@ public record EspecieEntrada(
     string? NomeCientifico,
     decimal? TamanhoCm,
     decimal Preco,
-    string? Observacoes);
+    string? Observacoes,
+    List<AtributoProduto>? Atributos = null);
 
 public record EspecieSaida(
     Guid Id,
@@ -18,7 +20,8 @@ public record EspecieSaida(
     string? Observacoes,
     bool Ativo,
     int Disponivel,
-    string? FotoUrl = null);
+    string? FotoUrl = null,
+    List<AtributoProduto>? Atributos = null);
 
 public record FotoEntrada(string DataUrl);
 
@@ -29,7 +32,8 @@ public record ItemCatalogoPublico(
     decimal? TamanhoCm,
     decimal Preco,
     int Disponivel,
-    string? FotoUrl);
+    string? FotoUrl,
+    List<AtributoProduto>? Atributos = null);
 
 public class EspecieEntradaValidator : AbstractValidator<EspecieEntrada>
 {
@@ -39,5 +43,12 @@ public class EspecieEntradaValidator : AbstractValidator<EspecieEntrada>
         RuleFor(x => x.NomeCientifico).MaximumLength(160);
         RuleFor(x => x.Preco).GreaterThanOrEqualTo(0);
         RuleFor(x => x.TamanhoCm).GreaterThan(0).When(x => x.TamanhoCm.HasValue);
+        RuleFor(x => x.Atributos).Must(a => a is null || a.Count <= RegrasAtributos.Maximo)
+            .WithMessage($"Use no máximo {RegrasAtributos.Maximo} campos.");
+        RuleForEach(x => x.Atributos).ChildRules(a =>
+        {
+            a.RuleFor(x => x.Nome).MaximumLength(RegrasAtributos.TamanhoNome).WithMessage($"Nome do campo com até {RegrasAtributos.TamanhoNome} letras.");
+            a.RuleFor(x => x.Valor).MaximumLength(RegrasAtributos.TamanhoValor).WithMessage($"Valor do campo com até {RegrasAtributos.TamanhoValor} letras.");
+        });
     }
 }

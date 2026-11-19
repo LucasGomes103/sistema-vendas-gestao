@@ -94,6 +94,7 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
                                 ["nome"] = e.NomePopular,
                                 ["nome_secundario"] = e.NomeCientifico,
                                 ["tamanho_cm"] = e.TamanhoCm,
+                                ["detalhes"] = e.Detalhes,
                                 ["preco"] = e.Preco.ToString("C", PtBr),
                                 ["disponivel"] = e.Disponivel
                             }).ToArray())

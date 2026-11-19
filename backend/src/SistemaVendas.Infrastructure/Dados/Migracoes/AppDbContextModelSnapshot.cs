@@ -1850,6 +1850,35 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_especie_loja_loja_id");
+
+                    b.OwnsMany("SistemaVendas.Domain.Catalogo.AtributoProduto", "Atributos", b1 =>
+                        {
+                            b1.Property<Guid>("EspecieId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Nome")
+                                .IsRequired();
+
+                            b1.Property<string>("Valor")
+                                .IsRequired();
+
+                            b1.HasKey("EspecieId", "__synthesizedOrdinal")
+                                .HasName("pk_especie");
+
+                            b1.ToTable("especie");
+
+                            b1
+                                .ToJson("atributos")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("EspecieId")
+                                .HasConstraintName("fk_especie_especie_especie_id");
+                        });
+
+                    b.Navigation("Atributos");
                 });
 
             modelBuilder.Entity("SistemaVendas.Domain.Catalogo.Foto", b =>

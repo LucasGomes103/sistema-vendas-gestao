@@ -31,6 +31,8 @@ export interface Vocabulario {
   aquario: boolean;
   isolamento: string;
   emoji: string;
+  /** Campos opcionais sugeridos para o produto neste tipo de loja. */
+  camposSugeridos?: string[];
 }
 
 
@@ -83,6 +85,13 @@ export interface Especie {
   ativo: boolean;
   disponivel: number;
   fotoUrl: string | null;
+  /** Campos opcionais do produto (Tamanho: M, Cor: preto...). */
+  atributos?: AtributoProduto[];
+}
+
+export interface AtributoProduto {
+  nome: string;
+  valor: string;
 }
 
 export interface EspecieEntrada {
@@ -91,6 +100,7 @@ export interface EspecieEntrada {
   tamanhoCm: number | null;
   preco: number;
   observacoes: string | null;
+  atributos: AtributoProduto[];
 }
 
 export interface ItemTanque {
