@@ -36,7 +36,7 @@ export class MotivoPerdaDialog {
     { valor: 'SemResposta', texto: 'Sem resposta' },
     { valor: 'NaoPagou', texto: 'Não pagou a reserva' },
     { valor: 'AchouCaro', texto: 'Achou caro' },
-    { valor: 'SemEstoque', texto: 'Sem estoque da espécie' },
+    { valor: 'SemEstoque', texto: 'Sem estoque do que queria' },
     { valor: 'RegiaoSemEntrega', texto: 'Região sem entrega' },
     { valor: 'Desistiu', texto: 'Desistiu ou comprou em outro lugar' },
   ];

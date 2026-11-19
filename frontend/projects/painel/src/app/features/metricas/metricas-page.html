@@ -5,7 +5,7 @@
   </div>
   <button mat-stroked-button [matMenuTriggerFor]="menuExportar"><mat-icon>download</mat-icon> Exportar</button>
   <mat-menu #menuExportar="matMenu">
-    @for (r of relatorios; track r.id) {
+    @for (r of relatorios(); track r.id) {
       <a mat-menu-item [href]="exportar(r.id)" download>
         <mat-icon>{{ r.icone }}</mat-icon>
         <span>{{ r.nome }}</span>
@@ -115,7 +115,7 @@
       <ng-container *ngTemplateOutlet="delta; context: { atual: r.atual.ticketMedio, anterior: r.anterior.ticketMedio }" />
     </div>
     <div class="sv-card kpi">
-      <span>Peixes vendidos</span>
+      <span>{{ tx.itensMai() }} vendidos</span>
       <strong>{{ r.atual.itensVendidos | number }}</strong>
       <small>
         {{ r.atual.pedidosCancelados }} pedido{{ r.atual.pedidosCancelados === 1 ? '' : 's' }} cancelado{{ r.atual.pedidosCancelados === 1 ? '' : 's' }}
@@ -276,13 +276,13 @@
 
   <!-- Espécies -->
   <section class="sv-card bloco">
-    <h2>Mais vendidos e margem por espécie</h2>
+    <h2>Mais vendidos e margem por {{ tx.produtoMin() }}</h2>
     @if (especiesVendidas().length) {
       <div class="rolagem">
         <table>
           <thead>
             <tr>
-              <th>Espécie</th>
+              <th>{{ tx.produto() }}</th>
               <th class="num">Vendidos</th>
               <th class="num">Receita</th>
               <th class="num">Custo</th>
@@ -309,25 +309,25 @@
         </table>
       </div>
       @if (algumaSemCusto()) {
-        <p class="nota">Margem com "—": algum lote vendido não tem custo cadastrado. Informe o custo por peixe na entrada do lote.</p>
+        <p class="nota">Margem com "—": algum lote vendido não tem custo cadastrado. Informe o custo por {{ tx.item() }} na entrada do lote.</p>
       }
     } @else {
-      <p class="vazio">Nenhuma espécie vendida no período.</p>
+      <p class="vazio">{{ tx.nenhumProduto() }} {{ tx.v().produtoFeminino ? 'vendida' : 'vendido' }} no período.</p>
     }
   </section>
 
   <!-- Estoque -->
   <section class="sv-card bloco">
-    <h2>Giro do estoque por tanque</h2>
+    <h2>Giro do estoque por {{ tx.localMin() }}</h2>
     <div class="rolagem">
       <table>
         <thead>
           <tr>
-            <th>Tanque</th>
+            <th>{{ tx.local() }}</th>
             <th class="num">No início</th>
             <th class="num">Entradas</th>
             <th class="num">Vendidos</th>
-            <th class="num">Mortes</th>
+            <th class="num">{{ tx.aquario() ? 'Mortes' : 'Perdas' }}</th>
             <th class="num" matTooltip="Vendidos ÷ estoque médio do período">Giro</th>
             <th class="num">Hoje</th>
           </tr>
@@ -335,7 +335,7 @@
         <tbody>
           @for (t of r.tanques; track t.tanqueId) {
             <tr>
-              <td>{{ t.tanque }} @if (t.tipo === 'Quarentena') {<small class="sv-selo alerta">quarentena</small>}</td>
+              <td>{{ t.tanque }} @if (t.tipo === 'Quarentena') {<small class="sv-selo alerta">{{ tx.isolamentoCurto() }}</small>}</td>
               <td class="num">{{ t.saldoInicio }}</td>
               <td class="num">{{ t.entradas }}</td>
               <td class="num">{{ t.vendidos }}</td>
@@ -344,23 +344,23 @@
               <td class="num">{{ t.saldoAtual }}</td>
             </tr>
           } @empty {
-            <tr><td colspan="7" class="vazio">Nenhum tanque cadastrado.</td></tr>
+            <tr><td colspan="7" class="vazio">Nenhum {{ tx.localMin() }} cadastrado.</td></tr>
           }
         </tbody>
       </table>
     </div>
-    <p class="nota">Giro = peixes vendidos ÷ estoque médio do período. Giro 2× quer dizer que o tanque "girou" duas vezes.</p>
+    <p class="nota">Giro = {{ tx.itens() }} vendidos ÷ estoque médio do período. Giro 2× quer dizer que o {{ tx.localMin() }} "girou" duas vezes.</p>
   </section>
 
   <div class="grade">
     <!-- Fornecedores -->
     <section class="sv-card bloco">
-      <h2>Mortalidade por fornecedor</h2>
-      <p class="nota topo">Lotes recebidos no período e quanto desse peixe morreu até hoje.</p>
+      <h2>{{ tx.aquario() ? 'Mortalidade' : 'Perdas' }} por fornecedor</h2>
+      <p class="nota topo">Lotes recebidos no período e {{ tx.aquario() ? 'quanto desse peixe morreu' : 'quanto se perdeu' }} até hoje.</p>
       @if (r.fornecedores.length) {
         <table>
           <thead>
-            <tr><th>Fornecedor</th><th class="num">Recebidos</th><th class="num">Mortes</th><th class="num">Compras</th></tr>
+            <tr><th>Fornecedor</th><th class="num">Recebidos</th><th class="num">{{ tx.aquario() ? 'Mortes' : 'Perdas' }}</th><th class="num">Compras</th></tr>
           </thead>
           <tbody>
             @for (f of r.fornecedores; track f.fornecedor) {
@@ -377,7 +377,7 @@
         <p class="vazio">Nenhum lote recebido no período.</p>
       }
       @if (especiesComMorte().length) {
-        <h3>Mortes no período por espécie</h3>
+        <h3>{{ tx.aquario() ? 'Mortes' : 'Perdas' }} no período por {{ tx.produtoMin() }}</h3>
         <p class="lista-curta">
           @for (e of especiesComMorte(); track e.especieId) {
             <span class="sv-selo alerta">{{ e.especie }}: {{ e.mortes }}</span>

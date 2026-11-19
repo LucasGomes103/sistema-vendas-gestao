@@ -12,8 +12,20 @@ interface ItemCatalogo {
   fotoUrl: string | null;
 }
 
+interface Termos {
+  aquario: boolean;
+  produto: string;
+  produtos: string;
+  produtoFeminino: boolean;
+  itens: string;
+}
+
 interface Catalogo {
   loja: string;
+  /** Tipo de loja escrito no cadastro (ex.: "Roupas"). */
+  segmento?: string | null;
+  /** Palavras do tipo de loja; sem elas (API antiga), aquarismo. */
+  termos?: Termos;
   /** WhatsApp da loja (só dígitos, com DDI). Sem ele, a vitrine não mostra o carrinho. */
   whatsApp: string | null;
   itens: ItemCatalogo[];
@@ -41,6 +53,20 @@ export class VitrinePage {
   protected readonly catalogo = httpResource<Catalogo>(() => `/api/v1/public/${this.loja()}/catalogo`);
   protected readonly busca = signal('');
   protected readonly poucas = POUCAS_UNIDADES;
+
+  /** Peixe na ECS Fish; produto nas lojas de outros tipos. */
+  protected readonly aquario = computed(() => this.catalogo.value()?.termos?.aquario ?? true);
+  protected readonly subtitulo = computed(() =>
+    this.aquario() ? 'Peixes ornamentais' : (this.catalogo.value()?.segmento?.trim() || 'Catálogo'),
+  );
+  protected readonly palavraItem = computed(() => (this.aquario() ? 'peixe' : 'produto'));
+  protected readonly itensPlural = computed(() => (this.aquario() ? 'peixes' : 'produtos'));
+  /** "espécie disponível" / "produto disponível". */
+  protected contagemTexto(n: number): string {
+    const t = this.catalogo.value()?.termos;
+    const nome = (n === 1 ? (t?.produto ?? 'Espécie') : (t?.produtos ?? 'Espécies')).toLowerCase();
+    return `${n} ${nome} ${n === 1 ? 'disponível' : 'disponíveis'}`;
+  }
 
   /** Carrinho: id da espécie -> quantidade. */
   private readonly carrinho = signal<Record<string, number>>({});

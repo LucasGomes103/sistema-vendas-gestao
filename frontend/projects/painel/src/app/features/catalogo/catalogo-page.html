@@ -1,10 +1,10 @@
 <header class="sv-cabecalho-pagina">
   <div>
     <h1>Catálogo</h1>
-    <p>O que está no estoque e aparece na vitrine. Cadastre peixes pela entrada de lote, no Estoque.</p>
+    <p>O que está no estoque e aparece na vitrine. Cadastre {{ tx.itens() }} pela entrada de lote, no Estoque.</p>
   </div>
   @if (auth.ehDono()) {
-    <button mat-flat-button (click)="abrir()"><mat-icon>add</mat-icon> Nova espécie</button>
+    <button mat-flat-button (click)="abrir()"><mat-icon>add</mat-icon> {{ tx.novoProduto() }}</button>
   }
 </header>
 
@@ -13,7 +13,7 @@
     <mat-icon>search</mat-icon>
     <input
       type="search"
-      placeholder="Buscar espécie"
+      [placeholder]="'Buscar ' + tx.produtoMin()"
       [value]="busca()"
       (input)="busca.set($any($event.target).value)"
     />
@@ -41,7 +41,7 @@
           @if (e.fotoUrl) {
             <img [src]="e.fotoUrl" [alt]="e.nomePopular" loading="lazy" />
           } @else {
-            <mat-icon>set_meal</mat-icon>
+            <mat-icon>{{ tx.aquario() ? 'set_meal' : 'inventory_2' }}</mat-icon>
           }
           @if (auth.ehDono()) {
             <span class="acoes-foto">
@@ -78,8 +78,8 @@
             }
             @if (auth.ehDono()) {
               <span class="acoes">
-                <button mat-icon-button aria-label="Editar espécie" (click)="abrir(e)"><mat-icon>edit</mat-icon></button>
-                <button mat-icon-button aria-label="Excluir espécie" (click)="excluir(e)"><mat-icon>delete</mat-icon></button>
+                <button mat-icon-button [attr.aria-label]="'Editar ' + tx.produtoMin()" (click)="abrir(e)"><mat-icon>edit</mat-icon></button>
+                <button mat-icon-button [attr.aria-label]="'Excluir ' + tx.produtoMin()" (click)="excluir(e)"><mat-icon>delete</mat-icon></button>
               </span>
             }
           </div>
@@ -88,7 +88,7 @@
     } @empty {
       <div class="sv-vazio">
         <mat-icon>search_off</mat-icon>
-        <p>{{ busca() ? 'Nenhuma espécie encontrada.' : filtro() === 'disponiveis' ? 'Nada no estoque ainda. Faça uma entrada de lote no Estoque.' : 'Nenhuma espécie sem estoque.' }}</p>
+        <p>{{ busca() ? tx.nenhumProduto() + (tx.v().produtoFeminino ? ' encontrada.' : ' encontrado.') : filtro() === 'disponiveis' ? 'Nada no estoque ainda. Faça uma entrada de lote no Estoque.' : tx.nenhumProduto() + ' sem estoque.' }}</p>
       </div>
     }
   </div>

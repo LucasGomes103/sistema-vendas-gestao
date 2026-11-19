@@ -4,14 +4,14 @@
       <span class="marca">{{ sigla() }}</span>
       <div>
         <h1>{{ c.loja }}</h1>
-        <p>Peixes ornamentais · disponível agora</p>
+        <p>{{ subtitulo() }} · disponível agora</p>
       </div>
     </div>
     <label class="busca">
       <span class="ms">search</span>
       <input
         type="search"
-        placeholder="Buscar peixe"
+        [placeholder]="'Buscar ' + palavraItem()"
         [value]="busca()"
         (input)="busca.set($any($event.target).value)"
       />
@@ -19,7 +19,7 @@
   </header>
 
   <main>
-    <p class="contagem">{{ itens().length }} {{ itens().length === 1 ? 'espécie disponível' : 'espécies disponíveis' }}</p>
+    <p class="contagem">{{ contagemTexto(itens().length) }}</p>
 
     <ul class="grade">
       @for (item of itens(); track item.id) {
@@ -28,7 +28,7 @@
             @if (item.fotoUrl) {
               <img [src]="item.fotoUrl" [alt]="item.nomePopular" loading="lazy" />
             } @else {
-              <span class="ms">set_meal</span>
+              <span class="ms">{{ aquario() ? 'set_meal' : 'inventory_2' }}</span>
             }
           </div>
           <div class="corpo">
@@ -61,7 +61,7 @@
       } @empty {
         <li class="vazio">
           <span class="ms">search_off</span>
-          Nenhum peixe encontrado.
+          Nenhum {{ palavraItem() }} encontrado.
         </li>
       }
     </ul>
@@ -71,7 +71,7 @@
     <footer class="carrinho" [class.vazio]="totalItens() === 0">
       @if (totalItens() > 0) {
         <div class="resumo">
-          <strong>{{ totalItens() }} {{ totalItens() === 1 ? 'peixe' : 'peixes' }}</strong>
+          <strong>{{ totalItens() }} {{ totalItens() === 1 ? palavraItem() : itensPlural() }}</strong>
           <span>{{ total() | currency: 'BRL' }} + frete</span>
         </div>
         <a class="enviar" [href]="linkPedido(c.whatsApp)" target="_blank" rel="noopener">

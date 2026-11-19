@@ -12,6 +12,7 @@ import { SenhaDialog } from '../features/usuarios/senha-dialog';
 import { AlertasQuentes } from '../core/alertas';
 import { atualizarACada } from '../core/atualizar';
 import { SinoAlertas } from './sino-alertas';
+import { Termos } from '../core/termos';
 
 interface ItemMenu {
   rota: string;
@@ -38,6 +39,7 @@ interface ItemMenu {
   styleUrl: './shell.scss',
 })
 export class Shell {
+  protected readonly tx = inject(Termos);
   protected readonly auth = inject(Auth);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
@@ -76,9 +78,12 @@ export class Shell {
     { rota: '/catalogo', rotulo: 'Catálogo', icone: 'set_meal', foraDaBarra: true },
   ];
 
-  protected readonly menu = computed(() =>
-    this.auth.ehEntregador() ? this.todos.filter((i) => i.entregador) : this.todos.filter((i) => !i.dono || this.auth.ehDono()),
-  );
+  protected readonly menu = computed(() => {
+    // Ícones do estoque e do catálogo seguem o tipo de loja (água e peixe só no aquarismo).
+    const icones: Record<string, string> = { '/estoque': this.tx.iconeLocal(), '/catalogo': this.tx.iconeProduto() };
+    const itens = this.todos.map((i) => (icones[i.rota] ? { ...i, icone: icones[i.rota] } : i));
+    return this.auth.ehEntregador() ? itens.filter((i) => i.entregador) : itens.filter((i) => !i.dono || this.auth.ehDono());
+  });
 
   protected readonly barra = computed(() => this.menu().filter((i) => !i.foraDaBarra));
   protected readonly noMenuDaConta = computed(() => this.menu().filter((i) => i.foraDaBarra));

@@ -7,6 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { firstValueFrom } from 'rxjs';
 import { API, Especie, EspecieEntrada } from '../../core/api';
+import { Termos } from '../../core/termos';
 
 /** Espécie salva, para quem abriu já poder mostrá-la e selecioná-la sem recarregar a lista. */
 export type EspecieSalva = Especie | undefined;
@@ -16,19 +17,19 @@ export type EspecieSalva = Especie | undefined;
   imports: [ReactiveFormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>{{ especie ? 'Editar espécie' : 'Nova espécie' }}</h2>
+    <h2 mat-dialog-title>{{ especie ? 'Editar ' + tx.produtoMin() : tx.novoProduto() }}</h2>
     <form [formGroup]="form" (ngSubmit)="salvar()">
       <mat-dialog-content class="campos">
         <mat-form-field appearance="outline" class="inteiro">
-          <mat-label>Nome popular</mat-label>
-          <input matInput formControlName="nomePopular" placeholder="Ex.: Betta halfmoon" />
+          <mat-label>{{ tx.aquario() ? 'Nome popular' : 'Nome' }}</mat-label>
+          <input matInput formControlName="nomePopular" [placeholder]="tx.aquario() ? 'Ex.: Betta halfmoon' : 'Ex.: Camiseta básica preta'" />
           @if (form.controls.nomePopular.hasError('required')) {
-            <mat-error>Informe o nome popular.</mat-error>
+            <mat-error>Informe o nome.</mat-error>
           }
         </mat-form-field>
         <mat-form-field appearance="outline" class="inteiro">
-          <mat-label>Nome científico</mat-label>
-          <input matInput formControlName="nomeCientifico" placeholder="Ex.: Betta splendens" />
+          <mat-label>{{ tx.nomeSecundario() }}</mat-label>
+          <input matInput formControlName="nomeCientifico" [placeholder]="tx.aquario() ? 'Ex.: Betta splendens' : 'Opcional'" />
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Preço</mat-label>
@@ -38,18 +39,20 @@ export type EspecieSalva = Especie | undefined;
             <mat-error>Informe um preço válido.</mat-error>
           }
         </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Tamanho</mat-label>
-          <input matInput type="number" min="0" step="0.5" formControlName="tamanhoCm" />
-          <span matTextSuffix>cm</span>
-        </mat-form-field>
+        @if (tx.aquario()) {
+          <mat-form-field appearance="outline">
+            <mat-label>Tamanho</mat-label>
+            <input matInput type="number" min="0" step="0.5" formControlName="tamanhoCm" />
+            <span matTextSuffix>cm</span>
+          </mat-form-field>
+        }
         <mat-form-field appearance="outline" class="inteiro">
           <mat-label>Observações</mat-label>
           <textarea
             matInput
             rows="3"
             formControlName="observacoes"
-            placeholder="Compatibilidade, parâmetros de água, cuidados"
+            [placeholder]="tx.aquario() ? 'Compatibilidade, parâmetros de água, cuidados' : 'Detalhes, medidas, cuidados'"
           ></textarea>
         </mat-form-field>
         @if (erro()) {
@@ -79,6 +82,7 @@ export type EspecieSalva = Especie | undefined;
   `,
 })
 export class EspecieDialog {
+  protected readonly tx = inject(Termos);
   private readonly http = inject(HttpClient);
   private readonly ref = inject<MatDialogRef<EspecieDialog, EspecieSalva>>(MatDialogRef);
   protected readonly especie = inject<Especie | null>(MAT_DIALOG_DATA);
