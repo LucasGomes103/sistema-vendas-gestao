@@ -308,7 +308,7 @@ public class ServicoMetricas(AppDbContext db)
 
         var especieIds = itens.Select(i => i.EspecieId).Concat(mortesPorEspecie.Keys).Distinct().ToList();
         var nomes = await db.Especies.AsNoTracking().IgnoreQueryFilters()
-            .Where(e => especieIds.Contains(e.Id)).ToDictionaryAsync(e => e.Id, e => e.NomePopular, ct);
+            .Where(e => e.LojaId == db.LojaAtualId && especieIds.Contains(e.Id)).ToDictionaryAsync(e => e.Id, e => e.NomePopular, ct);
 
         return especieIds.Select(id =>
             {

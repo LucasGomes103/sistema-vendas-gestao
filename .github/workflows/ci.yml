@@ -8,6 +8,21 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    # PostgreSQL de verdade para os testes de isolamento entre lojas (Isolamento/*).
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TESTE_BANCO: Host=localhost;Port=5432;Username=postgres;Password=postgres
     defaults:
       run:
         working-directory: backend
