@@ -42,7 +42,9 @@ public class CofreTests
 
         Assert.Null(cofre.Decifrar(cifrado, "loja-b:WhatsApp"));
         Assert.Null(NovoCofre(Convert.ToBase64String(new byte[32])).Decifrar(cifrado, "loja-a:WhatsApp"));
-        var adulterado = cifrado[..^2] + (cifrado[^2] == 'A' ? "B" : "A") + cifrado[^1];
+        var bytes = Convert.FromBase64String(cifrado[3..]);
+        bytes[^1] ^= 0x01;
+        var adulterado = "v1:" + Convert.ToBase64String(bytes);
         Assert.Null(cofre.Decifrar(adulterado, "loja-a:WhatsApp"));
         Assert.Null(cofre.Decifrar("lixo", "loja-a:WhatsApp"));
     }
