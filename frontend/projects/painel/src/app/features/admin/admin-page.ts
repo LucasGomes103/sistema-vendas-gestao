@@ -16,7 +16,7 @@ import { Auth } from '../../core/auth';
 import { EditarLojaDialog } from './editar-loja-dialog';
 import { RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
-import { AdminAbas, parada, tempoDesde } from './admin-comum';
+import { AdminAbas, SITUACAO_ASSINATURA, parada, tempoDesde } from './admin-comum';
 
 const STATUS: Record<LojaAdmin['status'], { rotulo: string; classe: string; icone: string }> = {
   Ativa: { rotulo: 'Ativa', classe: 'ok', icone: 'check_circle' },
@@ -81,6 +81,7 @@ const STATUS: Record<LojaAdmin['status'], { rotulo: string; classe: string; icon
             <div><dt>Última mensagem</dt><dd>{{ l.ultimaMensagemEm ? (l.ultimaMensagemEm | date: 'dd/MM HH:mm') : '—' }}</dd></div>
             <div><dt>Último acesso</dt><dd>{{ tempo(l.ultimoAcessoEm) }}</dd></div>
             <div><dt>Respostas do robô (30 dias)</dt><dd>{{ l.respostasRobo30Dias | number }}</dd></div>
+            <div><dt>Assinatura</dt><dd>{{ l.plano ?? 'isenta' }} · {{ situacoes[l.situacaoAssinatura].rotulo }}{{ l.venceEm ? ' até ' + (l.venceEm | date: 'dd/MM') : '' }}</dd></div>
             <div><dt>IA no mês</dt><dd>{{ l.respostasIaMes | number }}{{ l.limiteIaMes > 0 ? ' / ' + l.limiteIaMes : ' (sem limite)' }}</dd></div>
           </dl>
           <div class="rodape">
@@ -236,6 +237,7 @@ export class AdminPage {
   private readonly dialog = inject(MatDialog);
 
   protected readonly status = STATUS;
+  protected readonly situacoes = SITUACAO_ASSINATURA;
   private readonly auth = inject(Auth);
   protected readonly minhaLoja = computed(() => this.auth.usuario()?.lojaId);
   protected readonly lojas = httpResource<LojaAdmin[]>(() => `${API}/admin/lojas`);

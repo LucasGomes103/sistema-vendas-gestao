@@ -30,6 +30,17 @@ export const ACOES_AUDITORIA: Record<string, { rotulo: string; icone: string }> 
   excluir: { rotulo: 'Excluiu a loja', icone: 'delete_forever' },
   ver_como_loja: { rotulo: 'Entrou como suporte', icone: 'visibility' },
   sair_da_loja: { rotulo: 'Saiu do modo suporte', icone: 'visibility_off' },
+  assinatura: { rotulo: 'Mudou a assinatura', icone: 'workspace_premium' },
+};
+
+/** Texto da situação da assinatura de uma loja, para o painel da plataforma. */
+export const SITUACAO_ASSINATURA: Record<string, { rotulo: string; classe: string }> = {
+  Isenta: { rotulo: 'Isenta', classe: 'info' },
+  Cortesia: { rotulo: 'Cortesia', classe: 'ok' },
+  Teste: { rotulo: 'Em teste', classe: 'info' },
+  EmDia: { rotulo: 'Em dia', classe: 'ok' },
+  Carencia: { rotulo: 'Pagamento pendente', classe: 'alerta' },
+  Bloqueada: { rotulo: 'Bloqueada por atraso', classe: 'erro' },
 };
 
 export function rotuloAcao(a: AuditoriaAdmin): { rotulo: string; icone: string } {

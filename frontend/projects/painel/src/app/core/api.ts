@@ -69,6 +69,12 @@ export interface LojaAdmin {
   limiteIaMes: number;
   /** Limite próprio da loja; null = padrão da plataforma. */
   limiteIaProprio: number | null;
+  /** Assinatura: plano (null = isenta), situação de hoje e até quando vale. */
+  plano: string | null;
+  situacaoAssinatura: SituacaoAssinatura;
+  statusAssinatura: string;
+  venceEm: string | null;
+  mpStatus: string | null;
 }
 
 /** Um dia da série do painel da plataforma (horário de Brasília). */
