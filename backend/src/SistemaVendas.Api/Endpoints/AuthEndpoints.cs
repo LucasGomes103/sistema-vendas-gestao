@@ -15,7 +15,11 @@ namespace SistemaVendas.Api.Endpoints;
 public record LoginEntrada(string Email, string Senha);
 
 /// <summary>Termos: palavras do tipo de loja (espécie/tanque no aquarismo, produto/local nas outras).</summary>
-public record UsuarioLogado(Guid Id, string Nome, string Email, string Papel, Guid LojaId, string Loja, string LojaSlug, bool AdminPlataforma, Vocabulario Termos);
+public record UsuarioLogado(Guid Id, string Nome, string Email, string Papel, Guid LojaId, string Loja, string LojaSlug, bool AdminPlataforma, Vocabulario Termos)
+{
+    /// <summary>Administrador vendo esta loja como suporte, só leitura.</summary>
+    public bool ModoSuporte { get; init; }
+}
 
 public static class AuthEndpoints
 {
@@ -48,6 +52,8 @@ public static class AuthEndpoints
             if (loja.Status == StatusLoja.Suspensa)
                 return Results.Problem("Esta loja está suspensa. Fale com o suporte.", statusCode: StatusCodes.Status403Forbidden,
                     extensions: new Dictionary<string, object?> { ["codigo"] = "loja_suspensa" });
+            usuario.UltimoAcessoEm = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync(ct);
             await Sessao.EntrarAsync(http, usuario, loja);
             return Results.Ok(DoPrincipal(http.User, plataforma.CurrentValue, Vocabulario.Para(loja.Segmento)));
         })
@@ -102,5 +108,6 @@ public static class AuthEndpoints
         user.FindFirstValue("loja_nome")!,
         user.FindFirstValue("loja_slug")!,
         plataforma.EhAdmin(user.FindFirstValue(ClaimTypes.Email)),
-        termos);
+        termos)
+    { ModoSuporte = Sessao.EmModoSuporte(user) };
 }

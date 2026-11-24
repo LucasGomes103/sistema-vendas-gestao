@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using SistemaVendas.Api.Comum;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using SistemaVendas.Application.Atendimento;
@@ -114,14 +115,14 @@ public static class ConversaEndpoints
                 x.Conversa.ResponsavelId, x.Conversa.ResponsavelId is { } r ? nomes.GetValueOrDefault(r) ?? UsuarioRemovido : null));
         });
 
-        grupo.MapGet("/{id:guid}/mensagens", async (Guid id, AppDbContext db, CancellationToken ct) =>
+        grupo.MapGet("/{id:guid}/mensagens", async (Guid id, AppDbContext db, ClaimsPrincipal user, CancellationToken ct) =>
         {
             var conversa = await db.Conversas.FirstOrDefaultAsync(c => c.Id == id, ct);
             if (conversa is null)
                 return Results.NotFound();
 
-            // Abrir a conversa no painel marca como lida.
-            if (conversa.NaoLidas > 0)
+            // Abrir a conversa no painel marca como lida (menos quando é o suporte da plataforma olhando).
+            if (conversa.NaoLidas > 0 && !Sessao.EmModoSuporte(user))
             {
                 conversa.NaoLidas = 0;
                 await db.SaveChangesAsync(ct);

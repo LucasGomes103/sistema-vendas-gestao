@@ -33,6 +33,16 @@
     <button class="avatar" [matMenuTriggerFor]="menuUsuario" aria-label="Conta">{{ iniciais() }}</button>
   </header>
 
+  @if (auth.modoSuporte()) {
+    <div class="faixa-suporte" role="status">
+      <mat-icon>visibility</mat-icon>
+      <span>Você está vendo <strong>{{ auth.usuario()?.loja }}</strong> como suporte. Só leitura: nada pode ser mudado aqui.</span>
+      <button mat-flat-button (click)="sairDoSuporte()" [disabled]="saindoDoSuporte()">
+        <mat-icon>logout</mat-icon> Voltar para a minha loja
+      </button>
+    </div>
+  }
+
   <main>
     <router-outlet />
   </main>
@@ -71,12 +81,6 @@
     <a mat-menu-item routerLink="/config">
       <mat-icon>settings</mat-icon>
       <span>Configuração</span>
-    </a>
-  }
-  @if (auth.ehAdmin()) {
-    <a mat-menu-item routerLink="/admin">
-      <mat-icon>admin_panel_settings</mat-icon>
-      <span>Lojas da plataforma</span>
     </a>
   }
   <button mat-menu-item (click)="auth.sair()">

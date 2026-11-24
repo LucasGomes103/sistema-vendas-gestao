@@ -15,6 +15,8 @@ export interface UsuarioLogado {
   adminPlataforma?: boolean;
   /** Palavras do tipo de loja (espécie/tanque ou produto/local). Use o serviço Termos. */
   termos?: Vocabulario;
+  /** Administrador vendo esta loja como suporte: só leitura. */
+  modoSuporte?: boolean;
 }
 
 /** Palavras do tipo de loja, vindas da API (Vocabulario). */
@@ -57,6 +59,99 @@ export interface LojaAdmin {
   whatsAppProprio: boolean;
   mercadoPagoProprio: boolean;
   lojaOriginal: boolean;
+  /** Último acesso ao painel de qualquer usuário da loja. */
+  ultimoAcessoEm: string | null;
+  respostasRobo30Dias: number;
+  tokensIa30Dias: number;
+  falhasIa30Dias: number;
+}
+
+/** Um dia da série do painel da plataforma (horário de Brasília). */
+export interface DiaPlataforma {
+  dia: string;
+  lojasNovas: number;
+  mensagensRecebidas: number;
+  respostasRobo: number;
+  pedidos: number;
+  vendido: number;
+  tokensIa: number;
+}
+
+export interface TotaisPlataforma {
+  conversasNoPeriodo: number;
+  mensagensRecebidas: number;
+  respostasRobo: number;
+  mensagensVendedor: number;
+  pedidos: number;
+  pedidosPagos: number;
+  vendido: number;
+  chamadasIa: number;
+  tokensEntrada: number;
+  tokensSaida: number;
+  falhasIa: number;
+  mensagensComFalha: number;
+}
+
+export interface VisaoGeralPlataforma {
+  dias: number;
+  lojas: {
+    total: number;
+    ativas: number;
+    aguardandoConfirmacao: number;
+    suspensas: number;
+    novasNoPeriodo: number;
+    comMovimentoNoPeriodo: number;
+    paradas: number;
+  };
+  totais: TotaisPlataforma;
+  porDia: DiaPlataforma[];
+  saude: {
+    iaConfigurada: boolean;
+    modeloIa: string;
+    emailConfigurado: boolean;
+    chaveMestraConfigurada: boolean;
+    lojasComWhatsAppProprio: number;
+    lojasComMercadoPagoProprio: number;
+  };
+}
+
+export interface AuditoriaAdmin {
+  id: string;
+  criadoEm: string;
+  adminEmail: string;
+  acao: 'editar' | 'suspender' | 'ativar' | 'excluir' | 'ver_como_loja' | 'sair_da_loja' | string;
+  lojaId: string | null;
+  lojaSlug: string | null;
+  detalhe: string | null;
+}
+
+export interface DetalheLojaAdmin {
+  loja: LojaAdmin;
+  configuracao: {
+    whatsAppConectado: boolean;
+    whatsAppNumero: string | null;
+    atenderTodos: boolean;
+    numerosPermitidos: number;
+    pixConfigurado: boolean;
+    freteConfigurado: boolean;
+    zonasDeEntrega: number;
+    horarioAtendimento: string;
+  };
+  totais: TotaisPlataforma;
+  clientes: number;
+  conversasUltimas24h: number;
+  usuarios: {
+    id: string;
+    nome: string;
+    email: string;
+    papel: Papel;
+    ativo: boolean;
+    emailConfirmado: boolean;
+    criadoEm: string;
+    ultimoAcessoEm: string | null;
+  }[];
+  porDia: DiaPlataforma[];
+  auditoria: AuditoriaAdmin[];
 }
 
 export interface UsuarioEquipe {
