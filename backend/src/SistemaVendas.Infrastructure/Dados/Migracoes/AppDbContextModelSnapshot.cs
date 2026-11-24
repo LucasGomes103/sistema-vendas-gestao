@@ -835,6 +835,51 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.ToTable("local_cep", (string)null);
                 });
 
+            modelBuilder.Entity("SistemaVendas.Domain.Entregas.RotaCache", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CalculadaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("calculada_em");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<double>("DestinoLat")
+                        .HasColumnType("double precision")
+                        .HasColumnName("destino_lat");
+
+                    b.Property<double>("DestinoLon")
+                        .HasColumnType("double precision")
+                        .HasColumnName("destino_lon");
+
+                    b.Property<double>("Km")
+                        .HasColumnType("double precision")
+                        .HasColumnName("km");
+
+                    b.Property<double>("OrigemLat")
+                        .HasColumnType("double precision")
+                        .HasColumnName("origem_lat");
+
+                    b.Property<double>("OrigemLon")
+                        .HasColumnType("double precision")
+                        .HasColumnName("origem_lon");
+
+                    b.HasKey("Id")
+                        .HasName("pk_rota_cache");
+
+                    b.HasIndex("OrigemLat", "OrigemLon", "DestinoLat", "DestinoLon")
+                        .IsUnique()
+                        .HasDatabaseName("ix_rota_cache_origem_lat_origem_lon_destino_lat_destino_lon");
+
+                    b.ToTable("rota_cache", (string)null);
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Entregas.ZonaEntrega", b =>
                 {
                     b.Property<Guid>("Id")
