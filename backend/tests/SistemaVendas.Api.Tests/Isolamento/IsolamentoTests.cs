@@ -69,7 +69,8 @@ public class IsolamentoTests(BancoDeTeste banco) : IClassFixture<BancoDeTeste>
             "/api/v1/especies", "/api/v1/tanques", "/api/v1/fornecedores", "/api/v1/conversas", "/api/v1/pedidos",
             "/api/v1/usuarios", "/api/v1/entregas", "/api/v1/caixa", "/api/v1/metricas", "/api/v1/conversas/atendentes",
             "/api/v1/conversas/alertas", "/api/v1/funil/cards", "/api/v1/reservas", "/api/v1/entregas/pessoas",
-            "/api/v1/config/pix", "/api/v1/config/funil", "/api/v1/config/whatsapp", "/api/v1/metricas/exportar/pedidos"
+            "/api/v1/config/pix", "/api/v1/config/funil", "/api/v1/config/whatsapp", "/api/v1/metricas/exportar/pedidos",
+            "/api/v1/config/ia"
         ];
         var deA = new[] { banco.A.Id, banco.A.EspecieId, banco.A.TanqueId, banco.A.ConversaId, banco.A.PedidoId, banco.A.UsuarioId }
             .Select(g => g.ToString()).Append("loja-a").ToArray();

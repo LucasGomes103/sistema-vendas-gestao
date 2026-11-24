@@ -64,6 +64,11 @@ export interface LojaAdmin {
   respostasRobo30Dias: number;
   tokensIa30Dias: number;
   falhasIa30Dias: number;
+  /** Respostas com IA neste mês e o limite que vale (0 = sem limite). */
+  respostasIaMes: number;
+  limiteIaMes: number;
+  /** Limite próprio da loja; null = padrão da plataforma. */
+  limiteIaProprio: number | null;
 }
 
 /** Um dia da série do painel da plataforma (horário de Brasília). */
@@ -488,6 +493,16 @@ export interface ConfigCartao {
 }
 
 /** WhatsApp oficial (Cloud API da Meta) da loja: o token nunca volta, só o resumo. */
+/** Uso da IA da plataforma no mês (limite 0 = sem limite). */
+export interface UsoIA {
+  ativa: boolean;
+  atendente: string;
+  respostas: number;
+  porRegras: number;
+  limite: number;
+  esgotado: boolean;
+}
+
 export interface WhatsAppOficial {
   configurado: boolean;
   origem: 'Loja' | 'Servidor' | null;
