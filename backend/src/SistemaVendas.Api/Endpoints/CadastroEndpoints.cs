@@ -5,13 +5,18 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using SistemaVendas.Api.Comum;
 using SistemaVendas.Domain.Lojas;
+using SistemaVendas.Infrastructure.Assinaturas;
 using SistemaVendas.Infrastructure.Dados;
 using SistemaVendas.Infrastructure.Email;
 using SistemaVendas.Infrastructure.Seguranca;
 
 namespace SistemaVendas.Api.Endpoints;
 
-public record CadastroEntrada(string? NomeLoja, string? Slug, string? Segmento, string? NomeDono, string? Email, string? Senha, bool AceiteTermos);
+public record CadastroEntrada(string? NomeLoja, string? Slug, string? Segmento, string? NomeDono, string? Email, string? Senha, bool AceiteTermos)
+{
+    /// <summary>Plano do teste grátis (Essencial, Profissional ou Completo). Vazio: Profissional.</summary>
+    public string? Plano { get; init; }
+}
 
 public record CadastroSaida(string Email, bool EmailEnviado);
 
@@ -55,6 +60,7 @@ public static class CadastroEndpoints
             else if (!RegrasCadastro.EmailValido(emailDono)) erro = "Informe um e-mail válido.";
             else if (segmento is { Length: > 60 }) erro = "Tipo de loja muito longo.";
             else if (!e.AceiteTermos) erro = "Para criar a conta, aceite os termos de uso e a política de privacidade.";
+            else if (!string.IsNullOrWhiteSpace(e.Plano) && !Enum.TryParse<PlanoId>(e.Plano, true, out _)) erro = "Plano inválido.";
             else erro = RegrasCadastro.ValidarSlug(slug) ?? RegrasUsuario.ValidarSenha(e.Senha);
             if (erro is not null)
                 return Results.Problem(erro, statusCode: StatusCodes.Status422UnprocessableEntity);
@@ -69,6 +75,9 @@ public static class CadastroEndpoints
             dono.SenhaHash = new PasswordHasher<Usuario>().HashPassword(dono, e.Senha!);
             db.Lojas.Add(loja);
             db.Usuarios.Add(dono);
+            // Teste grátis de 7 dias; o prazo recomeça quando o dono confirma o e-mail.
+            db.Assinaturas.Add(RegrasAssinatura.NovoTeste(loja.Id,
+                Enum.TryParse<PlanoId>(e.Plano, true, out var plano) ? plano : null, DateTimeOffset.UtcNow));
             var codigo = NovoToken(db, dono.Id);
             try
             {
@@ -102,7 +111,10 @@ public static class CadastroEndpoints
             token.UsadoEm = agora;
             dono.EmailConfirmadoEm ??= agora;
             if (loja.Status == StatusLoja.AguardandoConfirmacao)
+            {
                 loja.Status = StatusLoja.Ativa;
+                await RegrasDoTeste.ComecarAsync(db, loja.Id, agora, ct);
+            }
             await db.SaveChangesAsync(ct);
 
             await Sessao.EntrarAsync(http, dono, loja);

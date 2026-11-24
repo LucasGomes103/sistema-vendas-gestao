@@ -404,3 +404,18 @@ Para a ida à produção (custos, variáveis, segurança, LGPD), ver [producao/c
   no Render, `WhatsApp__EmbeddedSignup__AppId`, `WhatsApp__EmbeddedSignup__ConfigId`, `WhatsApp__AppSecret` e
   `WhatsApp__VerifyToken`. Para outras empresas usarem (fora das contas do Lucas), o app precisa da verificação da
   empresa e do acesso avançado (Tech Provider) na Meta.
+
+## Planos e cobrança (SaaS fase 3)
+
+### Planos e teste grátis
+
+- Três planos, com preço e limites no código (`Domain/Lojas/Assinatura.cs`): Essencial R$ 297 (500 conversas, 2
+  usuários, 300 produtos, 2.500 respostas com IA), Profissional R$ 497 (1.500, 5, 2.000, 7.500, cartão e entregas) e
+  Completo R$ 797 (4.000, 15, sem limite de produtos, 20.000, cartão, entregas e domínio próprio).
+- Tabela `assinatura` (uma por loja): plano, status (Teste, Ativa, Cancelada, Cortesia, Isenta), fim do teste, pago
+  até, cortesia até e a assinatura do Mercado Pago. A situação do dia (Teste, Em dia, Carência, Bloqueada) é calculada.
+- Loja nova pelo cadastro começa no **teste grátis de 7 dias** (plano Profissional, ou o que vier em `plano` no
+  cadastro). Os 7 dias contam a partir da confirmação do e-mail.
+- Lojas de antes da cobrança (sem linha em `assinatura`) e a **loja original (ECS Fish)** são **isentas**: sem
+  mensalidade, sem bloqueio e sem limites de plano.
+- Painel: menu da conta → **Assinatura** (só o dono): plano atual, situação, vencimento e os planos.

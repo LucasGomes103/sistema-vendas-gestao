@@ -100,6 +100,13 @@ public class CadastroTests(BancoDeTeste banco) : IClassFixture<BancoDeTeste>
         Assert.Equal("moda-da-maria", eu.GetProperty("lojaSlug").GetString());
         Assert.Equal("Dono", eu.GetProperty("papel").GetString());
 
+        // Loja nova começa no teste grátis de 7 dias (plano Profissional), contado da confirmação.
+        var assinatura = await client.GetFromJsonAsync<JsonElement>("/api/v1/assinatura");
+        Assert.Equal("Teste", assinatura.GetProperty("situacao").GetString());
+        Assert.Equal("Profissional", assinatura.GetProperty("plano").GetProperty("id").GetString());
+        var testeAte = assinatura.GetProperty("testeAte").GetDateTimeOffset();
+        Assert.InRange(testeAte, DateTimeOffset.UtcNow.AddDays(7).AddMinutes(-5), DateTimeOffset.UtcNow.AddDays(7).AddMinutes(5));
+
         // O link vale uma vez só.
         Assert.Equal(HttpStatusCode.Gone, (await client.PostAsJsonAsync("/api/v1/cadastro/confirmar", new { token })).StatusCode);
 

@@ -1241,6 +1241,88 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.ToTable("config_funil", (string)null);
                 });
 
+            modelBuilder.Entity("SistemaVendas.Domain.Lojas.Assinatura", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("AtualizadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("atualizado_em");
+
+                    b.Property<DateTimeOffset?>("CanceladaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelada_em");
+
+                    b.Property<int>("CobrancasCreditadas")
+                        .HasColumnType("integer")
+                        .HasColumnName("cobrancas_creditadas");
+
+                    b.Property<DateTimeOffset?>("CortesiaAte")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cortesia_ate");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<string>("EmailPagador")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("email_pagador");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_id");
+
+                    b.Property<string>("MotivoCortesia")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("motivo_cortesia");
+
+                    b.Property<string>("MpAssinaturaId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("mp_assinatura_id");
+
+                    b.Property<string>("MpStatus")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("mp_status");
+
+                    b.Property<DateTimeOffset?>("PagoAte")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("pago_ate");
+
+                    b.Property<string>("Plano")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("plano");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset?>("TesteAte")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("teste_ate");
+
+                    b.HasKey("Id")
+                        .HasName("pk_assinatura");
+
+                    b.HasIndex("LojaId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_assinatura_loja_id");
+
+                    b.HasIndex("MpAssinaturaId")
+                        .HasDatabaseName("ix_assinatura_mp_assinatura_id");
+
+                    b.ToTable("assinatura", (string)null);
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Lojas.AuditoriaAdmin", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1438,6 +1520,60 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasDatabaseName("ix_loja_slug");
 
                     b.ToTable("loja", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Lojas.PagamentoAssinatura", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("AtualizadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("atualizado_em");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_id");
+
+                    b.Property<string>("MpAssinaturaId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("mp_assinatura_id");
+
+                    b.Property<string>("MpId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("mp_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status");
+
+                    b.Property<decimal>("Valor")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("valor");
+
+                    b.HasKey("Id")
+                        .HasName("pk_pagamento_assinatura");
+
+                    b.HasIndex("LojaId")
+                        .HasDatabaseName("ix_pagamento_assinatura_loja_id");
+
+                    b.HasIndex("MpId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_pagamento_assinatura_mp_id");
+
+                    b.ToTable("pagamento_assinatura", (string)null);
                 });
 
             modelBuilder.Entity("SistemaVendas.Domain.Lojas.TokenEmail", b =>
@@ -2199,6 +2335,16 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasConstraintName("fk_config_funil_loja_loja_id");
                 });
 
+            modelBuilder.Entity("SistemaVendas.Domain.Lojas.Assinatura", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_assinatura_loja_loja_id");
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Lojas.CredencialLoja", b =>
                 {
                     b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
@@ -2207,6 +2353,16 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_credencial_loja_loja_loja_id");
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Lojas.PagamentoAssinatura", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_pagamento_assinatura_loja_loja_id");
                 });
 
             modelBuilder.Entity("SistemaVendas.Domain.Lojas.TokenEmail", b =>
