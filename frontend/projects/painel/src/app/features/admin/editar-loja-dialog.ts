@@ -17,11 +17,11 @@ import { API, LojaAdmin, mensagemDeErro } from '../../core/api';
     <h2 mat-dialog-title>Editar loja</h2>
     <form [formGroup]="form" (ngSubmit)="salvar()">
       <mat-dialog-content class="campos">
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>Nome da loja</mat-label>
           <input matInput formControlName="nome" autocomplete="off" />
         </mat-form-field>
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>Endereço da vitrine</mat-label>
           <span matTextPrefix>/</span>
           <input matInput formControlName="slug" autocomplete="off" />
@@ -31,21 +31,21 @@ import { API, LojaAdmin, mensagemDeErro } from '../../core/api';
             <mat-hint>Letras minúsculas sem acento, números e hífen.</mat-hint>
           }
         </mat-form-field>
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>Tipo de loja</mat-label>
           <input matInput formControlName="segmento" autocomplete="off" />
         </mat-form-field>
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>Limite de respostas da IA por mês</mat-label>
           <input matInput type="number" min="0" formControlName="limiteRespostasIAMes" placeholder="Padrão da plataforma" />
           <mat-hint>Vazio: padrão da plataforma. 0: sem limite. Acima do limite o robô responde por regras.</mat-hint>
         </mat-form-field>
         @if (loja.emailDono) {
-          <mat-form-field appearance="outline">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>Nome do dono</mat-label>
             <input matInput formControlName="nomeDono" autocomplete="off" />
           </mat-form-field>
-          <mat-form-field appearance="outline">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>E-mail do dono (login)</mat-label>
             <input matInput type="email" formControlName="emailDono" autocomplete="off" />
             @if (form.controls.emailDono.value?.trim()?.toLowerCase() !== loja.emailDono) {
@@ -66,7 +66,7 @@ import { API, LojaAdmin, mensagemDeErro } from '../../core/api';
   styles: `
     .campos {
       display: grid;
-      gap: 4px;
+      gap: 16px;
       padding-top: 8px !important;
     }
     .aviso {
