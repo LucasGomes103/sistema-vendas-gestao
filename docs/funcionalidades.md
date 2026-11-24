@@ -353,3 +353,12 @@ Para a ida à produção (custos, variáveis, segurança, LGPD), ver [producao/c
 - A trava de "números permitidos" vale só para a loja da ponte.
 - **Para desligar a ponte de vez** (quando a Meta oficial estiver liberada): no Render, troque `WhatsApp__Provedor`
   de `Local` para `Meta`. Nada mais muda; o simulador continua disponível.
+
+### Limite de IA por loja
+
+- Cada loja tem um **limite de respostas da IA por mês** (padrão `IA__LimiteRespostasMes`, 1000; 0 = sem limite).
+  Conta só as respostas que saíram da IA (coluna `respostas_ia` em `uso_ia`, mês no horário de Brasília).
+- O administrador muda o limite de uma loja em **Plataforma → Lojas → Editar** (vazio = padrão; 0 = sem limite; fica
+  na auditoria) e vê "IA no mês" em cada loja.
+- Acima do limite o robô **continua respondendo** com as respostas por regras, sem chamar o Gemini, até virar o mês.
+  O dono vê o uso em **Configuração → Robô com IA**.

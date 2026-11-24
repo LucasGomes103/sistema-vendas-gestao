@@ -45,6 +45,12 @@ public class Loja : Entidade
 
     public string Fuso { get; set; } = "America/Sao_Paulo";
 
+    /// <summary>
+    /// Respostas da IA por mês que a plataforma paga para esta loja. Vazio: o padrão da plataforma
+    /// (IA__LimiteRespostasMes). 0: sem limite. Acima do limite o robô responde por regras.
+    /// </summary>
+    public int? LimiteRespostasIAMes { get; set; }
+
     /// <summary>Chave Pix comum da loja (sem provedor de pagamento): o sistema gera o copia e cola de cada pedido.</summary>
     public string? PixChave { get; set; }
 

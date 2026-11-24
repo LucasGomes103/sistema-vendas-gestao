@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using SistemaVendas.Domain.Lojas;
 using SistemaVendas.Domain.Vendas;
 using SistemaVendas.Infrastructure.Dados;
+using SistemaVendas.Infrastructure.IA;
 using SistemaVendas.Infrastructure.Seguranca;
 
 namespace SistemaVendas.Api.Endpoints;
@@ -20,11 +21,19 @@ public record LojaAdminSaida(
     public int RespostasRobo30Dias { get; init; }
     public long TokensIa30Dias { get; init; }
     public int FalhasIa30Dias { get; init; }
+
+    /// <summary>Respostas com IA neste mês e o limite que vale para a loja (0 = sem limite).</summary>
+    public int RespostasIaMes { get; init; }
+    public int LimiteIaMes { get; init; }
+
+    /// <summary>Limite próprio da loja; null = padrão da plataforma (IA__LimiteRespostasMes).</summary>
+    public int? LimiteIaProprio { get; init; }
 }
 
 public record SuspenderEntrada(string? Motivo);
 
-public record EditarLojaEntrada(string? Nome, string? Slug, string? Segmento, string? NomeDono, string? EmailDono);
+/// <summary>LimiteRespostasIAMes vazio: padrão da plataforma; 0: sem limite.</summary>
+public record EditarLojaEntrada(string? Nome, string? Slug, string? Segmento, string? NomeDono, string? EmailDono, int? LimiteRespostasIAMes = null);
 
 /// <summary>Para excluir, o administrador digita o endereço (slug) da loja: evita apagar a loja errada.</summary>
 public record ExcluirLojaEntrada(string? Confirmacao);
@@ -55,7 +64,7 @@ public static class AdminEndpoints
         var grupo = app.MapGroup("/admin").WithTags("Administração da plataforma").RequireAuthorization(PoliticaAdmin);
         grupo.MapAdminPainelEndpoints();
 
-        grupo.MapGet("/lojas", async (AppDbContext db, CredenciaisDaLoja credenciais, CancellationToken ct) =>
+        grupo.MapGet("/lojas", async (AppDbContext db, CredenciaisDaLoja credenciais, ServicoLimiteIa limiteIa, CancellationToken ct) =>
         {
             var desde = DateTimeOffset.UtcNow.AddDays(-30);
             var diaDesde = DateOnly.FromDateTime(desde.UtcDateTime);
@@ -64,6 +73,7 @@ public static class AdminEndpoints
             var usoIa = await db.UsosIa.IgnoreQueryFilters().Where(u => u.Dia >= diaDesde).GroupBy(u => u.LojaId)
                 .Select(g => new { g.Key, Respostas = g.Sum(u => u.Respostas), Tokens = g.Sum(u => u.TokensEntrada + u.TokensSaida), Falhas = g.Sum(u => u.Falhas) })
                 .ToDictionaryAsync(x => x.Key, ct);
+            var iaMes = await limiteIa.RespostasDoMesAsync(DateTimeOffset.UtcNow, ct);
             var lojas = await db.Lojas.AsNoTracking().OrderByDescending(l => l.CriadoEm).ToListAsync(ct);
             var donos = (await db.Usuarios.IgnoreQueryFilters().AsNoTracking().Where(u => u.Papel == Papel.Dono)
                     .OrderBy(u => u.CriadoEm).Select(u => new { u.LojaId, u.Nome, u.Email, u.EmailConfirmadoEm }).ToListAsync(ct))
@@ -95,6 +105,9 @@ public static class AdminEndpoints
                     RespostasRobo30Dias = usoIa.GetValueOrDefault(l.Id)?.Respostas ?? 0,
                     TokensIa30Dias = usoIa.GetValueOrDefault(l.Id)?.Tokens ?? 0,
                     FalhasIa30Dias = usoIa.GetValueOrDefault(l.Id)?.Falhas ?? 0,
+                    RespostasIaMes = iaMes.GetValueOrDefault(l.Id),
+                    LimiteIaMes = RegrasLimiteIa.LimiteDaLoja(l.LimiteRespostasIAMes, limiteIa.LimitePadrao),
+                    LimiteIaProprio = l.LimiteRespostasIAMes,
                 };
             }).ToList();
         });
@@ -130,6 +143,7 @@ public static class AdminEndpoints
             string? erro = null;
             if (nome.Length is < 2 or > 120) erro = "O nome da loja precisa ter de 2 a 120 letras.";
             else if (segmento is { Length: > 60 }) erro = "O tipo de loja pode ter até 60 letras.";
+            else if (e.LimiteRespostasIAMes is < 0 or > 1_000_000) erro = "O limite da IA vai de 0 (sem limite) a 1.000.000 respostas por mês.";
             else if (slug != loja.Slug) erro = RegrasCadastro.ValidarSlug(slug);
             if (erro is not null)
                 return Results.Problem(erro, statusCode: StatusCodes.Status422UnprocessableEntity);
@@ -155,11 +169,14 @@ public static class AdminEndpoints
             if (loja.Nome != nome) mudancas.Add($"nome: {loja.Nome} → {nome}");
             if (slugAntigo != slug) mudancas.Add($"endereço: {slugAntigo} → {slug}");
             if (loja.Segmento != segmento) mudancas.Add($"tipo: {loja.Segmento ?? "—"} → {segmento ?? "—"}");
+            if (loja.LimiteRespostasIAMes != e.LimiteRespostasIAMes)
+                mudancas.Add($"limite da IA: {loja.LimiteRespostasIAMes?.ToString() ?? "padrão"} → {e.LimiteRespostasIAMes?.ToString() ?? "padrão"}");
             if (dono is not null && db.Entry(dono).Property(u => u.Nome).IsModified) mudancas.Add("nome do dono");
             if (dono is not null && db.Entry(dono).Property(u => u.Email).IsModified) mudancas.Add("e-mail do dono");
             loja.Nome = nome;
             loja.Slug = slug;
             loja.Segmento = segmento;
+            loja.LimiteRespostasIAMes = e.LimiteRespostasIAMes;
             Auditar(db, user, AcaoAdmin.Editar, loja.Id, slug, mudancas.Count == 0 ? "sem mudanças" : string.Join("; ", mudancas));
             await db.SaveChangesAsync(ct);
             logs.CreateLogger("Admin").LogWarning("Loja {Slug} (antes {SlugAntigo}) editada por {Admin}", slug, slugAntigo, user.FindFirstValue(ClaimTypes.Email));

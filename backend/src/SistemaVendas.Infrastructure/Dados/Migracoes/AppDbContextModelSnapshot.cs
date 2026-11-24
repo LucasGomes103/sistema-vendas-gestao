@@ -1317,6 +1317,10 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasColumnType("time without time zone")
                         .HasColumnName("horario_inicio");
 
+                    b.Property<int?>("LimiteRespostasIAMes")
+                        .HasColumnType("integer")
+                        .HasColumnName("limite_respostas_ia_mes");
+
                     b.Property<string>("MotivoSuspensao")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)")
@@ -1462,6 +1466,10 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.Property<int>("Respostas")
                         .HasColumnType("integer")
                         .HasColumnName("respostas");
+
+                    b.Property<int>("RespostasIa")
+                        .HasColumnType("integer")
+                        .HasColumnName("respostas_ia");
 
                     b.Property<long>("TokensEntrada")
                         .HasColumnType("bigint")
