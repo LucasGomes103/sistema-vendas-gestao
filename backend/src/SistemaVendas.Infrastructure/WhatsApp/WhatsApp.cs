@@ -29,7 +29,19 @@ public class WhatsAppOptions
 
     public LocalOptions Local { get; set; } = new();
 
+    /// <summary>
+    /// A ponte por QR está ligada na plataforma (WhatsApp__Provedor=Local). Ela não faz parte do produto: só a loja da
+    /// ponte (WhatsApp__Local__LojaSlug, a ECS Fish) usa, enquanto a Meta oficial não sai. Para desligar de vez, troque
+    /// WhatsApp__Provedor para Meta no Render; as outras lojas usam a Meta (ou o simulador) de qualquer jeito.
+    /// </summary>
     public bool UsaPonteLocal => string.Equals(Provedor, "Local", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Esta loja (pelo slug) é a que atende pela ponte por QR.</summary>
+    public bool PonteDaLoja(string? slug) =>
+        UsaPonteLocal && !string.IsNullOrWhiteSpace(slug) && string.Equals(slug.Trim(), Local.LojaSlug?.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>"Local" só para a loja da ponte; as demais sempre "Meta".</summary>
+    public string ProvedorDa(string? slug) => PonteDaLoja(slug) ? "Local" : "Meta";
 
     public class LocalOptions
     {
@@ -175,12 +187,8 @@ public class WhatsAppRoteador(IOptions<WhatsAppOptions> opcoes, Dados.AppDbConte
     private async Task<IWhatsAppCliente> ClienteAsync(Guid lojaId, CancellationToken ct)
     {
         var o = opcoes.Value;
-        if (o.UsaPonteLocal)
-        {
-            var slug = await db.Lojas.Where(l => l.Id == lojaId).Select(l => l.Slug).FirstOrDefaultAsync(ct);
-            if (string.Equals(slug, o.Local.LojaSlug, StringComparison.OrdinalIgnoreCase))
-                return servicos.GetRequiredService<WhatsAppLocalCliente>();
-        }
+        if (o.UsaPonteLocal && o.PonteDaLoja(await db.Lojas.Where(l => l.Id == lojaId).Select(l => l.Slug).FirstOrDefaultAsync(ct)))
+            return servicos.GetRequiredService<WhatsAppLocalCliente>();
         return servicos.GetRequiredService<WhatsAppCloudCliente>();
     }
 
