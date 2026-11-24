@@ -45,7 +45,14 @@ public record ConfigFunilDto(
     string TextoChamarVendedor);
 
 /// <summary>WhatsApp oficial (Cloud API) da loja: o token nunca volta, só o resumo.</summary>
-public record WhatsAppOficialSaida(bool Configurado, string? Origem, string? PhoneNumberId, string? Resumo, bool PodeSalvar);
+public record WhatsAppOficialSaida(bool Configurado, string? Origem, string? PhoneNumberId, string? Resumo, bool PodeSalvar,
+    EmbeddedSignupSaida? EmbeddedSignup = null, bool ViaEmbeddedSignup = false);
+
+/// <summary>O que o painel precisa para abrir o Embedded Signup (nada disso é segredo).</summary>
+public record EmbeddedSignupSaida(string AppId, string ConfigId, string Versao);
+
+/// <summary>O que o Embedded Signup devolve no navegador: o código e os ids da conta do WhatsApp da loja.</summary>
+public record ConectarWhatsAppEntrada(string? Code, string? PhoneNumberId, string? WabaId);
 
 public record WhatsAppOficialEntrada(string? PhoneNumberId, string? AccessToken);
 
@@ -138,13 +145,16 @@ public static class FunilEndpoints
             return Results.Ok(new ConfigWhatsAppDto(l.AtenderTodos, l.NumerosPermitidos, l.WhatsAppNumero, wa.Value.UsaPonteLocal ? "Local" : "Meta"));
         });
 
-        config.MapGet("/whatsapp-oficial", async (AppDbContext db, ILojaAtual loja, CredenciaisDaLoja credenciais, ServicoCredenciais cofre, CancellationToken ct) =>
+        config.MapGet("/whatsapp-oficial", async (AppDbContext db, ILojaAtual loja, CredenciaisDaLoja credenciais, ServicoCredenciais cofre,
+            ConexaoWhatsApp conexao, IOptions<EmbeddedSignupOptions> signup, IOptions<WhatsAppOptions> wa, CancellationToken ct) =>
         {
             var lojaId = loja.LojaId!.Value;
             var phone = await db.Lojas.Where(l => l.Id == lojaId).Select(l => l.PhoneNumberId).FirstOrDefaultAsync(ct);
             var emUso = await credenciais.WhatsAppAsync(lojaId, ct);
             var resumo = emUso?.Origem == OrigemCredencial.Loja ? (await cofre.ResumosAsync(lojaId, ct)).GetValueOrDefault(TipoCredencial.WhatsApp).Resumo : null;
-            return new WhatsAppOficialSaida(emUso is not null, emUso?.Origem.ToString(), phone, resumo, cofre.Disponivel);
+            var es = conexao.Disponivel && cofre.Disponivel ? new EmbeddedSignupSaida(signup.Value.AppId!, signup.Value.ConfigId!, wa.Value.ApiVersion) : null;
+            return new WhatsAppOficialSaida(emUso is not null, emUso?.Origem.ToString(), phone, resumo, cofre.Disponivel, es,
+                emUso?.Valor.ViaEmbeddedSignup == true);
         });
 
         // O dono informa o Phone Number ID e o token da conta do WhatsApp DA LOJA (na fase 2, Embedded Signup).
@@ -173,6 +183,36 @@ public static class FunilEndpoints
             await db.SaveChangesAsync(ct);
             await cofre.SalvarAsync(lojaId, new CredencialWhatsApp(token), $"token {ServicoCredenciais.Final(token)}, número {numero}", ct);
             return Results.NoContent();
+        });
+
+        // Fim do Embedded Signup: troca o código, inscreve os webhooks, registra o número e liga na loja.
+        config.MapPost("/whatsapp-oficial/conectar", async (ConectarWhatsAppEntrada e, AppDbContext db, ILojaAtual loja, ServicoCredenciais cofre,
+            ConexaoWhatsApp conexao, CancellationToken ct) =>
+        {
+            var lojaId = loja.LojaId!.Value;
+            var code = e.Code?.Trim() ?? "";
+            var phone = e.PhoneNumberId?.Trim() ?? "";
+            var waba = e.WabaId?.Trim() ?? "";
+            if (code.Length is < 10 or > 2000 || phone.Length is < 5 or > 30 || !phone.All(char.IsAsciiDigit) || waba.Length is < 5 or > 30 || !waba.All(char.IsAsciiDigit))
+                return Results.Problem("A Meta não devolveu os dados da conta. Tente conectar de novo.", statusCode: StatusCodes.Status422UnprocessableEntity);
+            if (!cofre.Disponivel)
+                return Results.Problem("Falta a chave mestra (Plataforma__ChaveMestra) no servidor.", statusCode: StatusCodes.Status422UnprocessableEntity);
+            if (await db.Lojas.AnyAsync(l => l.PhoneNumberId == phone && l.Id != lojaId, ct))
+                return Results.Problem("Este número já está ligado a outra loja.", statusCode: StatusCodes.Status409Conflict);
+
+            var (conectado, erro) = await conexao.ConectarAsync(code, phone, waba, ct);
+            if (conectado is null)
+                return Results.Problem(erro, statusCode: StatusCodes.Status422UnprocessableEntity);
+
+            var l = await db.Lojas.FirstAsync(x => x.Id == lojaId, ct);
+            l.PhoneNumberId = phone;
+            // O número da vitrine ("pedir pelo WhatsApp") passa a ser o conectado, se a loja ainda não tinha um.
+            if (string.IsNullOrEmpty(l.WhatsAppNumero) && conectado.Numero is { } exibido && Loja.NormalizarNumeros([exibido]) is [var numero])
+                l.WhatsAppNumero = numero;
+            await db.SaveChangesAsync(ct);
+            await cofre.SalvarAsync(lojaId, new CredencialWhatsApp(conectado.Token) { ViaEmbeddedSignup = true, WabaId = waba, Pin = conectado.Pin },
+                $"número {conectado.Numero ?? phone}, conectado pela Meta", ct);
+            return Results.Ok(new { numero = conectado.Numero });
         });
 
         config.MapDelete("/whatsapp-oficial", async (ILojaAtual loja, ServicoCredenciais cofre, CancellationToken ct) =>

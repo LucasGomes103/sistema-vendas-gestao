@@ -327,3 +327,19 @@ Para a ida à produção (custos, variáveis, segurança, LGPD), ver [producao/c
   aplicação, código; pet: marca, peso, porte...). Aparecem no catálogo e na vitrine, entram na busca da vitrine e o
   robô recebe os detalhes ao buscar o produto (e acha o produto pelo valor, ex.: "tem em preto?").
 
+
+### Botão "Conectar WhatsApp" (Embedded Signup)
+
+- Em **Configuração → WhatsApp oficial (Meta)**, o dono clica em **Conectar WhatsApp**. Abre a janela da Meta: ele
+  entra com o Facebook da empresa, cria ou escolhe a conta do WhatsApp Business e o número. No fim o sistema troca o
+  código pelo token da empresa, **inscreve o app da plataforma nos webhooks** da conta (as mensagens chegam em
+  `/api/v1/webhooks/whatsapp`), **registra o número** na Cloud API com um PIN de duas etapas novo (guardado cifrado) e
+  liga o número na loja. Se a loja ainda não tinha número na vitrine, passa a usar o conectado.
+- Um número só pode estar em uma loja. Colar o Phone Number ID e o token à mão continua possível.
+- **Configuração (Lucas):** no app da plataforma na Meta for Developers, adicionar o produto WhatsApp e o Facebook
+  Login for Business; criar a configuração do Embedded Signup e copiar o Configuration ID; em "Domínios permitidos"
+  e "URIs de redirecionamento OAuth válidos" pôr `https://sistema-vendas-gestao.pages.dev`; webhook do WhatsApp em
+  `https://sistema-vendas-gestao.pages.dev/api/v1/webhooks/whatsapp` (campo messages) com o `WhatsApp__VerifyToken`;
+  no Render, `WhatsApp__EmbeddedSignup__AppId`, `WhatsApp__EmbeddedSignup__ConfigId`, `WhatsApp__AppSecret` e
+  `WhatsApp__VerifyToken`. Para outras empresas usarem (fora das contas do Lucas), o app precisa da verificação da
+  empresa e do acesso avançado (Tech Provider) na Meta.

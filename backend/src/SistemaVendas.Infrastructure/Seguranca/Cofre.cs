@@ -38,8 +38,16 @@ public class PlataformaOptions
             .Any(a => string.Equals(a.Trim(), email.Trim(), StringComparison.OrdinalIgnoreCase));
 }
 
-/// <summary>Credencial da WhatsApp Cloud API de uma loja.</summary>
-public record CredencialWhatsApp(string AccessToken);
+/// <summary>
+/// Credencial da WhatsApp Cloud API de uma loja: colada pelo dono ou vinda do botão "Conectar WhatsApp" (Embedded
+/// Signup), que guarda também a conta (WABA) e o PIN de duas etapas usado no registro do número.
+/// </summary>
+public record CredencialWhatsApp(string AccessToken)
+{
+    public bool ViaEmbeddedSignup { get; init; }
+    public string? WabaId { get; init; }
+    public string? Pin { get; init; }
+}
 
 /// <summary>Credencial do Mercado Pago de uma loja (hoje digitada pelo dono; na fase 2 vem do OAuth).</summary>
 public record CredencialMercadoPago(string AccessToken, string? WebhookSecret = null, bool ModoTeste = false,
