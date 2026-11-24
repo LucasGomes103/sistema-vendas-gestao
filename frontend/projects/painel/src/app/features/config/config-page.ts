@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { API, ConfigFunil, mensagemDeErro } from '../../core/api';
 import { ConexaoWhatsAppComponent } from './conexao-whatsapp';
@@ -50,6 +51,17 @@ export class ConfigPage {
       const c = this.config.value();
       if (c) this.form.reset(c);
     });
+    // Volta do botão "Conectar Mercado Pago".
+    const q = inject(ActivatedRoute).snapshot.queryParamMap;
+    const mp = q.get('mercadopago');
+    if (mp) {
+      this.snack.open(
+        mp === 'conectado' ? 'Mercado Pago conectado. As próximas cobranças já saem com o link do cartão.' : q.get('motivo') || 'Não deu para conectar o Mercado Pago.',
+        'OK',
+        { duration: 8000 },
+      );
+      inject(Router).navigate([], { queryParams: {}, replaceUrl: true });
+    }
   }
 
   protected async salvar(): Promise<void> {

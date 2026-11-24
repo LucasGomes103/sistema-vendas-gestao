@@ -371,3 +371,20 @@ Para a ida à produção (custos, variáveis, segurança, LGPD), ver [producao/c
   calculou e só a primeira consulta sai para a internet.
 - Rota guardada vale 180 dias; depois é calculada de novo. Quando o serviço de rotas está fora do ar, o frete usa a
   linha reta corrigida e essa conta não fica no cache.
+
+### Botão "Conectar Mercado Pago"
+
+- Em **Configuração → Cartão**, o dono clica em **Conectar Mercado Pago**, entra na conta dele no Mercado Pago e
+  autoriza. O sistema troca o código pelo token da loja (OAuth da aplicação da plataforma), guarda cifrado e volta para
+  Configuração com o aviso "Mercado Pago conectado". O dinheiro do cartão cai na conta da loja.
+- O token vale 180 dias e **renova sozinho** (verificação a cada 6 horas; renova quando faltam menos de 30 dias). Se a
+  renovação falhar (o dono revogou o acesso), o log avisa e o dono precisa conectar de novo.
+- Os avisos de pagamento das lojas conectadas pelo botão chegam no mesmo webhook (`/api/v1/webhooks/mercadopago`),
+  assinados com o segredo da aplicação da plataforma (`MercadoPago__OAuth__WebhookSecret`).
+- Colar o Access Token à mão continua possível ("Prefere colar o Access Token à mão?"), e é o único jeito enquanto a
+  aplicação da plataforma não estiver configurada.
+- **Configuração (Lucas):** criar no Mercado Pago (Suas integrações) uma aplicação da plataforma do tipo Checkout Pro
+  com OAuth; em "URLs de redirecionamento" pôr
+  `https://sistema-vendas-gestao.pages.dev/api/v1/mercadopago/oauth/retorno`; em Webhooks, a URL
+  `https://sistema-vendas-gestao.pages.dev/api/v1/webhooks/mercadopago` com o evento Order; no Render, as variáveis
+  `MercadoPago__OAuth__ClientId`, `MercadoPago__OAuth__ClientSecret` e `MercadoPago__OAuth__WebhookSecret`.

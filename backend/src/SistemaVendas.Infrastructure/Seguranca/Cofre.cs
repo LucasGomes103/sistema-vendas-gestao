@@ -41,9 +41,19 @@ public class PlataformaOptions
 /// <summary>Credencial da WhatsApp Cloud API de uma loja.</summary>
 public record CredencialWhatsApp(string AccessToken);
 
-/// <summary>Credencial do Mercado Pago de uma loja (hoje digitada pelo dono; na fase 2 vem do OAuth).</summary>
+/// <summary>
+/// Credencial do Mercado Pago de uma loja: colada pelo dono ou vinda do botão "Conectar Mercado Pago" (OAuth, com
+/// refresh token e validade; renovada sozinha antes de vencer).
+/// </summary>
 public record CredencialMercadoPago(string AccessToken, string? WebhookSecret = null, bool ModoTeste = false,
-    string? RefreshToken = null, DateTimeOffset? ExpiraEm = null);
+    string? RefreshToken = null, DateTimeOffset? ExpiraEm = null)
+{
+    /// <summary>Veio do OAuth: os avisos de pagamento chegam assinados com o segredo da aplicação da plataforma.</summary>
+    public bool ViaOAuth { get; init; }
+
+    /// <summary>Id da conta (user_id) no Mercado Pago, só para o painel mostrar.</summary>
+    public string? ContaMp { get; init; }
+}
 
 /// <summary>
 /// AES-256-GCM com a chave mestra. O texto associado (loja + tipo) amarra cada segredo à sua loja: copiar o valor

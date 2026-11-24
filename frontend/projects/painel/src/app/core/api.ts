@@ -490,6 +490,10 @@ export interface ConfigCartao {
   origem: 'Loja' | 'Servidor' | null;
   resumo: string | null;
   podeSalvar: boolean;
+  /** A plataforma tem a aplicação do Mercado Pago: mostra o botão "Conectar Mercado Pago". */
+  conectarDisponivel: boolean;
+  viaOAuth: boolean;
+  expiraEm: string | null;
 }
 
 /** WhatsApp oficial (Cloud API da Meta) da loja: o token nunca volta, só o resumo. */

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { HttpClient, httpResource } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,12 +15,13 @@ import { Confirmar } from '../../core/confirmar';
 import { ESTILO_BLOCO } from './estilo-bloco';
 
 /**
- * Cartão pelo Mercado Pago da conta DA LOJA. O dono cola o Access Token e a assinatura secreta; o servidor guarda
- * cifrado e nunca devolve o token (só o final dele). A loja original pode seguir com as variáveis do Render.
+ * Cartão pelo Mercado Pago da conta DA LOJA. Com a aplicação da plataforma configurada, o dono só clica em
+ * "Conectar Mercado Pago" e autoriza na conta dele (OAuth; o token renova sozinho). Sem ela, ou para quem prefere,
+ * ainda dá para colar o Access Token à mão. O servidor guarda cifrado e nunca devolve o token.
  */
 @Component({
   selector: 'app-config-cartao',
-  imports: [ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule],
+  imports: [DatePipe, NgTemplateOutlet, ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let c = config.value();
@@ -45,12 +47,21 @@ import { ESTILO_BLOCO } from './estilo-bloco';
         <ul>
           <li>
             <mat-icon>key</mat-icon>
-            {{ c?.origem === 'Servidor' ? 'Usando o token do servidor (Render).' : 'Token salvo: ' + (c?.resumo ?? '') + '.' }}
+            @if (c?.viaOAuth) {
+              Conectado pelo Mercado Pago ({{ c?.resumo }}).
+              @if (c?.expiraEm) {
+                O acesso renova sozinho (vale até {{ c?.expiraEm | date: 'dd/MM/yyyy' }}).
+              }
+            } @else {
+              {{ c?.origem === 'Servidor' ? 'Usando o token do servidor (Render).' : 'Token salvo: ' + (c?.resumo ?? '') + '.' }}
+            }
           </li>
-          <li>
-            <mat-icon>{{ c?.webhookPronto ? 'check' : 'warning' }}</mat-icon>
-            {{ c?.webhookPronto ? 'No Mercado Pago (Suas integrações → Webhooks, evento Order), a URL deve ser: ' + c?.urlWebhook : 'Sem endereço público para o aviso de pagamento: o pedido não confirma sozinho.' }}
-          </li>
+          @if (!c?.viaOAuth) {
+            <li>
+              <mat-icon>{{ c?.webhookPronto ? 'check' : 'warning' }}</mat-icon>
+              {{ c?.webhookPronto ? 'No Mercado Pago (Suas integrações → Webhooks, evento Order), a URL deve ser: ' + c?.urlWebhook : 'Sem endereço público para o aviso de pagamento: o pedido não confirma sozinho.' }}
+            </li>
+          }
           <li>
             <mat-icon>{{ c?.assinaturaConferida ? 'check' : 'warning' }}</mat-icon>
             {{ c?.assinaturaConferida ? 'Assinatura secreta conferida nos avisos.' : 'Falta a assinatura secreta do webhook. Funciona, mas é mais seguro preencher.' }}
@@ -62,6 +73,25 @@ import { ESTILO_BLOCO } from './estilo-bloco';
         @if (c && !c.podeSalvar) {
           <p class="ajuda">O servidor ainda não tem a chave mestra (Plataforma__ChaveMestra): por enquanto não dá para salvar o token aqui.</p>
         } @else {
+          @if (c?.conectarDisponivel) {
+            <div class="acoes">
+              @if (c?.origem === 'Loja') {
+                <button mat-stroked-button type="button" (click)="remover()" [disabled]="salvando()"><mat-icon>link_off</mat-icon> Desligar cartão</button>
+              }
+              <button mat-flat-button type="button" (click)="conectar()" [disabled]="salvando()">
+                <mat-icon>link</mat-icon> {{ c?.viaOAuth ? 'Conectar de novo' : 'Conectar Mercado Pago' }}
+              </button>
+            </div>
+            <details>
+              <summary>Prefere colar o Access Token à mão?</summary>
+              <ng-container *ngTemplateOutlet="manual" />
+            </details>
+          } @else {
+            <ng-container *ngTemplateOutlet="manual" />
+          }
+        }
+      }
+      <ng-template #manual>
           <form [formGroup]="form" (ngSubmit)="salvar()" class="grade">
             <mat-form-field appearance="outline" class="inteiro">
               <mat-label>{{ c?.origem === 'Loja' ? 'Trocar o Access Token' : 'Access Token do Mercado Pago' }}</mat-label>
@@ -75,17 +105,16 @@ import { ESTILO_BLOCO } from './estilo-bloco';
             </mat-form-field>
             <mat-checkbox formControlName="modoTeste" class="inteiro">Credenciais de teste (conta de teste do Mercado Pago)</mat-checkbox>
             <div class="acoes inteiro">
-              @if (c?.origem === 'Loja') {
+              @if (c?.origem === 'Loja' && !c?.conectarDisponivel) {
                 <button mat-stroked-button type="button" (click)="remover()" [disabled]="salvando()"><mat-icon>link_off</mat-icon> Desligar cartão</button>
               }
               <button mat-flat-button type="submit" [disabled]="salvando()"><mat-icon>save</mat-icon> Salvar</button>
             </div>
           </form>
-        }
-      }
+      </ng-template>
     </section>
   `,
-  styles: ESTILO_BLOCO,
+  styles: [ESTILO_BLOCO, `details { margin-top: 8px; } summary { cursor: pointer; color: var(--mat-sys-on-surface-variant); margin-bottom: 8px; }`],
 })
 export class ConfigCartaoComponent {
   private readonly http = inject(HttpClient);
@@ -116,6 +145,18 @@ export class ConfigCartaoComponent {
     } catch (e) {
       this.snack.open(mensagemDeErro(e), 'OK', { duration: 6000 });
     } finally {
+      this.salvando.set(false);
+    }
+  }
+
+  /** Abre a autorização no Mercado Pago na mesma aba; ele devolve para Configuração com ?mercadopago=... */
+  protected async conectar(): Promise<void> {
+    this.salvando.set(true);
+    try {
+      const r = await firstValueFrom(this.http.post<{ url: string }>(`${API}/config/cartao/conectar`, {}));
+      window.location.href = r.url;
+    } catch (e) {
+      this.snack.open(mensagemDeErro(e), 'OK', { duration: 6000 });
       this.salvando.set(false);
     }
   }
