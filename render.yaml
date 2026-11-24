@@ -39,6 +39,11 @@ services:
         sync: false
       - key: WhatsApp__EmbeddedSignup__ConfigId
         sync: false
+      # Segredo do app da Meta (confere a assinatura dos webhooks) e o texto de verificação do webhook
+      - key: WhatsApp__AppSecret
+        sync: false
+      - key: WhatsApp__VerifyToken
+        sync: false
       # Chave que cifra as credenciais de cada loja (openssl rand -base64 32). Guarde uma cópia: perder = recadastrar
       - key: Plataforma__ChaveMestra
         sync: false
