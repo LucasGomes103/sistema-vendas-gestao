@@ -26,6 +26,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
     public DbSet<ZonaEntrega> ZonasEntrega => Set<ZonaEntrega>();
     public DbSet<FretePorKm> FretesPorKm => Set<FretePorKm>();
     public DbSet<LocalCep> LocaisCep => Set<LocalCep>();
+    public DbSet<RotaCache> RotasCache => Set<RotaCache>();
     public DbSet<Reserva> Reservas => Set<Reserva>();
     public DbSet<ItemReserva> ItensReserva => Set<ItemReserva>();
     public DbSet<Pedido> Pedidos => Set<Pedido>();
@@ -103,6 +104,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
             e.ToTable("credencial_loja");
             e.HasIndex(x => new { x.LojaId, x.Tipo }).IsUnique();
             e.Property(x => x.Resumo).HasMaxLength(200);
+        });
+
+        modelBuilder.Entity<RotaCache>(e =>
+        {
+            e.ToTable("rota_cache");
+            e.HasIndex(x => new { x.OrigemLat, x.OrigemLon, x.DestinoLat, x.DestinoLon }).IsUnique();
         });
 
         modelBuilder.Entity<Usuario>(e =>

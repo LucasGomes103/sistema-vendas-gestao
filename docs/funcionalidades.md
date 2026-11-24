@@ -362,3 +362,12 @@ Para a ida à produção (custos, variáveis, segurança, LGPD), ver [producao/c
   na auditoria) e vê "IA no mês" em cada loja.
 - Acima do limite o robô **continua respondendo** com as respostas por regras, sem chamar o Gemini, até virar o mês.
   O dono vê o uso em **Configuração → Robô com IA**.
+
+### Mapas com cache compartilhado
+
+- O frete por km continua nos serviços **grátis** (BrasilAPI, OpenStreetMap e OSRM), agora como serviço da
+  plataforma com **cache compartilhado entre todas as lojas**: cada CEP localizado (`local_cep`) e cada rota de carro
+  calculada (`rota_cache`, coordenadas arredondadas em ~11 m) ficam guardados. Uma loja aproveita o que outra já
+  calculou e só a primeira consulta sai para a internet.
+- Rota guardada vale 180 dias; depois é calculada de novo. Quando o serviço de rotas está fora do ar, o frete usa a
+  linha reta corrigida e essa conta não fica no cache.
