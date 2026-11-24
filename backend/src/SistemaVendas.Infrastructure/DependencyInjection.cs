@@ -57,6 +57,9 @@ public static class DependencyInjection
         services.AddHttpClient<WhatsAppCloudCliente>(c => c.Timeout = TimeSpan.FromSeconds(20));
         services.AddScoped<IWhatsAppCliente, WhatsAppRoteador>();
         services.AddHttpClient<VerificadorWhatsApp>(c => c.Timeout = TimeSpan.FromSeconds(15));
+        // Botão "Conectar WhatsApp" (Embedded Signup com o app da plataforma).
+        services.Configure<EmbeddedSignupOptions>(config.GetSection(EmbeddedSignupOptions.Secao));
+        services.AddHttpClient<ConexaoWhatsApp>(c => c.Timeout = TimeSpan.FromSeconds(20));
 
         // Atendente: Gemini quando há chave; sem ela, respostas por regras (também usadas se o Gemini falhar).
         var gemini = config.GetSection(GeminiOptions.Secao);

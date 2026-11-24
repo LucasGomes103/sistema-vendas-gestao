@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { HttpClient, httpResource } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,14 +11,16 @@ import { firstValueFrom } from 'rxjs';
 import { API, WhatsAppOficial, mensagemDeErro } from '../../core/api';
 import { Confirmar } from '../../core/confirmar';
 import { ESTILO_BLOCO } from './estilo-bloco';
+import { abrirEmbeddedSignup } from '../../core/embedded-signup';
 
 /**
- * WhatsApp oficial (Cloud API da Meta) com a conta DA LOJA. O sistema confere na Meta se o token enxerga o
- * número antes de salvar. Na fase 2 isto vira o botão "Conectar WhatsApp" (Embedded Signup).
+ * WhatsApp oficial (Cloud API da Meta) com a conta DA LOJA. Com o app da plataforma configurado, o dono clica em
+ * "Conectar WhatsApp" (Embedded Signup): cria ou escolhe a conta do WhatsApp da empresa e o número na janela da Meta,
+ * e o sistema registra o número e passa a receber as mensagens. Colar o token à mão continua possível.
  */
 @Component({
   selector: 'app-config-whatsapp-oficial',
-  imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule],
+  imports: [NgTemplateOutlet, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let c = config.value();
@@ -47,7 +50,26 @@ import { ESTILO_BLOCO } from './estilo-bloco';
       }
       @if (c && !c.podeSalvar) {
         <p class="ajuda">O servidor ainda não tem a chave mestra (Plataforma__ChaveMestra): por enquanto não dá para salvar o token aqui.</p>
+      } @else if (c?.embeddedSignup) {
+        <div class="acoes">
+          @if (c?.origem === 'Loja') {
+            <button mat-stroked-button type="button" (click)="remover()" [disabled]="salvando()"><mat-icon>link_off</mat-icon> Desconectar</button>
+          }
+          <button mat-flat-button type="button" (click)="conectar()" [disabled]="salvando()">
+            <mat-icon>chat</mat-icon> {{ c?.configurado ? 'Conectar outro número' : 'Conectar WhatsApp' }}
+          </button>
+        </div>
+        @if (salvando()) {
+          <p class="ajuda">Termine na janela da Meta: entre com o Facebook da empresa, escolha (ou crie) a conta do WhatsApp e o número.</p>
+        }
+        <details>
+          <summary>Prefere colar o Phone Number ID e o token à mão?</summary>
+          <ng-container *ngTemplateOutlet="manual" />
+        </details>
       } @else {
+        <ng-container *ngTemplateOutlet="manual" />
+      }
+      <ng-template #manual>
         <form [formGroup]="form" (ngSubmit)="salvar()" class="grade">
           <mat-form-field appearance="outline">
             <mat-label>Phone Number ID</mat-label>
@@ -60,16 +82,16 @@ import { ESTILO_BLOCO } from './estilo-bloco';
             <mat-hint>Token permanente de um usuário do sistema</mat-hint>
           </mat-form-field>
           <div class="acoes inteiro">
-            @if (c?.origem === 'Loja') {
+            @if (c?.origem === 'Loja' && !c?.embeddedSignup) {
               <button mat-stroked-button type="button" (click)="remover()" [disabled]="salvando()"><mat-icon>link_off</mat-icon> Desconectar</button>
             }
             <button mat-flat-button type="submit" [disabled]="salvando()"><mat-icon>save</mat-icon> Conferir e salvar</button>
           </div>
         </form>
-      }
+      </ng-template>
     </section>
   `,
-  styles: ESTILO_BLOCO,
+  styles: [ESTILO_BLOCO, `details { margin-top: 8px; } summary { cursor: pointer; color: var(--mat-sys-on-surface-variant); margin-bottom: 8px; }`],
 })
 export class ConfigWhatsAppOficialComponent {
   private readonly http = inject(HttpClient);
@@ -97,6 +119,22 @@ export class ConfigWhatsAppOficialComponent {
       this.snack.open('WhatsApp oficial conectado.', undefined, { duration: 4000 });
     } catch (e) {
       this.snack.open(mensagemDeErro(e), 'OK', { duration: 6000 });
+    } finally {
+      this.salvando.set(false);
+    }
+  }
+
+  protected async conectar(): Promise<void> {
+    const es = this.config.value()?.embeddedSignup;
+    if (!es) return;
+    this.salvando.set(true);
+    try {
+      const r = await abrirEmbeddedSignup(es.appId, es.configId, es.versao);
+      const resp = await firstValueFrom(this.http.post<{ numero: string | null }>(`${API}/config/whatsapp-oficial/conectar`, r));
+      this.config.reload();
+      this.snack.open(`WhatsApp conectado${resp.numero ? ' (' + resp.numero + ')' : ''}. O robô já atende por este número.`, 'OK', { duration: 6000 });
+    } catch (e) {
+      this.snack.open(e instanceof Error ? e.message : mensagemDeErro(e), 'OK', { duration: 8000 });
     } finally {
       this.salvando.set(false);
     }

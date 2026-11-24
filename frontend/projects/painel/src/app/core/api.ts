@@ -513,6 +513,9 @@ export interface WhatsAppOficial {
   phoneNumberId: string | null;
   resumo: string | null;
   podeSalvar: boolean;
+  /** Presente quando a plataforma tem o app da Meta: mostra o botão "Conectar WhatsApp". */
+  embeddedSignup: { appId: string; configId: string; versao: string } | null;
+  viaEmbeddedSignup: boolean;
 }
 
 export type TipoLancamento = 'Entrada' | 'Saida';
