@@ -16,12 +16,13 @@ import { Auth } from '../../core/auth';
 import { ConfigCartaoComponent } from './config-cartao';
 import { ConfigWhatsAppOficialComponent } from './config-whatsapp-oficial';
 import { ConfigPixComponent } from './config-pix';
+import { ConfigIAComponent } from './config-ia';
 import { ConfigWhatsAppComponent } from './config-whatsapp';
 
 /** Prazos do funil e respostas prontas. Mudar um prazo é editar aqui, não fazer deploy. */
 @Component({
   selector: 'app-config-page',
-  imports: [ConexaoWhatsAppComponent, ConfigWhatsAppComponent, ConfigFreteComponent, ConfigPixComponent, ConfigCartaoComponent, ConfigWhatsAppOficialComponent, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule],
+  imports: [ConfigIAComponent, ConexaoWhatsAppComponent, ConfigWhatsAppComponent, ConfigFreteComponent, ConfigPixComponent, ConfigCartaoComponent, ConfigWhatsAppOficialComponent, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './config-page.html',
   styleUrl: './config-page.scss',

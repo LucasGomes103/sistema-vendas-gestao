@@ -20,10 +20,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
     public DbSet<CredencialLoja> CredenciaisLoja => Set<CredencialLoja>();
     public DbSet<TokenEmail> TokensEmail => Set<TokenEmail>();
     public DbSet<Loja> Lojas => Set<Loja>();
+    public DbSet<UsoIa> UsosIa => Set<UsoIa>();
+    public DbSet<AuditoriaAdmin> AuditoriaAdmin => Set<AuditoriaAdmin>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<ZonaEntrega> ZonasEntrega => Set<ZonaEntrega>();
     public DbSet<FretePorKm> FretesPorKm => Set<FretePorKm>();
     public DbSet<LocalCep> LocaisCep => Set<LocalCep>();
+    public DbSet<RotaCache> RotasCache => Set<RotaCache>();
     public DbSet<Reserva> Reservas => Set<Reserva>();
     public DbSet<ItemReserva> ItensReserva => Set<ItemReserva>();
     public DbSet<Pedido> Pedidos => Set<Pedido>();
@@ -78,11 +81,35 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
 
         modelBuilder.Entity<DataProtectionKey>(e => e.ToTable("chave_protecao"));
 
+        modelBuilder.Entity<UsoIa>(e =>
+        {
+            e.ToTable("uso_ia");
+            e.HasIndex(x => new { x.LojaId, x.Dia }).IsUnique();
+            e.HasIndex(x => x.Dia);
+        });
+
+        modelBuilder.Entity<AuditoriaAdmin>(e =>
+        {
+            e.ToTable("auditoria_admin");
+            e.Property(x => x.AdminEmail).HasMaxLength(200);
+            e.Property(x => x.Acao).HasMaxLength(40);
+            e.Property(x => x.LojaAlvoSlug).HasMaxLength(60);
+            e.Property(x => x.Detalhe).HasMaxLength(500);
+            e.HasIndex(x => x.CriadoEm);
+            e.HasIndex(x => x.LojaAlvoId);
+        });
+
         modelBuilder.Entity<CredencialLoja>(e =>
         {
             e.ToTable("credencial_loja");
             e.HasIndex(x => new { x.LojaId, x.Tipo }).IsUnique();
             e.Property(x => x.Resumo).HasMaxLength(200);
+        });
+
+        modelBuilder.Entity<RotaCache>(e =>
+        {
+            e.ToTable("rota_cache");
+            e.HasIndex(x => new { x.OrigemLat, x.OrigemLon, x.DestinoLat, x.DestinoLon }).IsUnique();
         });
 
         modelBuilder.Entity<Usuario>(e =>
@@ -324,6 +351,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
         modelBuilder.Entity<FechamentoCaixa>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<Entrega>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<CredencialLoja>().HasQueryFilter(x => x.LojaId == LojaId);
+        modelBuilder.Entity<UsoIa>().HasQueryFilter(x => x.LojaId == LojaId);
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

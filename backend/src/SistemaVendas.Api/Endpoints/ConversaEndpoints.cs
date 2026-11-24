@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using SistemaVendas.Api.Comum;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using SistemaVendas.Application.Atendimento;
@@ -114,14 +115,14 @@ public static class ConversaEndpoints
                 x.Conversa.ResponsavelId, x.Conversa.ResponsavelId is { } r ? nomes.GetValueOrDefault(r) ?? UsuarioRemovido : null));
         });
 
-        grupo.MapGet("/{id:guid}/mensagens", async (Guid id, AppDbContext db, CancellationToken ct) =>
+        grupo.MapGet("/{id:guid}/mensagens", async (Guid id, AppDbContext db, ClaimsPrincipal user, CancellationToken ct) =>
         {
             var conversa = await db.Conversas.FirstOrDefaultAsync(c => c.Id == id, ct);
             if (conversa is null)
                 return Results.NotFound();
 
-            // Abrir a conversa no painel marca como lida.
-            if (conversa.NaoLidas > 0)
+            // Abrir a conversa no painel marca como lida (menos quando é o suporte da plataforma olhando).
+            if (conversa.NaoLidas > 0 && !Sessao.EmModoSuporte(user))
             {
                 conversa.NaoLidas = 0;
                 await db.SaveChangesAsync(ct);
@@ -260,10 +261,11 @@ public static class ConversaEndpoints
 
         grupo.MapGet("/status-whatsapp", async (IWhatsAppCliente whatsApp, IAtendenteIA atendente, Microsoft.Extensions.Options.IOptions<WhatsAppOptions> opcoesWa, AppDbContext db, ILojaAtual lojaAtual, IHostEnvironment env, IConfiguration config, CancellationToken ct) =>
         {
-            var phoneNumberId = await db.Lojas.Where(l => l.Id == lojaAtual.LojaId).Select(l => l.PhoneNumberId).FirstOrDefaultAsync(ct);
+            var loja = await db.Lojas.Where(l => l.Id == lojaAtual.LojaId).Select(l => new { l.PhoneNumberId, l.Slug }).FirstAsync(ct);
+            var phoneNumberId = loja.PhoneNumberId;
             // Simulador disponível mesmo com o número real ligado: as conversas dele nunca saem pelo WhatsApp.
             var simulador = env.IsDevelopment() || config.GetValue("Simulador:Habilitado", true);
-            return Results.Ok(new { simulado = await whatsApp.SimuladoAsync(lojaAtual.LojaId!.Value, ct), simuladorDisponivel = simulador, phoneNumberId, atendente = atendente.Nome, provedor = opcoesWa.Value.UsaPonteLocal ? "Local" : "Meta" });
+            return Results.Ok(new { simulado = await whatsApp.SimuladoAsync(lojaAtual.LojaId!.Value, ct), simuladorDisponivel = simulador, phoneNumberId, atendente = atendente.Nome, provedor = opcoesWa.Value.ProvedorDa(loja.Slug) });
         });
 
         // Número do WhatsApp da loja (phone_number_id da Meta). Não é segredo; o token fica cifrado (/config/whatsapp-oficial).

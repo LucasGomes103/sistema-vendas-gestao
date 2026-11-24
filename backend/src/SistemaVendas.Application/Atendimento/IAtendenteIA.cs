@@ -75,7 +75,13 @@ public record RespostaAtendente(string Texto, bool ChamarVendedor, string? Motiv
 
     /// <summary>Endereço de entrega que o cliente passou: fica no cadastro dele e preenche o pedido.</summary>
     public SistemaVendas.Domain.Entregas.EnderecoEntrega? Endereco { get; init; }
+
+    /// <summary>Quanto a IA gastou nesta resposta. Nulo = respondeu pelas regras, sem IA.</summary>
+    public ConsumoIa? Consumo { get; init; }
 }
+
+/// <summary>Chamadas e tokens gastos numa resposta. Falhou = a IA deu erro e a resposta saiu pelas regras.</summary>
+public record ConsumoIa(int Chamadas, long TokensEntrada, long TokensSaida, bool Falhou);
 
 /// <summary>
 /// A IA às vezes copia da conversa um link antigo da vitrine (ex.: o do Netlify, antes da troca de domínio).

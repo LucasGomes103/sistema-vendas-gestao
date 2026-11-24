@@ -835,6 +835,51 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.ToTable("local_cep", (string)null);
                 });
 
+            modelBuilder.Entity("SistemaVendas.Domain.Entregas.RotaCache", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CalculadaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("calculada_em");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<double>("DestinoLat")
+                        .HasColumnType("double precision")
+                        .HasColumnName("destino_lat");
+
+                    b.Property<double>("DestinoLon")
+                        .HasColumnType("double precision")
+                        .HasColumnName("destino_lon");
+
+                    b.Property<double>("Km")
+                        .HasColumnType("double precision")
+                        .HasColumnName("km");
+
+                    b.Property<double>("OrigemLat")
+                        .HasColumnType("double precision")
+                        .HasColumnName("origem_lat");
+
+                    b.Property<double>("OrigemLon")
+                        .HasColumnType("double precision")
+                        .HasColumnName("origem_lon");
+
+                    b.HasKey("Id")
+                        .HasName("pk_rota_cache");
+
+                    b.HasIndex("OrigemLat", "OrigemLon", "DestinoLat", "DestinoLon")
+                        .IsUnique()
+                        .HasDatabaseName("ix_rota_cache_origem_lat_origem_lon_destino_lat_destino_lon");
+
+                    b.ToTable("rota_cache", (string)null);
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Entregas.ZonaEntrega", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1196,6 +1241,55 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.ToTable("config_funil", (string)null);
                 });
 
+            modelBuilder.Entity("SistemaVendas.Domain.Lojas.AuditoriaAdmin", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Acao")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("acao");
+
+                    b.Property<string>("AdminEmail")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("admin_email");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<string>("Detalhe")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("detalhe");
+
+                    b.Property<Guid?>("LojaAlvoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_alvo_id");
+
+                    b.Property<string>("LojaAlvoSlug")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("loja_alvo_slug");
+
+                    b.HasKey("Id")
+                        .HasName("pk_auditoria_admin");
+
+                    b.HasIndex("CriadoEm")
+                        .HasDatabaseName("ix_auditoria_admin_criado_em");
+
+                    b.HasIndex("LojaAlvoId")
+                        .HasDatabaseName("ix_auditoria_admin_loja_alvo_id");
+
+                    b.ToTable("auditoria_admin", (string)null);
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Lojas.CredencialLoja", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1267,6 +1361,10 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.Property<TimeOnly>("HorarioInicio")
                         .HasColumnType("time without time zone")
                         .HasColumnName("horario_inicio");
+
+                    b.Property<int?>("LimiteRespostasIAMes")
+                        .HasColumnType("integer")
+                        .HasColumnName("limite_respostas_ia_mes");
 
                     b.Property<string>("MotivoSuspensao")
                         .HasMaxLength(300)
@@ -1383,6 +1481,62 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.ToTable("token_email", (string)null);
                 });
 
+            modelBuilder.Entity("SistemaVendas.Domain.Lojas.UsoIa", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Chamadas")
+                        .HasColumnType("integer")
+                        .HasColumnName("chamadas");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<DateOnly>("Dia")
+                        .HasColumnType("date")
+                        .HasColumnName("dia");
+
+                    b.Property<int>("Falhas")
+                        .HasColumnType("integer")
+                        .HasColumnName("falhas");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_id");
+
+                    b.Property<int>("Respostas")
+                        .HasColumnType("integer")
+                        .HasColumnName("respostas");
+
+                    b.Property<int>("RespostasIa")
+                        .HasColumnType("integer")
+                        .HasColumnName("respostas_ia");
+
+                    b.Property<long>("TokensEntrada")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tokens_entrada");
+
+                    b.Property<long>("TokensSaida")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tokens_saida");
+
+                    b.HasKey("Id")
+                        .HasName("pk_uso_ia");
+
+                    b.HasIndex("Dia")
+                        .HasDatabaseName("ix_uso_ia_dia");
+
+                    b.HasIndex("LojaId", "Dia")
+                        .IsUnique()
+                        .HasDatabaseName("ix_uso_ia_loja_id_dia");
+
+                    b.ToTable("uso_ia", (string)null);
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Lojas.Usuario", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1425,6 +1579,10 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("senha_hash");
+
+                    b.Property<DateTimeOffset?>("UltimoAcessoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ultimo_acesso_em");
 
                     b.HasKey("Id")
                         .HasName("pk_usuario");
@@ -2059,6 +2217,16 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_token_email_usuarios_usuario_id");
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Lojas.UsoIa", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_uso_ia_loja_loja_id");
                 });
 
             modelBuilder.Entity("SistemaVendas.Domain.Lojas.Usuario", b =>

@@ -38,11 +38,13 @@ public interface IGeolocalizacao
 }
 
 /// <summary>
-/// Serviços gratuitos, sem chave: BrasilAPI (CEP → endereço e, às vezes, coordenada), Nominatim do
-/// OpenStreetMap (endereço → coordenada) e o servidor público do OSRM (rota de carro). Cada CEP
-/// localizado fica guardado no banco, e só a primeira consulta de cada CEP sai para a internet.
+/// Serviço de mapas da plataforma, com cache compartilhado entre todas as lojas. Usa serviços gratuitos, sem chave:
+/// BrasilAPI (CEP → endereço e, às vezes, coordenada), Nominatim do OpenStreetMap (endereço → coordenada) e o
+/// servidor público do OSRM (rota de carro). Cada CEP localizado (local_cep) e cada rota calculada (rota_cache)
+/// ficam no banco para todas as lojas: só a primeira consulta sai para a internet, o que poupa os limites dos
+/// serviços grátis (e o bolso, se um dia trocar por um serviço pago).
 /// </summary>
-public class Geolocalizacao(AppDbContext db, MapasGratuitos mapas) : IGeolocalizacao
+public class Geolocalizacao(AppDbContext db, MapasGratuitos mapas, TimeProvider? relogio = null) : IGeolocalizacao
 {
     public async Task<LocalEncontrado?> LocalizarAsync(int cep, CancellationToken ct)
     {
@@ -68,7 +70,35 @@ public class Geolocalizacao(AppDbContext db, MapasGratuitos mapas) : IGeolocaliz
         return achado;
     }
 
-    public Task<Distancia> DistanciaAsync(Coordenada de, Coordenada ate, CancellationToken ct) => mapas.DistanciaAsync(de, ate, ct);
+    public async Task<Distancia> DistanciaAsync(Coordenada de, Coordenada ate, CancellationToken ct)
+    {
+        double oLat = RotaCache.Arredondar(de.Lat), oLon = RotaCache.Arredondar(de.Lon);
+        double dLat = RotaCache.Arredondar(ate.Lat), dLon = RotaCache.Arredondar(ate.Lon);
+        var agora = (relogio ?? TimeProvider.System).GetUtcNow();
+
+        var salva = await db.RotasCache.FirstOrDefaultAsync(r => r.OrigemLat == oLat && r.OrigemLon == oLon && r.DestinoLat == dLat && r.DestinoLon == dLon, ct);
+        if (salva is not null && agora - salva.CalculadaEm < RotaCache.Validade)
+            return new Distancia(salva.Km, true);
+
+        var distancia = await mapas.DistanciaAsync(de, ate, ct);
+        // Linha reta (serviço de rotas fora do ar) não fica guardada: na próxima tenta a rota de verdade.
+        if (!distancia.PorRota)
+            return distancia;
+
+        var rota = salva ?? db.RotasCache.Add(new RotaCache { OrigemLat = oLat, OrigemLon = oLon, DestinoLat = dLat, DestinoLon = dLon }).Entity;
+        rota.Km = distancia.Km;
+        rota.CalculadaEm = agora;
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            // Outra requisição guardou a mesma rota ao mesmo tempo: tudo bem.
+            db.Entry(rota).State = EntityState.Detached;
+        }
+        return distancia;
+    }
 }
 
 /// <summary>Chamadas aos serviços de mapa, sem guardar nada (separado para poder testar sem banco).</summary>

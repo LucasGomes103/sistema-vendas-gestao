@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -34,6 +34,11 @@ import { API, LojaAdmin, mensagemDeErro } from '../../core/api';
         <mat-form-field appearance="outline">
           <mat-label>Tipo de loja</mat-label>
           <input matInput formControlName="segmento" autocomplete="off" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Limite de respostas da IA por mês</mat-label>
+          <input matInput type="number" min="0" formControlName="limiteRespostasIAMes" placeholder="Padrão da plataforma" />
+          <mat-hint>Vazio: padrão da plataforma. 0: sem limite. Acima do limite o robô responde por regras.</mat-hint>
         </mat-form-field>
         @if (loja.emailDono) {
           <mat-form-field appearance="outline">
@@ -87,6 +92,7 @@ export class EditarLojaDialog {
     segmento: [this.loja.segmento ?? '', Validators.maxLength(60)],
     nomeDono: [this.loja.dono ?? '', this.loja.emailDono ? [Validators.required, Validators.minLength(2)] : []],
     emailDono: [this.loja.emailDono ?? '', this.loja.emailDono ? [Validators.required, Validators.email] : []],
+    limiteRespostasIAMes: new FormControl<number | null>(this.loja.limiteIaProprio, [Validators.min(0), Validators.max(1_000_000)]),
   });
 
   protected async salvar(): Promise<void> {
@@ -94,7 +100,11 @@ export class EditarLojaDialog {
     this.salvando.set(true);
     this.erro.set(null);
     try {
-      await firstValueFrom(this.http.put(`${API}/admin/lojas/${this.loja.id}`, this.form.getRawValue()));
+      const v = this.form.getRawValue();
+      const limite = v.limiteRespostasIAMes;
+      await firstValueFrom(
+        this.http.put(`${API}/admin/lojas/${this.loja.id}`, { ...v, limiteRespostasIAMes: limite === null || `${limite}` === '' ? null : Number(limite) }),
+      );
       this.ref.close(true);
     } catch (e) {
       this.erro.set(mensagemDeErro(e));
