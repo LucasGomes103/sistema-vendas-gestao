@@ -13,6 +13,9 @@ public class AssinaturasOptions
 
     /// <summary>Dias depois do vencimento em que a loja segue funcionando, com aviso (Assinaturas__DiasCarencia).</summary>
     public int DiasCarencia { get; set; } = RegrasAssinatura.DiasCarenciaPadrao;
+
+    /// <summary>Conta do Mercado Pago da plataforma que cobra a mensalidade (Assinaturas__MercadoPago__*).</summary>
+    public CobrancaMercadoPagoOptions MercadoPago { get; set; } = new();
 }
 
 /// <summary>Assinatura de uma loja e a situação de hoje.</summary>

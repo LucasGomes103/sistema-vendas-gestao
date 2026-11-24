@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using SistemaVendas.Infrastructure.Dados;
 using SistemaVendas.Application.Comum;
 using SistemaVendas.Domain.Lojas;
 using SistemaVendas.Infrastructure.Assinaturas;
@@ -20,7 +22,17 @@ public record UsoDoPlanoSaida(int Conversas, int? LimiteConversas, int Usuarios,
 public record AssinaturaSaida(
     string Situacao, string Status, PlanoSaida? Plano, DateTimeOffset? TesteAte, DateTimeOffset? PagoAte, DateTimeOffset? CortesiaAte,
     DateTimeOffset? Vencimento, DateTimeOffset? BloqueiaEm, int DiasCarencia, bool LojaOriginal, string? MpStatus,
-    IReadOnlyList<PlanoSaida> Planos);
+    IReadOnlyList<PlanoSaida> Planos)
+{
+    /// <summary>A plataforma já tem a conta do Mercado Pago que cobra a mensalidade.</summary>
+    public bool CobrancaDisponivel { get; init; }
+    public string? EmailPagador { get; init; }
+}
+
+public record AssinarEntrada(string? Plano, string? EmailPagador);
+
+/// <summary>Url: link do Mercado Pago para pagar. Null: o plano já foi trocado na assinatura que estava paga.</summary>
+public record AssinarSaida(string? Url);
 
 /// <summary>Assinatura da loja com a plataforma: plano, teste grátis, vencimento e situação.</summary>
 public static class AssinaturaEndpoints
@@ -30,8 +42,67 @@ public static class AssinaturaEndpoints
         // Todos da equipe leem (o painel mostra a faixa de teste, carência ou bloqueio); só o dono muda.
         var grupo = app.MapGroup("/assinatura").WithTags("Assinatura").RequireAuthorization(AuthEndpoints.PoliticaEntregas);
 
-        grupo.MapGet("/", async (ILojaAtual loja, ServicoAssinatura assinaturas, CancellationToken ct) =>
-            Saida(await assinaturas.EstadoAsync(loja.LojaId!.Value, ct), assinaturas.DiasCarencia));
+        grupo.MapGet("/", async (ILojaAtual loja, ServicoAssinatura assinaturas, ServicoCobranca cobranca, CancellationToken ct) =>
+            Saida(await assinaturas.EstadoAsync(loja.LojaId!.Value, ct), assinaturas.DiasCarencia) with { CobrancaDisponivel = cobranca.Disponivel });
+
+        // Assinar ou trocar de plano: devolve o link do Mercado Pago (o painel abre na mesma aba).
+        grupo.MapPost("/assinar", async (AssinarEntrada e, ILojaAtual loja, ServicoCobranca cobranca, CancellationToken ct) =>
+        {
+            if (!Enum.TryParse<PlanoId>(e.Plano, true, out var plano))
+                return Results.Problem("Escolha um plano.", statusCode: StatusCodes.Status422UnprocessableEntity);
+            var email = e.EmailPagador?.Trim().ToLowerInvariant() ?? "";
+            if (!RegrasCadastro.EmailValido(email))
+                return Results.Problem("Informe o e-mail da conta do Mercado Pago que vai pagar.", statusCode: StatusCodes.Status422UnprocessableEntity);
+            try
+            {
+                return Results.Ok(new AssinarSaida(await cobranca.AssinarAsync(loja.LojaId!.Value, plano, email, ct)));
+            }
+            catch (Domain.Estoque.RegraException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status422UnprocessableEntity);
+            }
+            catch (HttpRequestException)
+            {
+                return Results.Problem("O Mercado Pago não respondeu. Tente de novo em alguns minutos.", statusCode: StatusCodes.Status502BadGateway);
+            }
+        })
+        .RequireAuthorization(AuthEndpoints.PoliticaDono);
+
+        grupo.MapPost("/cancelar", async (ILojaAtual loja, ServicoCobranca cobranca, CancellationToken ct) =>
+        {
+            try
+            {
+                await cobranca.CancelarAsync(loja.LojaId!.Value, ct);
+                return Results.NoContent();
+            }
+            catch (Domain.Estoque.RegraException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status422UnprocessableEntity);
+            }
+            catch (HttpRequestException)
+            {
+                return Results.Problem("O Mercado Pago não respondeu. Tente de novo em alguns minutos.", statusCode: StatusCodes.Status502BadGateway);
+            }
+        })
+        .RequireAuthorization(AuthEndpoints.PoliticaDono);
+
+        // Voltou do Mercado Pago (ou "Já paguei"): confere a assinatura lá, sem esperar o aviso.
+        grupo.MapPost("/conferir", async (ILojaAtual loja, AppDbContext db, ServicoCobranca cobranca, CancellationToken ct) =>
+        {
+            var mpId = await db.Assinaturas.Where(a => a.LojaId == loja.LojaId).Select(a => a.MpAssinaturaId).FirstOrDefaultAsync(ct);
+            if (mpId is null || !cobranca.Disponivel)
+                return Results.NoContent();
+            try
+            {
+                await cobranca.SincronizarAsync(mpId, ct);
+            }
+            catch (HttpRequestException)
+            {
+                return Results.Problem("O Mercado Pago não respondeu. Tente de novo em alguns minutos.", statusCode: StatusCodes.Status502BadGateway);
+            }
+            return Results.NoContent();
+        })
+        .RequireAuthorization(AuthEndpoints.PoliticaDono);
 
         grupo.MapGet("/uso", async (ILojaAtual loja, ServicoAssinatura assinaturas, ServicoLimites limites, ServicoLimiteIa limiteIa, CancellationToken ct) =>
         {
@@ -50,5 +121,8 @@ public static class AssinaturaEndpoints
         new(e.Situacao.ToString(), (e.Assinatura?.Status ?? StatusAssinatura.Isenta).ToString(),
             e.Plano is null ? null : PlanoSaida.De(e.Plano),
             e.Assinatura?.TesteAte, e.Assinatura?.PagoAte, e.Assinatura?.CortesiaAte, e.Vencimento, e.BloqueiaEm, diasCarencia,
-            e.LojaOriginal, e.Assinatura?.MpStatus, Planos.Todos.Select(PlanoSaida.De).ToList());
+            e.LojaOriginal, e.Assinatura?.MpStatus, Planos.Todos.Select(PlanoSaida.De).ToList())
+        {
+            EmailPagador = e.Assinatura?.EmailPagador
+        };
 }

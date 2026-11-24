@@ -641,6 +641,9 @@ export interface AssinaturaLoja {
   lojaOriginal: boolean;
   mpStatus: string | null;
   planos: PlanoPlataforma[];
+  /** A plataforma já cobra a mensalidade pelo Mercado Pago. */
+  cobrancaDisponivel: boolean;
+  emailPagador: string | null;
 }
 
 /** Uso do plano: conversas e IA no mês, usuários e produtos ativos. Limites null = sem limite. */
