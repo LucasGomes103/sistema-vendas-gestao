@@ -133,7 +133,8 @@ public sealed class BancoDeTeste : IAsyncLifetime
             new Entrega { LojaId = l, PedidoId = pedido.Id, ClienteId = cliente.Id, ConversaId = conversa.Id },
             new ZonaEntrega { LojaId = l, Nome = "Zona " + slug, CepInicio = 1000000, CepFim = 1999999 },
             new FretePorKm { LojaId = l },
-            new CredencialLoja { LojaId = l, Tipo = TipoCredencial.MercadoPago, Cifrado = "v1:teste", Resumo = "token " + slug });
+            new CredencialLoja { LojaId = l, Tipo = TipoCredencial.MercadoPago, Cifrado = "v1:teste", Resumo = "token " + slug },
+            new UsoIA { LojaId = l, Dia = hoje.AddDays(-40), Respostas = 7, Chamadas = 9 });
 
         await db.SaveChangesAsync();
         return new LojaDeTeste(l, slug, dono.Email, especie.Id, tanque.Id, conversa.Id, pedido.Id, dono.Id);

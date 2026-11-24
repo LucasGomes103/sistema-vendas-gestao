@@ -327,3 +327,14 @@ Para a ida à produção (custos, variáveis, segurança, LGPD), ver [producao/c
   aplicação, código; pet: marca, peso, porte...). Aparecem no catálogo e na vitrine, entram na busca da vitrine e o
   robô recebe os detalhes ao buscar o produto (e acha o produto pelo valor, ex.: "tem em preto?").
 
+
+### IA da plataforma com limite por loja
+
+- O robô usa o Gemini da plataforma (chave `IA__Gemini__ApiKey`, conta do Lucas). Cada resposta é **medida por loja e
+  por dia** (tabela `uso_ia`): respostas, chamadas ao modelo e tokens de entrada e saída.
+- Cada loja tem um **limite de respostas da IA por mês** (padrão `IA__LimiteRespostasMes`, 1000; 0 = sem limite). O
+  administrador muda o limite de uma loja em **Lojas → Editar** (vazio = padrão; 0 = sem limite) e vê "IA no mês" em
+  cada loja.
+- Acima do limite (ou com o Gemini fora do ar) o robô **continua respondendo** com as respostas por regras até virar o
+  mês (fuso da loja). O dono vê o uso do mês em **Configuração → Robô com IA**.
+- Sem chave do Gemini nada é medido (o robô já responde por regras).

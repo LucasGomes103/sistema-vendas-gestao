@@ -70,10 +70,17 @@ public static class DependencyInjection
         services.AddScoped<IGeolocalizacao, Geolocalizacao>();
         services.AddScoped<ServicoFrete>();
         services.AddScoped<IFerramentasAtendimento, FerramentasAtendimento>();
+        services.Configure<LimitesIAOptions>(config.GetSection(LimitesIAOptions.Secao));
+        services.AddScoped<ServicoUsoIA>();
         if (string.IsNullOrWhiteSpace(gemini[nameof(GeminiOptions.ApiKey)]))
             services.AddSingleton<IAtendenteIA>(sp => sp.GetRequiredService<AtendentePorRegras>());
         else
-            services.AddHttpClient<IAtendenteIA, GeminiAtendente>(c => c.Timeout = TimeSpan.FromSeconds(30));
+        {
+            // IA paga pela plataforma: cada resposta é medida e respeita o limite do mês da loja.
+            services.AddScoped<MedidorIA>();
+            services.AddHttpClient<GeminiAtendente>(c => c.Timeout = TimeSpan.FromSeconds(30));
+            services.AddScoped<IAtendenteIA, AtendenteComLimite>();
+        }
 
         return services;
     }

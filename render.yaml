@@ -33,6 +33,9 @@ services:
         sync: false
       - key: IA__Gemini__ApiKey
         sync: false
+      # Respostas da IA por loja por mês (padrão 1000; 0 = sem limite). Cada loja pode ter o seu na tela Lojas
+      - key: IA__LimiteRespostasMes
+        value: "1000"
       # Chave que cifra as credenciais de cada loja (openssl rand -base64 32). Guarde uma cópia: perder = recadastrar
       - key: Plataforma__ChaveMestra
         sync: false

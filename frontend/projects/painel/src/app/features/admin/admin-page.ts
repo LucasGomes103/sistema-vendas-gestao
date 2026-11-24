@@ -69,6 +69,7 @@ const STATUS: Record<LojaAdmin['status'], { rotulo: string; classe: string; icon
             <div><dt>Vendido (30 dias)</dt><dd>{{ l.vendido30Dias | currency: 'BRL' }}</dd></div>
             <div><dt>Produtos</dt><dd>{{ l.produtos }}</dd></div>
             <div><dt>Usuários</dt><dd>{{ l.usuarios }}</dd></div>
+            <div><dt>IA no mês</dt><dd>{{ l.respostasIAMes }}{{ l.limiteIAMes > 0 ? ' / ' + l.limiteIAMes : '' }}</dd></div>
             <div><dt>Última mensagem</dt><dd>{{ l.ultimaMensagemEm ? (l.ultimaMensagemEm | date: 'dd/MM HH:mm') : '—' }}</dd></div>
           </dl>
           <div class="rodape">

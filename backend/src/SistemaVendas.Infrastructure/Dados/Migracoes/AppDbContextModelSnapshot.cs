@@ -1268,6 +1268,10 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasColumnType("time without time zone")
                         .HasColumnName("horario_inicio");
 
+                    b.Property<int?>("LimiteRespostasIAMes")
+                        .HasColumnType("integer")
+                        .HasColumnName("limite_respostas_ia_mes");
+
                     b.Property<string>("MotivoSuspensao")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)")
@@ -1381,6 +1385,55 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .HasDatabaseName("ix_token_email_usuario_id");
 
                     b.ToTable("token_email", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Lojas.UsoIA", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Chamadas")
+                        .HasColumnType("integer")
+                        .HasColumnName("chamadas");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<DateOnly>("Dia")
+                        .HasColumnType("date")
+                        .HasColumnName("dia");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_id");
+
+                    b.Property<int>("PorRegras")
+                        .HasColumnType("integer")
+                        .HasColumnName("por_regras");
+
+                    b.Property<int>("Respostas")
+                        .HasColumnType("integer")
+                        .HasColumnName("respostas");
+
+                    b.Property<long>("TokensEntrada")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tokens_entrada");
+
+                    b.Property<long>("TokensSaida")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tokens_saida");
+
+                    b.HasKey("Id")
+                        .HasName("pk_uso_ia");
+
+                    b.HasIndex("LojaId", "Dia")
+                        .IsUnique()
+                        .HasDatabaseName("ix_uso_ia_loja_id_dia");
+
+                    b.ToTable("uso_ia", (string)null);
                 });
 
             modelBuilder.Entity("SistemaVendas.Domain.Lojas.Usuario", b =>
@@ -2059,6 +2112,16 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_token_email_usuarios_usuario_id");
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Lojas.UsoIA", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_uso_ia_loja_loja_id");
                 });
 
             modelBuilder.Entity("SistemaVendas.Domain.Lojas.Usuario", b =>

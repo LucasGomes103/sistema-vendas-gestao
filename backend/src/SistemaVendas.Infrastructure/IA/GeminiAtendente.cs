@@ -26,7 +26,7 @@ public class GeminiOptions
 /// Nome, telefone e cadastro do cliente nunca são enviados ao modelo: ele vê só o texto da conversa
 /// (inclusive o endereço de entrega, quando o próprio cliente o escreve).
 /// </summary>
-public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, AtendentePorRegras reserva, ILogger<GeminiAtendente> logger) : IAtendenteIA
+public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, AtendentePorRegras reserva, ILogger<GeminiAtendente> logger, MedidorIA? medidor = null) : IAtendenteIA
 {
     private const int MaximoRodadas = 4;
     private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
@@ -43,6 +43,8 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
         {
             // Limite da camada grátis ou instabilidade: o cliente não fica sem resposta.
             logger.LogWarning("Gemini falhou, usando respostas por regras: {Erro}", e.Message);
+            if (medidor is not null)
+                medidor.CaiuParaRegras = true;
             return await reserva.ResponderAsync(nomeLoja, historico, ferramentas, ct);
         }
     }
@@ -204,9 +206,14 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
         using var resp = await http.SendAsync(req, ct);
         var texto = await resp.Content.ReadAsStringAsync(ct);
         if (!resp.IsSuccessStatusCode)
+        {
+            medidor?.Registrar(null);
             throw new HttpRequestException($"Gemini respondeu {(int)resp.StatusCode}: {texto[..Math.Min(300, texto.Length)]}");
+        }
 
-        return JsonNode.Parse(texto)!.AsObject();
+        var json = JsonNode.Parse(texto)!.AsObject();
+        medidor?.Registrar(json);
+        return json;
     }
 
     private static string? Texto(JsonObject args, string campo) =>

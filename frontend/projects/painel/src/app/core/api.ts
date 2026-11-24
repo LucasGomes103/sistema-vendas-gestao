@@ -57,6 +57,11 @@ export interface LojaAdmin {
   whatsAppProprio: boolean;
   mercadoPagoProprio: boolean;
   lojaOriginal: boolean;
+  respostasIAMes: number;
+  /** Limite que vale para a loja (0 = sem limite). */
+  limiteIAMes: number;
+  /** Limite próprio da loja; null = padrão da plataforma. */
+  limiteIAProprio: number | null;
 }
 
 export interface UsuarioEquipe {
@@ -393,6 +398,16 @@ export interface ConfigCartao {
 }
 
 /** WhatsApp oficial (Cloud API da Meta) da loja: o token nunca volta, só o resumo. */
+/** Uso da IA da plataforma no mês (limite 0 = sem limite). */
+export interface UsoIA {
+  ativa: boolean;
+  atendente: string;
+  respostas: number;
+  porRegras: number;
+  limite: number;
+  esgotado: boolean;
+}
+
 export interface WhatsAppOficial {
   configurado: boolean;
   origem: 'Loja' | 'Servidor' | null;

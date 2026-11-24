@@ -18,6 +18,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
     /// <summary>Chaves que assinam os cookies de login: no banco, um deploy novo não desloga ninguém.</summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
     public DbSet<CredencialLoja> CredenciaisLoja => Set<CredencialLoja>();
+    public DbSet<UsoIA> UsosIA => Set<UsoIA>();
     public DbSet<TokenEmail> TokensEmail => Set<TokenEmail>();
     public DbSet<Loja> Lojas => Set<Loja>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
@@ -83,6 +84,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
             e.ToTable("credencial_loja");
             e.HasIndex(x => new { x.LojaId, x.Tipo }).IsUnique();
             e.Property(x => x.Resumo).HasMaxLength(200);
+        });
+
+        modelBuilder.Entity<UsoIA>(e =>
+        {
+            e.ToTable("uso_ia");
+            e.HasIndex(x => new { x.LojaId, x.Dia }).IsUnique();
         });
 
         modelBuilder.Entity<Usuario>(e =>
@@ -324,6 +331,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
         modelBuilder.Entity<FechamentoCaixa>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<Entrega>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<CredencialLoja>().HasQueryFilter(x => x.LojaId == LojaId);
+        modelBuilder.Entity<UsoIA>().HasQueryFilter(x => x.LojaId == LojaId);
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
