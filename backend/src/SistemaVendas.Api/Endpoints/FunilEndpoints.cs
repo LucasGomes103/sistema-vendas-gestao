@@ -134,7 +134,7 @@ public static class FunilEndpoints
         config.MapGet("/whatsapp", async (AppDbContext db, ILojaAtual loja, IOptions<WhatsAppOptions> wa, CancellationToken ct) =>
         {
             var l = await db.Lojas.AsNoTracking().FirstAsync(x => x.Id == loja.LojaId, ct);
-            return new ConfigWhatsAppDto(l.AtenderTodos, l.NumerosPermitidos, l.WhatsAppNumero, wa.Value.UsaPonteLocal ? "Local" : "Meta");
+            return new ConfigWhatsAppDto(l.AtenderTodos, l.NumerosPermitidos, l.WhatsAppNumero, wa.Value.ProvedorDa(l.Slug));
         });
 
         config.MapPut("/whatsapp", async (ConfigWhatsAppDto entrada, AppDbContext db, ILojaAtual loja, IOptions<WhatsAppOptions> wa, CancellationToken ct) =>
@@ -147,7 +147,7 @@ public static class FunilEndpoints
             l.WhatsAppNumero = numero.Length == 0 ? null : Loja.NormalizarNumeros([numero]).FirstOrDefault();
 
             await db.SaveChangesAsync(ct);
-            return Results.Ok(new ConfigWhatsAppDto(l.AtenderTodos, l.NumerosPermitidos, l.WhatsAppNumero, wa.Value.UsaPonteLocal ? "Local" : "Meta"));
+            return Results.Ok(new ConfigWhatsAppDto(l.AtenderTodos, l.NumerosPermitidos, l.WhatsAppNumero, wa.Value.ProvedorDa(l.Slug)));
         });
 
         config.MapGet("/whatsapp-oficial", async (AppDbContext db, ILojaAtual loja, CredenciaisDaLoja credenciais, ServicoCredenciais cofre, CancellationToken ct) =>

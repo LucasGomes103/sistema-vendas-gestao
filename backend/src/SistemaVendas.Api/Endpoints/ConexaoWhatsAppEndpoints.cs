@@ -1,6 +1,9 @@
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using SistemaVendas.Application.Comum;
+using SistemaVendas.Infrastructure.Dados;
 using SistemaVendas.Infrastructure.WhatsApp;
 
 namespace SistemaVendas.Api.Endpoints;
@@ -9,7 +12,8 @@ public record CodigoPareamentoEntrada(string Numero);
 
 /// <summary>
 /// Conexão do número na ponte não oficial (QR code), feita pelo painel: a ponte roda junto da API
-/// e não fica exposta na internet, então o painel fala com ela por aqui.
+/// e não fica exposta na internet, então o painel fala com ela por aqui. Só a loja da ponte
+/// (WhatsApp__Local__LojaSlug) enxerga: o dono de outra loja nunca vê o QR nem desconecta o número da ECS Fish.
 /// </summary>
 public static class ConexaoWhatsAppEndpoints
 {
@@ -17,21 +21,24 @@ public static class ConexaoWhatsAppEndpoints
     {
         var grupo = app.MapGroup("/config/whatsapp/conexao").WithTags("Configuração").RequireAuthorization(AuthEndpoints.PoliticaDono);
 
-        grupo.MapGet("/", (IHttpClientFactory fabrica, IOptions<WhatsAppOptions> opcoes, CancellationToken ct) =>
-            ChamarPonte(fabrica, opcoes.Value, HttpMethod.Get, "/estado", null, ct));
+        grupo.MapGet("/", (AppDbContext db, ILojaAtual loja, IHttpClientFactory fabrica, IOptions<WhatsAppOptions> opcoes, CancellationToken ct) =>
+            ChamarPonte(db, loja, fabrica, opcoes.Value, HttpMethod.Get, "/estado", null, ct));
 
-        grupo.MapPost("/codigo", (CodigoPareamentoEntrada entrada, IHttpClientFactory fabrica, IOptions<WhatsAppOptions> opcoes, CancellationToken ct) =>
-            ChamarPonte(fabrica, opcoes.Value, HttpMethod.Post, "/estado/codigo", new { numero = entrada.Numero }, ct));
+        grupo.MapPost("/codigo", (CodigoPareamentoEntrada entrada, AppDbContext db, ILojaAtual loja, IHttpClientFactory fabrica, IOptions<WhatsAppOptions> opcoes, CancellationToken ct) =>
+            ChamarPonte(db, loja, fabrica, opcoes.Value, HttpMethod.Post, "/estado/codigo", new { numero = entrada.Numero }, ct));
 
-        grupo.MapPost("/desconectar", (IHttpClientFactory fabrica, IOptions<WhatsAppOptions> opcoes, CancellationToken ct) =>
-            ChamarPonte(fabrica, opcoes.Value, HttpMethod.Post, "/estado/desconectar", new { }, ct));
+        grupo.MapPost("/desconectar", (AppDbContext db, ILojaAtual loja, IHttpClientFactory fabrica, IOptions<WhatsAppOptions> opcoes, CancellationToken ct) =>
+            ChamarPonte(db, loja, fabrica, opcoes.Value, HttpMethod.Post, "/estado/desconectar", new { }, ct));
     }
 
-    private static async Task<IResult> ChamarPonte(
+    private static async Task<IResult> ChamarPonte(AppDbContext db, ILojaAtual loja,
         IHttpClientFactory fabrica, WhatsAppOptions opcoes, HttpMethod metodo, string caminho, object? corpo, CancellationToken ct)
     {
-        if (!opcoes.UsaPonteLocal)
-            return Results.Ok(new { disponivel = false, status = "A loja usa a API oficial da Meta." });
+        var slug = opcoes.UsaPonteLocal ? await db.Lojas.Where(l => l.Id == loja.LojaId).Select(l => l.Slug).FirstOrDefaultAsync(ct) : null;
+        if (!opcoes.PonteDaLoja(slug))
+            return metodo == HttpMethod.Get
+                ? Results.Ok(new { disponivel = false, status = "A loja usa a API oficial da Meta." })
+                : Results.Problem("A conexão por QR code não está disponível para esta loja.", statusCode: StatusCodes.Status409Conflict);
 
         using var req = new HttpRequestMessage(metodo, $"{opcoes.Local.Url.TrimEnd('/')}{caminho}");
         req.Headers.Add("x-segredo", opcoes.Local.Segredo);

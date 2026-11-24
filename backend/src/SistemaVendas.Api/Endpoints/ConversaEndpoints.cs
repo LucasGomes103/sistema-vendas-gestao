@@ -260,10 +260,11 @@ public static class ConversaEndpoints
 
         grupo.MapGet("/status-whatsapp", async (IWhatsAppCliente whatsApp, IAtendenteIA atendente, Microsoft.Extensions.Options.IOptions<WhatsAppOptions> opcoesWa, AppDbContext db, ILojaAtual lojaAtual, IHostEnvironment env, IConfiguration config, CancellationToken ct) =>
         {
-            var phoneNumberId = await db.Lojas.Where(l => l.Id == lojaAtual.LojaId).Select(l => l.PhoneNumberId).FirstOrDefaultAsync(ct);
+            var loja = await db.Lojas.Where(l => l.Id == lojaAtual.LojaId).Select(l => new { l.PhoneNumberId, l.Slug }).FirstAsync(ct);
+            var phoneNumberId = loja.PhoneNumberId;
             // Simulador disponível mesmo com o número real ligado: as conversas dele nunca saem pelo WhatsApp.
             var simulador = env.IsDevelopment() || config.GetValue("Simulador:Habilitado", true);
-            return Results.Ok(new { simulado = await whatsApp.SimuladoAsync(lojaAtual.LojaId!.Value, ct), simuladorDisponivel = simulador, phoneNumberId, atendente = atendente.Nome, provedor = opcoesWa.Value.UsaPonteLocal ? "Local" : "Meta" });
+            return Results.Ok(new { simulado = await whatsApp.SimuladoAsync(lojaAtual.LojaId!.Value, ct), simuladorDisponivel = simulador, phoneNumberId, atendente = atendente.Nome, provedor = opcoesWa.Value.ProvedorDa(loja.Slug) });
         });
 
         // Número do WhatsApp da loja (phone_number_id da Meta). Não é segredo; o token fica cifrado (/config/whatsapp-oficial).

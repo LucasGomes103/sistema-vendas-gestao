@@ -328,6 +328,17 @@ Para a ida à produção (custos, variáveis, segurança, LGPD), ver [producao/c
   robô recebe os detalhes ao buscar o produto (e acha o produto pelo valor, ex.: "tem em preto?").
 
 
+## Integrações pelo cliente (SaaS fase 2)
+
+### Ponte por QR só para a loja original
+
+- A conexão por QR code (ponte não oficial) **não faz parte do produto**: só a loja configurada em
+  `WhatsApp__Local__LojaSlug` (a ECS Fish) vê o bloco "Conexão do WhatsApp" e usa a ponte. O dono de outra loja não
+  vê o QR, não gera código e não desconecta o número da ECS Fish; para ele o WhatsApp é sempre a Meta oficial (ou o
+  simulador, enquanto não conectar).
+- A trava de "números permitidos" vale só para a loja da ponte.
+- **Para desligar a ponte de vez** (quando a Meta oficial estiver liberada): no Render, troque `WhatsApp__Provedor`
+  de `Local` para `Meta`. Nada mais muda; o simulador continua disponível.
 ### IA da plataforma com limite por loja
 
 - O robô usa o Gemini da plataforma (chave `IA__Gemini__ApiKey`, conta do Lucas). Cada resposta é **medida por loja e

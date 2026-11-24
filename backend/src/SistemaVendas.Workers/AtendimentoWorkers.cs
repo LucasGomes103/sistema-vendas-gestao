@@ -121,7 +121,7 @@ public class MensagemWorker(
                 {
                     p.Mensagem.Wamid = await simulado.EnviarTextoAsync(p.Mensagem.LojaId, "simulador", p.Telefone, p.Mensagem.Conteudo, ct);
                 }
-                else if (opcoes.Value.UsaPonteLocal && !p.Loja.PodeAtender(p.Telefone))
+                else if (opcoes.Value.PonteDaLoja(p.Loja.Slug) && !p.Loja.PodeAtender(p.Telefone))
                 {
                     // Trava de segurança da conexão local: nunca escreve para quem está fora da lista.
                     p.Mensagem.Status = StatusMensagem.Falhou;

@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -141,5 +143,34 @@ public class IntegracoesPorLojaTests(BancoDeTeste banco) : IClassFixture<BancoDe
         Assert.True(await whatsApp.SimuladoAsync(banco.B.Id, default));
         var wamid = await whatsApp.EnviarTextoAsync(banco.B.Id, "pn-loja-b", "5511900000002", "oi", default);
         Assert.StartsWith("sim.", wamid);
+    }
+
+    [FactComBanco]
+    public async Task Conexao_por_qr_so_aparece_para_a_loja_da_ponte()
+    {
+        await using var app = Fabrica();
+        var client = app.CreateClient();
+        (await client.PostAsJsonAsync("/api/v1/auth/login", new { email = banco.B.EmailDono, senha = BancoDeTeste.Senha })).EnsureSuccessStatusCode();
+
+        // Dono da loja B não vê o QR da ECS Fish nem consegue desconectar o número dela.
+        var estado = await client.GetFromJsonAsync<JsonElement>("/api/v1/config/whatsapp/conexao");
+        Assert.False(estado.GetProperty("disponivel").GetBoolean());
+        Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsJsonAsync("/api/v1/config/whatsapp/conexao/desconectar", new { })).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsJsonAsync("/api/v1/config/whatsapp/conexao/codigo", new { numero = "11912345678" })).StatusCode);
+        Assert.Equal("Meta", (await client.GetFromJsonAsync<JsonElement>("/api/v1/config/whatsapp")).GetProperty("provedor").GetString());
+        Assert.Equal("Meta", (await client.GetFromJsonAsync<JsonElement>("/api/v1/conversas/status-whatsapp")).GetProperty("provedor").GetString());
+    }
+
+    [Theory]
+    [InlineData("Local", "loja-a", "loja-a", true)]
+    [InlineData("Local", "loja-a", "LOJA-A", true)]
+    [InlineData("Local", "loja-a", "loja-b", false)]
+    [InlineData("Meta", "loja-a", "loja-a", false)]
+    [InlineData("Local", "loja-a", null, false)]
+    public void Ponte_so_vale_para_a_loja_configurada(string provedor, string lojaDaPonte, string? slug, bool esperado)
+    {
+        var o = new WhatsAppOptions { Provedor = provedor, Local = new() { LojaSlug = lojaDaPonte } };
+        Assert.Equal(esperado, o.PonteDaLoja(slug));
+        Assert.Equal(esperado ? "Local" : "Meta", o.ProvedorDa(slug));
     }
 }
