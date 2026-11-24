@@ -29,7 +29,29 @@ public record LojaAdminSaida(
 
     /// <summary>Limite próprio da loja; null = padrão da plataforma (IA__LimiteRespostasMes).</summary>
     public int? LimiteIaProprio { get; init; }
+
+    /// <summary>Assinatura: plano (null = isenta), situação de hoje, status combinado e até quando vale.</summary>
+    public string? Plano { get; init; }
+    public string SituacaoAssinatura { get; init; } = "Isenta";
+    public string StatusAssinatura { get; init; } = "Isenta";
+    public DateTimeOffset? VenceEm { get; init; }
+    public string? MpStatus { get; init; }
+
+    public LojaAdminSaida ComAssinatura(EstadoAssinatura e) => this with
+    {
+        Plano = e.Plano?.Nome,
+        SituacaoAssinatura = e.Situacao.ToString(),
+        StatusAssinatura = (e.LojaOriginal ? Domain.Lojas.StatusAssinatura.Isenta : e.Assinatura?.Status ?? Domain.Lojas.StatusAssinatura.Isenta).ToString(),
+        VenceEm = e.Vencimento,
+        MpStatus = e.Assinatura?.MpStatus
+    };
 }
+
+/// <summary>
+/// Mudança na assinatura feita pelo administrador. Acao: plano (troca o plano), cortesia (até Ate, vazio = sem fim),
+/// estender_teste (mais Dias de teste), isentar (sem mensalidade nem limites), cobrar (volta à cobrança normal).
+/// </summary>
+public record AssinaturaAdminEntrada(string? Acao, string? Plano, int? Dias, DateTimeOffset? Ate, string? Motivo);
 
 public record SuspenderEntrada(string? Motivo);
 
@@ -91,6 +113,7 @@ public static class AdminEndpoints
                 .Select(g => new { g.Key, Tipos = g.Select(c => c.Tipo).ToList() }).ToDictionaryAsync(x => x.Key, x => x.Tipos, ct);
             var original = await credenciais.LojaOriginalAsync(ct);
             var planos = await assinaturas.TodasAsync(ct);
+            var agora = DateTimeOffset.UtcNow;
 
             return lojas.Select(l =>
             {
@@ -110,7 +133,7 @@ public static class AdminEndpoints
                     RespostasIaMes = iaMes.GetValueOrDefault(l.Id),
                     LimiteIaMes = limiteIa.LimitePara(l.LimiteRespostasIAMes, planos.GetValueOrDefault(l.Id), l.Id == original),
                     LimiteIaProprio = l.LimiteRespostasIAMes,
-                };
+                }.ComAssinatura(ServicoAssinatura.Calcular(planos.GetValueOrDefault(l.Id), l.Id == original, agora, assinaturas.DiasCarencia));
             }).ToList();
         });
 
@@ -202,6 +225,90 @@ public static class AdminEndpoints
             Auditar(db, user, AcaoAdmin.Excluir, id, loja.Slug, $"{loja.Nome} ({linhas} linhas apagadas)");
             await db.SaveChangesAsync(ct);
             logs.CreateLogger("Admin").LogWarning("Loja {Slug} EXCLUÍDA por {Admin} ({Linhas} linhas apagadas)", loja.Slug, user.FindFirstValue(ClaimTypes.Email), linhas);
+            return Results.NoContent();
+        });
+
+        // Plano, cortesia, mais dias de teste, isentar ou voltar à cobrança normal.
+        grupo.MapPost("/lojas/{id:guid}/assinatura", async (Guid id, AssinaturaAdminEntrada e, AppDbContext db, CredenciaisDaLoja credenciais,
+            ICobrancaMercadoPago mp, ClaimsPrincipal user, ILoggerFactory logs, CancellationToken ct) =>
+        {
+            var loja = await db.Lojas.AsNoTracking().FirstOrDefaultAsync(l => l.Id == id, ct);
+            if (loja is null)
+                return Results.NotFound();
+            if (await credenciais.LojaOriginalAsync(ct) == id)
+                return Results.Problem("A loja original é sempre isenta.", statusCode: StatusCodes.Status422UnprocessableEntity);
+            var agora = DateTimeOffset.UtcNow;
+            var a = await db.Assinaturas.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.LojaId == id, ct);
+            var nova = a is null;
+            a ??= new Assinatura { LojaId = id, Status = StatusAssinatura.Isenta };
+            var antes = $"{a.Status}/{a.Plano}";
+            PlanoId? plano = Enum.TryParse<PlanoId>(e.Plano, true, out var p) ? p : null;
+            var motivo = string.IsNullOrWhiteSpace(e.Motivo) ? null : e.Motivo.Trim()[..Math.Min(e.Motivo.Trim().Length, 300)];
+            string detalhe;
+            switch (e.Acao)
+            {
+                case "plano" when plano is { } novoPlano:
+                    a.Plano = novoPlano;
+                    // Saindo de isenta: começa um teste de 7 dias no plano escolhido.
+                    if (a.Status == StatusAssinatura.Isenta)
+                    {
+                        a.Status = StatusAssinatura.Teste;
+                        a.TesteAte = agora.AddDays(RegrasAssinatura.DiasTeste);
+                    }
+                    // Já paga pelo Mercado Pago: a próxima cobrança vem com o valor do plano novo.
+                    if (a.MpAssinaturaId is { } mpId && a.MpStatus == "authorized" && mp.Configurado)
+                    {
+                        try
+                        {
+                            await mp.AlterarValorAsync(mpId, ServicoCobranca.Motivo(Planos.De(novoPlano), loja.Nome), Planos.De(novoPlano).Preco, ct);
+                        }
+                        catch (Exception ex) when (ex is Domain.Estoque.RegraException or HttpRequestException)
+                        {
+                            return Results.Problem($"O Mercado Pago não aceitou o valor novo: {ex.Message}", statusCode: StatusCodes.Status502BadGateway);
+                        }
+                    }
+                    detalhe = $"plano: {Planos.De(novoPlano).Nome}";
+                    break;
+                case "cortesia":
+                    if (e.Ate is { } ate && ate <= agora)
+                        return Results.Problem("A data da cortesia precisa ser no futuro.", statusCode: StatusCodes.Status422UnprocessableEntity);
+                    a.Status = StatusAssinatura.Cortesia;
+                    a.CortesiaAte = e.Ate;
+                    a.MotivoCortesia = motivo;
+                    if (plano is { } pc) a.Plano = pc;
+                    detalhe = $"cortesia {(e.Ate is { } d ? "até " + d.ToOffset(TimeSpan.FromHours(-3)).ToString("dd/MM/yyyy") : "sem fim")} no {Planos.De(a.Plano).Nome}" + (motivo is null ? "" : $" ({motivo})");
+                    break;
+                case "estender_teste" when e.Dias is >= 1 and <= 90:
+                    a.Status = StatusAssinatura.Teste;
+                    a.TesteAte = (a.TesteAte > agora ? a.TesteAte.Value : agora).AddDays(e.Dias.Value);
+                    if (plano is { } pt) a.Plano = pt;
+                    detalhe = $"teste +{e.Dias} dias (até {a.TesteAte.Value.ToOffset(TimeSpan.FromHours(-3)):dd/MM/yyyy})";
+                    break;
+                case "isentar":
+                    a.Status = StatusAssinatura.Isenta;
+                    detalhe = "isenta" + (motivo is null ? "" : $" ({motivo})");
+                    break;
+                case "cobrar":
+                    // Volta à cobrança normal: vale o que já foi pago; sem nada pago, ganha os dias informados (padrão 7) de teste.
+                    if (a.PagoAte > agora)
+                        a.Status = a.MpStatus == "cancelled" ? StatusAssinatura.Cancelada : StatusAssinatura.Ativa;
+                    else
+                    {
+                        a.Status = StatusAssinatura.Teste;
+                        a.TesteAte = agora.AddDays(Math.Clamp(e.Dias ?? RegrasAssinatura.DiasTeste, 0, 90));
+                    }
+                    a.CortesiaAte = null;
+                    detalhe = "volta à cobrança normal";
+                    break;
+                default:
+                    return Results.Problem("Ação inválida: use plano, cortesia, estender_teste (1 a 90 dias), isentar ou cobrar.", statusCode: StatusCodes.Status422UnprocessableEntity);
+            }
+            a.AtualizadoEm = agora;
+            if (nova)
+                db.Assinaturas.Add(a);
+            Auditar(db, user, AcaoAdmin.Assinatura, id, loja.Slug, $"{antes} → {detalhe}");
+            await db.SaveChangesAsync(ct);
+            logs.CreateLogger("Admin").LogWarning("Assinatura da loja {Slug} mudada por {Admin}: {Detalhe}", loja.Slug, user.FindFirstValue(ClaimTypes.Email), detalhe);
             return Results.NoContent();
         });
 

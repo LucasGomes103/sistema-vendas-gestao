@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using SistemaVendas.Api.Comum;
 using SistemaVendas.Domain.Lojas;
 using SistemaVendas.Domain.Vendas;
+using SistemaVendas.Infrastructure.Assinaturas;
 using SistemaVendas.Infrastructure.Dados;
 using SistemaVendas.Infrastructure.Email;
 using SistemaVendas.Infrastructure.IA;
@@ -85,7 +86,8 @@ public static class AdminPainelEndpoints
                 await TotaisAsync(db, null, desde, ct), await PorDiaAsync(db, null, desde, periodo, agora, ct), saude));
         });
 
-        grupo.MapGet("/lojas/{id:guid}", async (Guid id, int? dias, AppDbContext db, CredenciaisDaLoja credenciais, CancellationToken ct) =>
+        grupo.MapGet("/lojas/{id:guid}", async (Guid id, int? dias, AppDbContext db, CredenciaisDaLoja credenciais, ServicoAssinatura assinaturas,
+            ServicoLimiteIa limiteIa, CancellationToken ct) =>
         {
             var loja = await db.Lojas.AsNoTracking().FirstOrDefaultAsync(l => l.Id == id, ct);
             if (loja is null)
@@ -114,7 +116,9 @@ public static class AdminPainelEndpoints
                 RespostasRobo30Dias = totais.RespostasRobo,
                 TokensIa30Dias = totais.TokensEntrada + totais.TokensSaida,
                 FalhasIa30Dias = totais.FalhasIa,
-            };
+            }.ComAssinatura(await assinaturas.EstadoAsync(id, ct));
+            var ia = await limiteIa.ResumoAsync(id, agora, ct);
+            resumo = resumo with { RespostasIaMes = ia.Respostas, LimiteIaMes = ia.Limite, LimiteIaProprio = loja.LimiteRespostasIAMes };
 
             var config = new ConfiguracaoLojaAdmin(
                 loja.PhoneNumberId is not null || tipos.Contains(TipoCredencial.WhatsApp), loja.WhatsAppNumero, loja.AtenderTodos, loja.NumerosPermitidos.Count,

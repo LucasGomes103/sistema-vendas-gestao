@@ -463,3 +463,21 @@ Para a ida à produção (custos, variáveis, segurança, LGPD), ver [producao/c
   Pago: pagamento confirmado, recusado, assinatura cancelada.
 - E-mail por SMTP (Gmail, já existia) ou **Resend** (`Email__Resend__ApiKey`, camada grátis de 3.000 por mês; sem
   domínio verificado o Resend só entrega no e-mail da própria conta, então serve depois do domínio).
+
+### Super admin: assinatura das lojas
+
+- Plataforma → Lojas mostra o plano e a situação de cada loja; o detalhe da loja tem o bloco **Assinatura** com o
+  botão **Mudar**: trocar o plano (se a loja paga pelo Mercado Pago, a próxima cobrança vem com o valor novo; loja
+  isenta que ganha plano começa 7 dias de teste), dar **cortesia** (até uma data ou sem fim, com motivo), dar **mais
+  dias de teste**, **isentar** ou **voltar à cobrança normal**. Tudo fica na auditoria. A loja original não muda.
+
+### O que configurar para cobrar de verdade
+
+1. Render → `Assinaturas__MercadoPago__AccessToken` = Access Token de **produção** da conta do Mercado Pago do Lucas
+   (para testar antes, o de um vendedor de teste). Opcional: `Assinaturas__MercadoPago__WebhookSecret`.
+2. Mercado Pago → Suas integrações → a aplicação → **Webhooks**: URL
+   `https://sistema-vendas-gestao.pages.dev/api/v1/webhooks/mercadopago` (ou `/api/v1/webhooks/assinatura`) com os
+   eventos de **Planos e assinaturas** marcados, além do Order que já existe.
+3. E-mail: o SMTP do Gmail (`Email__Smtp__*`) já serve. Depois do domínio, dá para trocar pelo Resend
+   (`Email__Resend__ApiKey` e `Email__Remetente` com o domínio verificado).
+4. Opcional: `Assinaturas__DiasCarencia` (padrão 7).

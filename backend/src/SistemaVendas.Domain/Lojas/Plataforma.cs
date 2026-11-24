@@ -46,6 +46,7 @@ public static class AcaoAdmin
     public const string Excluir = "excluir";
     public const string VerComoLoja = "ver_como_loja";
     public const string SairDaLoja = "sair_da_loja";
+    public const string Assinatura = "assinatura";
 }
 
 public static class RegrasLimiteIa

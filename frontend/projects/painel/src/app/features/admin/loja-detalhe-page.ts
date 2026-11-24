@@ -10,7 +10,9 @@ import { firstValueFrom } from 'rxjs';
 import { API, DetalheLojaAdmin, mensagemDeErro } from '../../core/api';
 import { Auth } from '../../core/auth';
 import { Confirmar } from '../../core/confirmar';
-import { AdminAbas, GraficoDias, parada, rotuloAcao, tempoDesde } from './admin-comum';
+import { AdminAbas, GraficoDias, SITUACAO_ASSINATURA, parada, rotuloAcao, tempoDesde } from './admin-comum';
+import { MatDialog } from '@angular/material/dialog';
+import { AssinaturaAdminDialog } from './assinatura-admin-dialog';
 
 const STATUS: Record<string, { rotulo: string; classe: string; icone: string }> = {
   Ativa: { rotulo: 'Ativa', classe: 'ok', icone: 'check_circle' },
@@ -81,6 +83,27 @@ const STATUS: Record<string, { rotulo: string; classe: string; icone: string }> 
           <small>tokens · {{ d.totais.chamadasIa | number }} chamada(s) · {{ d.totais.falhasIa }} falha(s)</small>
         </div>
       </div>
+
+      @let sa = situacoes[d.loja.situacaoAssinatura];
+      <section class="sv-card bloco">
+        <div class="titulo-bloco">
+          <h2>Assinatura</h2>
+          @if (!d.loja.lojaOriginal) {
+            <button mat-stroked-button (click)="mudarAssinatura()" [disabled]="ocupado()"><mat-icon>workspace_premium</mat-icon> Mudar</button>
+          }
+        </div>
+        <p class="assinatura">
+          <span class="sv-selo {{ sa.classe }}">{{ sa.rotulo }}</span>
+          {{ d.loja.plano ? 'Plano ' + d.loja.plano : 'Sem plano (sem limites)' }}
+          @if (d.loja.venceEm) {
+            · {{ d.loja.statusAssinatura === 'Teste' ? 'teste até' : d.loja.statusAssinatura === 'Cortesia' ? 'cortesia até' : 'pago até' }} {{ d.loja.venceEm | date: 'dd/MM/yyyy' }}
+          }
+          @if (d.loja.mpStatus) {
+            · Mercado Pago: {{ d.loja.mpStatus }}
+          }
+          · IA no mês: {{ d.loja.respostasIaMes | number }}{{ d.loja.limiteIaMes > 0 ? ' / ' + (d.loja.limiteIaMes | number) : ' (sem limite)' }}
+        </p>
+      </section>
 
       <section class="sv-card bloco">
         <h2>Por dia (30 dias)</h2>
@@ -287,6 +310,19 @@ const STATUS: Record<string, { rotulo: string; classe: string; icone: string }> 
     .vazio {
       color: var(--mat-sys-on-surface-variant);
     }
+    .titulo-bloco {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .assinatura {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin: 4px 0 0;
+    }
     @media (max-width: 1099px) {
       .kpis {
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -312,6 +348,18 @@ export class LojaDetalhePage {
   private readonly snack = inject(MatSnackBar);
 
   protected readonly status = STATUS;
+  protected readonly situacoes = SITUACAO_ASSINATURA;
+  private readonly dialog = inject(MatDialog);
+
+  protected async mudarAssinatura(): Promise<void> {
+    const loja = this.detalhe.value()?.loja;
+    if (!loja) return;
+    const ref = this.dialog.open(AssinaturaAdminDialog, { data: loja, width: '460px', maxWidth: '95vw' });
+    if (await firstValueFrom(ref.afterClosed())) {
+      this.snack.open('Assinatura atualizada.', 'OK', { duration: 4000 });
+      this.detalhe.reload();
+    }
+  }
   protected readonly minhaLoja = computed(() => this.auth.usuario()?.lojaId);
   protected readonly detalhe = httpResource<DetalheLojaAdmin>(() => `${API}/admin/lojas/${this.id()}`);
   protected readonly ocupado = signal(false);
