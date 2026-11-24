@@ -433,3 +433,19 @@ Para a ida à produção (custos, variáveis, segurança, LGPD), ver [producao/c
   a agenda de entregas some do menu e não dá para criar entregador. **Domínio próprio** (Completo) ainda não existe
   no sistema: fica só marcado no plano.
 - Painel: Assinatura → **Uso do plano**, com barras de conversas, IA, usuários e produtos.
+
+### Mensalidade pelo Mercado Pago da plataforma
+
+- Assinatura recorrente na conta do **Lucas** (API de Assinaturas, `/preapproval`, sem plano associado, pagamento
+  pendente): o dono clica em **Assinar** na tela Assinatura, informa o e-mail da conta do Mercado Pago que paga e vai
+  para o link do Mercado Pago. No teste grátis, a primeira cobrança sai quando o teste acaba.
+- Avisos: `subscription_preapproval` (assinatura mudou) e `subscription_authorized_payment` (cobrança do mês), em
+  `/api/v1/webhooks/assinatura` ou na URL que a aplicação já usa (`/api/v1/webhooks/mercadopago`). O sistema relê
+  tudo na API com o token da plataforma; aviso falso não muda nada.
+- Cada cobrança aprovada soma um mês ao "pago até" (a partir do fim do teste ou do mês anterior). Aviso repetido não
+  soma de novo (tabela `pagamento_assinatura`).
+- Trocar de plano com a assinatura paga muda o valor das próximas cobranças e o plano vale na hora. Link que ficou sem
+  pagar é cancelado quando o dono gera outro. **Cancelar** para a cobrança; a loja usa até o fim do que pagou.
+- Botão **Conferir pagamento** (e a volta do Mercado Pago) lê a assinatura na hora, sem esperar o aviso.
+- Configurar no Render: `Assinaturas__MercadoPago__AccessToken` (conta do Lucas) e, opcional,
+  `Assinaturas__MercadoPago__WebhookSecret`. Sem o token, a tela diz que o pagamento ainda não está ligado.

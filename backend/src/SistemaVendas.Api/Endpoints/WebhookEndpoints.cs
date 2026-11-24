@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using SistemaVendas.Domain.Atendimento;
+using SistemaVendas.Infrastructure.Assinaturas;
 using SistemaVendas.Infrastructure.Dados;
 using SistemaVendas.Application.Comum;
 using SistemaVendas.Infrastructure.Pagamentos;
@@ -70,6 +71,9 @@ public static class WebhookEndpoints
         {
             var log = logs.CreateLogger("MercadoPago");
             var (tipo, id) = await LerAvisoMercadoPagoAsync(req, ct);
+            // A aplicação da plataforma tem uma URL de webhook só: os avisos da mensalidade também podem chegar aqui.
+            if (EhAvisoDeAssinatura(tipo))
+                return await AvisoDeAssinaturaAsync(req, tipo!, id, req.HttpContext.RequestServices, log, ct);
             // "order" (e "orders_v2", nome que aparece em parte da documentação). Outros tópicos não interessam.
             if (tipo is not ("order" or "orders_v2") || string.IsNullOrEmpty(id))
                 return Results.Ok();
@@ -107,6 +111,15 @@ public static class WebhookEndpoints
             var resultado = await pedidos.AoPagarNoCartaoAsync(pedidoId, order, ct);
             log.LogInformation("Mercado Pago order {Id} ({Status}): {Resultado}", order.Id, order.Status, resultado);
             return Results.Ok();
+        });
+
+        // Mensalidade das lojas (Mercado Pago DA PLATAFORMA): subscription_preapproval e subscription_authorized_payment.
+        grupo.MapPost("/assinatura", async (HttpRequest req, ILoggerFactory logs, CancellationToken ct) =>
+        {
+            var (tipo, id) = await LerAvisoMercadoPagoAsync(req, ct);
+            return EhAvisoDeAssinatura(tipo)
+                ? await AvisoDeAssinaturaAsync(req, tipo!, id, req.HttpContext.RequestServices, logs.CreateLogger("Assinatura"), ct)
+                : Results.Ok();
         });
 
         // Lista de quem a ponte local pode atender (configurada no painel). A ponte consulta a cada 30 s.
@@ -162,6 +175,43 @@ public static class WebhookEndpoints
             await db.SaveChangesAsync(ct);
             return Results.Ok();
         });
+    }
+
+    private static bool EhAvisoDeAssinatura(string? tipo) =>
+        tipo is "subscription_preapproval" or "subscription_authorized_payment" or "preapproval" or "authorized_payment";
+
+    /// <summary>
+    /// Aviso da mensalidade: confere a assinatura (quando há segredo) e relê tudo na API do Mercado Pago com o token da
+    /// plataforma. Um aviso falso não muda nada: no máximo faz o sistema ler de novo o que já está lá.
+    /// </summary>
+    private static async Task<IResult> AvisoDeAssinaturaAsync(HttpRequest req, string tipo, string? id, IServiceProvider sp, ILogger log, CancellationToken ct)
+    {
+        var cobranca = sp.GetRequiredService<ServicoCobranca>();
+        if (string.IsNullOrEmpty(id) || !cobranca.Disponivel)
+            return Results.Ok();
+        var segredo = sp.GetRequiredService<IOptions<AssinaturasOptions>>().Value.MercadoPago.WebhookSecret
+            ?? sp.GetRequiredService<IOptions<MercadoPagoOAuthOptions>>().Value.WebhookSecret;
+        var assinatura = req.Headers["x-signature"].ToString();
+        if (!string.IsNullOrEmpty(segredo) && assinatura.Length > 0
+            && !AssinaturaMercadoPago.Valida(assinatura, req.Headers["x-request-id"], req.Query["data.id"].FirstOrDefault() ?? id, segredo))
+        {
+            log.LogWarning("Aviso de assinatura com assinatura inválida ({Tipo} {Id})", tipo, id);
+            return Results.Unauthorized();
+        }
+        try
+        {
+            var (resultado, loja) = tipo.EndsWith("authorized_payment", StringComparison.Ordinal)
+                ? await cobranca.ProcessarCobrancaAsync(id, ct)
+                : await cobranca.SincronizarAsync(id, ct);
+            log.LogInformation("Aviso de assinatura {Tipo} {Id}: {Resultado} (loja {Loja})", tipo, id, resultado, loja);
+            return Results.Ok();
+        }
+        catch (HttpRequestException e)
+        {
+            // Responde erro para o Mercado Pago mandar o aviso de novo mais tarde.
+            log.LogWarning("Não consegui ler {Tipo} {Id} no Mercado Pago: {Erro}", tipo, id, e.Message);
+            return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+        }
     }
 
     /// <summary>Tipo ("order") e id do aviso, da URL ou do corpo JSON.</summary>

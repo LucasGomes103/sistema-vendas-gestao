@@ -16,6 +16,8 @@ export interface OpcoesConfirmar {
   perigo?: boolean;
   /** Mostra um campo de texto opcional (ex.: motivo) e devolve o que foi digitado. */
   campo?: string;
+  /** Valor que já vem preenchido no campo. */
+  inicial?: string;
 }
 
 interface Dados extends OpcoesConfirmar {
@@ -65,7 +67,7 @@ interface Dados extends OpcoesConfirmar {
 export class ConfirmarDialog {
   protected readonly d = inject<Dados>(MAT_DIALOG_DATA);
   private readonly ref = inject<MatDialogRef<ConfirmarDialog, { valor: string }>>(MatDialogRef);
-  protected readonly valor = signal('');
+  protected readonly valor = signal(this.d.inicial ?? '');
 
   protected confirmar(): void {
     this.ref.close({ valor: this.valor() });
