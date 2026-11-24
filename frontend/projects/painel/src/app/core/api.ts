@@ -610,3 +610,35 @@ export function mensagemDeErro(erro: unknown, padrao = 'Não foi possível concl
   const primeiroCampo = corpo?.errors ? Object.values(corpo.errors).flat()[0] : undefined;
   return corpo?.detail ?? primeiroCampo ?? padrao;
 }
+
+/** Um plano da plataforma. Produtos null = sem limite. */
+export interface PlanoPlataforma {
+  id: 'Essencial' | 'Profissional' | 'Completo';
+  nome: string;
+  preco: number;
+  conversas: number;
+  usuarios: number;
+  produtos: number | null;
+  respostasIa: number;
+  cartao: boolean;
+  entregas: boolean;
+  dominioProprio: boolean;
+}
+
+export type SituacaoAssinatura = 'Isenta' | 'Cortesia' | 'Teste' | 'EmDia' | 'Carencia' | 'Bloqueada';
+
+/** Assinatura da loja com a plataforma. Plano null = isenta (sem limites de plano). */
+export interface AssinaturaLoja {
+  situacao: SituacaoAssinatura;
+  status: 'Teste' | 'Ativa' | 'Cancelada' | 'Cortesia' | 'Isenta';
+  plano: PlanoPlataforma | null;
+  testeAte: string | null;
+  pagoAte: string | null;
+  cortesiaAte: string | null;
+  vencimento: string | null;
+  bloqueiaEm: string | null;
+  diasCarencia: number;
+  lojaOriginal: boolean;
+  mpStatus: string | null;
+  planos: PlanoPlataforma[];
+}

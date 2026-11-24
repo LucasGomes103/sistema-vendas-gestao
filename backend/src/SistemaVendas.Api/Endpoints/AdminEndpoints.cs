@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using SistemaVendas.Domain.Lojas;
 using SistemaVendas.Domain.Vendas;
+using SistemaVendas.Infrastructure.Assinaturas;
 using SistemaVendas.Infrastructure.Dados;
 using SistemaVendas.Infrastructure.IA;
 using SistemaVendas.Infrastructure.Seguranca;
@@ -210,6 +211,8 @@ public static class AdminEndpoints
             if (loja is null)
                 return Results.NotFound();
             var antes = loja.Status;
+            if (antes == StatusLoja.AguardandoConfirmacao)
+                await RegrasDoTeste.ComecarAsync(db, loja.Id, DateTimeOffset.UtcNow, ct);
             loja.Status = StatusLoja.Ativa;
             loja.MotivoSuspensao = null;
             loja.SuspensaEm = null;

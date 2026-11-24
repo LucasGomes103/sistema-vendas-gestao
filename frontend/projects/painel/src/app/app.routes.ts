@@ -72,6 +72,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/config/config-page').then((m) => m.ConfigPage),
       },
       {
+        path: 'assinatura',
+        title: 'Assinatura',
+        canActivate: [exigeDono],
+        loadComponent: () => import('./features/assinatura/assinatura-page').then((m) => m.AssinaturaPage),
+      },
+      {
         path: 'usuarios',
         title: 'Usuários',
         canActivate: [exigeDono],

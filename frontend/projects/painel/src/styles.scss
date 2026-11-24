@@ -108,6 +108,10 @@ h3 {
     color: var(--mat-sys-on-secondary-container);
     background: var(--mat-sys-secondary-container);
   }
+  &.erro {
+    color: var(--mat-sys-on-error-container);
+    background: var(--mat-sys-error-container);
+  }
 }
 
 .sv-cabecalho-pagina {

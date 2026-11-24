@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SistemaVendas.Application.Atendimento;
+using SistemaVendas.Infrastructure.Assinaturas;
 using SistemaVendas.Infrastructure.Dados;
 using SistemaVendas.Infrastructure.Email;
 using SistemaVendas.Infrastructure.IA;
@@ -32,6 +33,9 @@ public static class DependencyInjection
         services.AddScoped<ServicoFunil>();
         services.AddScoped<ServicoReservas>();
         services.AddScoped<ServicoPedidos>();
+        // Mensalidade das lojas: plano, teste grátis, carência e bloqueio.
+        services.Configure<AssinaturasOptions>(config.GetSection(AssinaturasOptions.Secao));
+        services.AddScoped<ServicoAssinatura>();
 
         // Cartão pelo Mercado Pago: só liga com MercadoPago__AccessToken. O endereço do webhook vem do Render.
         services.Configure<MercadoPagoOptions>(config.GetSection(MercadoPagoOptions.Secao));
