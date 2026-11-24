@@ -39,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<ServicoLimites>();
         services.AddHttpClient<ICobrancaMercadoPago, CobrancaMercadoPago>(c => c.Timeout = TimeSpan.FromSeconds(15));
         services.AddScoped<ServicoCobranca>();
+        services.AddScoped<AvisosAssinatura>();
 
         // Cartão pelo Mercado Pago: só liga com MercadoPago__AccessToken. O endereço do webhook vem do Render.
         services.Configure<MercadoPagoOptions>(config.GetSection(MercadoPagoOptions.Secao));

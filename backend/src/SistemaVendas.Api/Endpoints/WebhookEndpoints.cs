@@ -204,6 +204,8 @@ public static class WebhookEndpoints
                 ? await cobranca.ProcessarCobrancaAsync(id, ct)
                 : await cobranca.SincronizarAsync(id, ct);
             log.LogInformation("Aviso de assinatura {Tipo} {Id}: {Resultado} (loja {Loja})", tipo, id, resultado, loja);
+            if (loja is { } l && resultado is ResultadoCobranca.Paga or ResultadoCobranca.Recusada or ResultadoCobranca.Cancelada)
+                await sp.GetRequiredService<AvisosAssinatura>().AoCobrarAsync(l, resultado, id, ct);
             return Results.Ok();
         }
         catch (HttpRequestException e)

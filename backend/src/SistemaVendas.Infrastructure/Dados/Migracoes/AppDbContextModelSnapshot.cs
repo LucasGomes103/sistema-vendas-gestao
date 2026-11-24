@@ -1372,6 +1372,46 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                     b.ToTable("auditoria_admin", (string)null);
                 });
 
+            modelBuilder.Entity("SistemaVendas.Domain.Lojas.AvisoAssinatura", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Assunto")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("assunto");
+
+                    b.Property<string>("Chave")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("chave");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<bool>("Enviado")
+                        .HasColumnType("boolean")
+                        .HasColumnName("enviado");
+
+                    b.Property<Guid>("LojaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loja_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_aviso_assinatura");
+
+                    b.HasIndex("LojaId", "Chave")
+                        .IsUnique()
+                        .HasDatabaseName("ix_aviso_assinatura_loja_id_chave");
+
+                    b.ToTable("aviso_assinatura", (string)null);
+                });
+
             modelBuilder.Entity("SistemaVendas.Domain.Lojas.CredencialLoja", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2343,6 +2383,16 @@ namespace SistemaVendas.Infrastructure.Dados.Migracoes
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_assinatura_loja_loja_id");
+                });
+
+            modelBuilder.Entity("SistemaVendas.Domain.Lojas.AvisoAssinatura", b =>
+                {
+                    b.HasOne("SistemaVendas.Domain.Lojas.Loja", null)
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_aviso_assinatura_loja_loja_id");
                 });
 
             modelBuilder.Entity("SistemaVendas.Domain.Lojas.CredencialLoja", b =>

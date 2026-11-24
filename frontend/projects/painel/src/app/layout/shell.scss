@@ -245,3 +245,9 @@ main {
     display: none !important;
   }
 }
+
+.faixa-assinatura.bloqueada {
+  color: var(--mat-sys-on-error-container);
+  background: var(--mat-sys-error-container);
+  border-bottom-color: var(--mat-sys-error);
+}
