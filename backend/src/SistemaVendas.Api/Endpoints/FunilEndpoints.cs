@@ -1,9 +1,11 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using SistemaVendas.Application.Atendimento;
 using SistemaVendas.Application.Comum;
 using SistemaVendas.Domain.Atendimento;
 using SistemaVendas.Domain.Funil;
 using SistemaVendas.Infrastructure.Dados;
+using SistemaVendas.Infrastructure.IA;
 using SistemaVendas.Infrastructure.WhatsApp;
 using SistemaVendas.Domain.Lojas;
 using Microsoft.Extensions.Options;
@@ -48,6 +50,9 @@ public record ConfigFunilDto(
 public record WhatsAppOficialSaida(bool Configurado, string? Origem, string? PhoneNumberId, string? Resumo, bool PodeSalvar);
 
 public record WhatsAppOficialEntrada(string? PhoneNumberId, string? AccessToken);
+
+/// <summary>Uso da IA no mês: Limite 0 = sem limite.</summary>
+public record UsoIASaida(bool Ativa, string Atendente, int Respostas, int PorRegras, int Limite, bool Esgotado);
 
 public record ConfigWhatsAppDto(bool AtenderTodos, List<string> NumerosPermitidos, string? WhatsAppNumero, string Provedor);
 
@@ -118,6 +123,13 @@ public static class FunilEndpoints
                 .ToListAsync(ct));
 
         var config = app.MapGroup("/config").WithTags("Configuração").RequireAuthorization(AuthEndpoints.PoliticaDono);
+
+        // Uso da IA da plataforma neste mês (o dono vê quanto falta para o robô passar a responder por regras).
+        config.MapGet("/ia", async (ILojaAtual loja, ServicoLimiteIa limite, IAtendenteIA atendente, CancellationToken ct) =>
+        {
+            var r = await limite.ResumoAsync(loja.LojaId!.Value, DateTimeOffset.UtcNow, ct);
+            return new UsoIASaida(atendente is AtendenteComLimite, atendente.Nome, r.Respostas, r.PorRegras, r.Limite, r.Esgotado);
+        });
 
         config.MapGet("/whatsapp", async (AppDbContext db, ILojaAtual loja, IOptions<WhatsAppOptions> wa, CancellationToken ct) =>
         {
