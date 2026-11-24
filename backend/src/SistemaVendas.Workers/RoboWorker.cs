@@ -96,6 +96,14 @@ public class RoboWorker(IServiceScopeFactory scopes, EstadoWorkers estado, ILogg
             return;
         }
 
+        // Mensalidade atrasada além da carência: o robô fica parado (as mensagens continuam chegando no painel).
+        if ((await sp.GetRequiredService<ServicoAssinatura>().EstadoAsync(conversa.LojaId, ct)).Bloqueada)
+        {
+            logger.LogInformation("Conversa {Id}: assinatura da loja bloqueada, robô não respondeu", conversa.Id);
+            await db.SaveChangesAsync(ct);
+            return;
+        }
+
         // Limite de conversas do plano: cliente novo além do limite do mês vai para a equipe, sem resposta do robô.
         if (!conversa.Simulada && !await sp.GetRequiredService<ServicoLimites>().ClienteDentroDoLimiteAsync(conversa.LojaId, conversa.ClienteId, DateTimeOffset.UtcNow, ct))
         {

@@ -102,6 +102,30 @@ export class Shell {
   /** Itens que ainda vão entrar, mostrados desabilitados para dar a visão do todo. */
   protected readonly emBreve: ItemMenu[] = [];
 
+  /** Faixa do topo: teste acabando, mensalidade em aberto ou loja bloqueada. */
+  protected readonly faixaAssinatura = computed(() => {
+    const a = this.assinatura.valor();
+    if (!a || this.auth.modoSuporte()) return null;
+    const data = (d: string | null) => (d ? new Date(d).toLocaleDateString('pt-BR') : '');
+    if (a.situacao === 'Bloqueada')
+      return {
+        bloqueada: true,
+        icone: 'block',
+        botao: 'Regularizar',
+        texto: 'Mensalidade atrasada: o robô está parado e o painel está só para consulta até o pagamento.',
+      };
+    if (a.situacao === 'Carencia')
+      return {
+        bloqueada: false,
+        icone: 'warning',
+        botao: 'Pagar agora',
+        texto: `Mensalidade em aberto. Tudo funciona até ${data(a.bloqueiaEm)}; depois o robô para.`,
+      };
+    if (a.situacao === 'Teste' && a.testeAte && new Date(a.testeAte).getTime() - Date.now() < 3 * 86_400_000 && a.mpStatus !== 'authorized')
+      return { bloqueada: false, icone: 'hourglass_top', botao: 'Assinar', texto: `Seu teste grátis acaba em ${data(a.testeAte)}.` };
+    return null;
+  });
+
   protected readonly saindoDoSuporte = signal(false);
 
   protected async sairDoSuporte(): Promise<void> {

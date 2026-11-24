@@ -449,3 +449,17 @@ Para a ida à produção (custos, variáveis, segurança, LGPD), ver [producao/c
 - Botão **Conferir pagamento** (e a volta do Mercado Pago) lê a assinatura na hora, sem esperar o aviso.
 - Configurar no Render: `Assinaturas__MercadoPago__AccessToken` (conta do Lucas) e, opcional,
   `Assinaturas__MercadoPago__WebhookSecret`. Sem o token, a tela diz que o pagamento ainda não está ligado.
+
+### Carência, bloqueio e e-mails
+
+- **Carência**: 7 dias depois do vencimento (fim do teste, do mês pago ou da cortesia) tudo funciona, com faixa
+  amarela no topo do painel. `Assinaturas__DiasCarencia` muda os dias.
+- **Bloqueio** depois da carência: o robô não responde e os follow-ups automáticos param (as mensagens dos clientes
+  continuam chegando no painel); o painel fica **só leitura** (403 `assinatura_bloqueada` em tudo que muda dados,
+  menos Assinatura, login e o painel da plataforma); faixa vermelha no topo. Pagou, volta na hora. A loja original e
+  as isentas nunca bloqueiam.
+- **E-mails** para os donos (de hora em hora, cada um uma vez só, tabela `aviso_assinatura`): teste acabando (2 dias
+  antes), mensalidade em aberto, loja bloqueada, conversas ou IA em 80% e 100% do mês; e na hora do aviso do Mercado
+  Pago: pagamento confirmado, recusado, assinatura cancelada.
+- E-mail por SMTP (Gmail, já existia) ou **Resend** (`Email__Resend__ApiKey`, camada grátis de 3.000 por mês; sem
+  domínio verificado o Resend só entrega no e-mail da própria conta, então serve depois do domínio).

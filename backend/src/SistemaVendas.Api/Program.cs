@@ -111,6 +111,7 @@ if (app.Environment.IsDevelopment())
 app.UseSerilogRequestLogging();
 app.UseAuthentication();
 app.Use(Sessao.SomenteLeitura); // modo suporte do administrador: só leitura
+app.Use(BloqueioPorAtraso.Middleware); // mensalidade atrasada: painel só leitura
 app.UseAuthorization();
 app.UseRateLimiter();
 

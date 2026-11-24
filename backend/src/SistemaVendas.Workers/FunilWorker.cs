@@ -6,6 +6,7 @@ using SistemaVendas.Application.Comum;
 using SistemaVendas.Domain.Atendimento;
 using SistemaVendas.Domain.Funil;
 using SistemaVendas.Domain.Vendas;
+using SistemaVendas.Infrastructure.Assinaturas;
 using SistemaVendas.Infrastructure.Dados;
 using SistemaVendas.Infrastructure.WhatsApp;
 
@@ -147,8 +148,15 @@ public class FunilWorker(IServiceScopeFactory scopes, EstadoWorkers estado, ILog
 
         var conversa = await db.Conversas.FirstAsync(c => c.Id == conversaId, ct);
         var loja = await db.Lojas.FirstAsync(l => l.Id == conversa.LojaId, ct);
-        var cfg = await funil.ConfigAsync(loja.Id, ct);
         var agora = DateTimeOffset.UtcNow;
+        // Mensalidade atrasada além da carência: nada de follow-up automático; tenta de novo em 1 h.
+        if ((await sp.GetRequiredService<ServicoAssinatura>().EstadoAsync(loja.Id, ct)).Bloqueada)
+        {
+            conversa.ProximaAcaoEm = agora.AddHours(1);
+            await db.SaveChangesAsync(ct);
+            return;
+        }
+        var cfg = await funil.ConfigAsync(loja.Id, ct);
 
         var fuso = TimeZoneInfo.FindSystemTimeZoneById(loja.Fuso);
         var resultado = MotorFunil.Executar(conversa, cfg, agora, fuso, loja.HorarioInicio, loja.HorarioFim);
@@ -194,6 +202,7 @@ public static class DependencyInjection
         services.AddHostedService<MensagemWorker>();
         services.AddHostedService<RoboWorker>();
         services.AddHostedService<RenovacaoTokensWorker>();
+        services.AddHostedService<AvisosAssinaturaWorker>();
         return services;
     }
 }

@@ -171,3 +171,12 @@ public static class RegrasAssinatura
     private static DateTimeOffset? Max(DateTimeOffset? x, DateTimeOffset? y) =>
         x is null ? y : y is null ? x : x > y ? x : y;
 }
+
+/// <summary>E-mail de cobrança ou de limite já mandado para a loja (a chave evita mandar o mesmo aviso duas vezes).</summary>
+public class AvisoAssinatura : EntidadeDaLoja
+{
+    /// <summary>Ex.: "teste_acaba:20261201", "conversas80:202611", "pago:9001".</summary>
+    public required string Chave { get; set; }
+    public string? Assunto { get; set; }
+    public bool Enviado { get; set; }
+}

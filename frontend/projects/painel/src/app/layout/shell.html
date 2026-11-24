@@ -43,6 +43,16 @@
     </div>
   }
 
+  @if (faixaAssinatura(); as f) {
+    <div class="faixa-suporte faixa-assinatura" [class.bloqueada]="f.bloqueada" role="status">
+      <mat-icon>{{ f.icone }}</mat-icon>
+      <span>{{ f.texto }}</span>
+      @if (auth.ehDono() && !auth.modoSuporte()) {
+        <a mat-flat-button routerLink="/assinatura">{{ f.botao }}</a>
+      }
+    </div>
+  }
+
   <main>
     <router-outlet />
   </main>

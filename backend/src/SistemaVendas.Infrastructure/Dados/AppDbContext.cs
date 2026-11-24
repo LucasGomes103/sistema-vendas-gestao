@@ -23,6 +23,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
     public DbSet<UsoIa> UsosIa => Set<UsoIa>();
     public DbSet<Assinatura> Assinaturas => Set<Assinatura>();
     public DbSet<PagamentoAssinatura> PagamentosAssinatura => Set<PagamentoAssinatura>();
+    public DbSet<AvisoAssinatura> AvisosAssinatura => Set<AvisoAssinatura>();
     public DbSet<AuditoriaAdmin> AuditoriaAdmin => Set<AuditoriaAdmin>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<ZonaEntrega> ZonasEntrega => Set<ZonaEntrega>();
@@ -110,6 +111,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
             e.Property(x => x.MpAssinaturaId).HasMaxLength(64);
             e.Property(x => x.Status).HasMaxLength(30);
             e.Property(x => x.Valor).HasPrecision(12, 2);
+        });
+
+        modelBuilder.Entity<AvisoAssinatura>(e =>
+        {
+            e.ToTable("aviso_assinatura");
+            e.HasIndex(x => new { x.LojaId, x.Chave }).IsUnique();
+            e.Property(x => x.Chave).HasMaxLength(80);
+            e.Property(x => x.Assunto).HasMaxLength(200);
         });
 
         modelBuilder.Entity<AuditoriaAdmin>(e =>
@@ -378,6 +387,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ILojaAtual loj
         modelBuilder.Entity<UsoIa>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<Assinatura>().HasQueryFilter(x => x.LojaId == LojaId);
         modelBuilder.Entity<PagamentoAssinatura>().HasQueryFilter(x => x.LojaId == LojaId);
+        modelBuilder.Entity<AvisoAssinatura>().HasQueryFilter(x => x.LojaId == LojaId);
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
