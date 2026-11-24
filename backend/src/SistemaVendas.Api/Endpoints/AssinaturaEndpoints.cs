@@ -1,7 +1,10 @@
 using SistemaVendas.Application.Comum;
 using SistemaVendas.Domain.Lojas;
 using SistemaVendas.Infrastructure.Assinaturas;
+<<<<<<< HEAD
 using SistemaVendas.Infrastructure.IA;
+=======
+>>>>>>> origin/main
 
 namespace SistemaVendas.Api.Endpoints;
 
@@ -12,10 +15,13 @@ public record PlanoSaida(string Id, string Nome, decimal Preco, int Conversas, i
         new(p.Id.ToString(), p.Nome, p.Preco, p.Conversas, p.Usuarios, p.Produtos, p.RespostasIa, p.Cartao, p.Entregas, p.DominioProprio);
 }
 
+<<<<<<< HEAD
 /// <summary>Uso do mês (conversas, IA) e de agora (usuários e produtos ativos) com os limites do plano (null = sem limite).</summary>
 public record UsoDoPlanoSaida(int Conversas, int? LimiteConversas, int Usuarios, int? LimiteUsuarios, int Produtos, int? LimiteProdutos,
     int RespostasIa, int LimiteRespostasIa);
 
+=======
+>>>>>>> origin/main
 /// <summary>Assinatura da loja como o painel mostra. Plano null = isenta (sem limites de plano).</summary>
 public record AssinaturaSaida(
     string Situacao, string Status, PlanoSaida? Plano, DateTimeOffset? TesteAte, DateTimeOffset? PagoAte, DateTimeOffset? CortesiaAte,
@@ -32,6 +38,7 @@ public static class AssinaturaEndpoints
 
         grupo.MapGet("/", async (ILojaAtual loja, ServicoAssinatura assinaturas, CancellationToken ct) =>
             Saida(await assinaturas.EstadoAsync(loja.LojaId!.Value, ct), assinaturas.DiasCarencia));
+<<<<<<< HEAD
 
         grupo.MapGet("/uso", async (ILojaAtual loja, ServicoAssinatura assinaturas, ServicoLimites limites, ServicoLimiteIa limiteIa, CancellationToken ct) =>
         {
@@ -44,6 +51,8 @@ public static class AssinaturaEndpoints
                 uso.RespostasIa, ia.Limite);
         })
         .RequireAuthorization(AuthEndpoints.PoliticaDono);
+=======
+>>>>>>> origin/main
     }
 
     public static AssinaturaSaida Saida(EstadoAssinatura e, int diasCarencia) =>
