@@ -13,6 +13,7 @@ import { AlertasQuentes } from '../core/alertas';
 import { atualizarACada } from '../core/atualizar';
 import { SinoAlertas } from './sino-alertas';
 import { Termos } from '../core/termos';
+import { AssinaturaAtual } from '../core/assinatura';
 
 interface ItemMenu {
   rota: string;
@@ -46,8 +47,10 @@ export class Shell {
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
   private readonly alertas = inject(AlertasQuentes);
+  protected readonly assinatura = inject(AssinaturaAtual);
 
   constructor() {
+    void this.assinatura.carregar();
     // Entregador não atende conversas: sem alertas de cliente quente, e o painel dele é só a agenda de entregas.
     if (!this.auth.ehEntregador()) {
       void this.alertas.atualizar();
@@ -84,7 +87,10 @@ export class Shell {
   protected readonly menu = computed(() => {
     // Ícones do estoque e do catálogo seguem o tipo de loja (água e peixe só no aquarismo).
     const icones: Record<string, string> = { '/estoque': this.tx.iconeLocal(), '/catalogo': this.tx.iconeProduto() };
-    const itens = this.todos.map((i) => (icones[i.rota] ? { ...i, icone: icones[i.rota] } : i));
+    // Entregas só aparece quando o plano da loja inclui.
+    const itens = this.todos
+      .filter((i) => i.rota !== '/entregas' || this.assinatura.temEntregas())
+      .map((i) => (icones[i.rota] ? { ...i, icone: icones[i.rota] } : i));
     return this.auth.ehEntregador()
       ? itens.filter((i) => i.entregador)
       : itens.filter((i) => (!i.dono || this.auth.ehDono()) && (!i.admin || this.auth.ehAdmin()));

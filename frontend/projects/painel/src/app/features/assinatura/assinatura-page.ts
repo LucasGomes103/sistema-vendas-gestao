@@ -4,7 +4,7 @@ import { httpResource } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { API, AssinaturaLoja } from '../../core/api';
+import { API, AssinaturaLoja, UsoDoPlano } from '../../core/api';
 import { Auth } from '../../core/auth';
 
 /** Texto e cor da situação da assinatura. */
@@ -81,6 +81,34 @@ export function rotuloSituacao(a: AssinaturaLoja): { texto: string; classe: 'ok'
         </p>
       </section>
 
+      @if (uso.value(); as u) {
+        <section class="sv-card bloco">
+          <h2><mat-icon>data_usage</mat-icon> Uso do plano</h2>
+          <p class="ajuda">Conversas e respostas com IA contam no mês (zeram no dia 1º); usuários e produtos são os ativos agora.</p>
+          <div class="usos">
+            @for (l of linhasDeUso(); track l.rotulo) {
+              <div class="uso">
+                <div class="rotulo">
+                  <span>{{ l.rotulo }}</span>
+                  <strong [class.cheio]="l.limite !== null && l.valor >= l.limite">
+                    {{ l.valor | number }}{{ l.limite === null ? '' : ' de ' + (l.limite | number) }}
+                  </strong>
+                </div>
+                @if (l.limite !== null) {
+                  <mat-progress-bar mode="determinate" [value]="l.porcentagem" [class.cheia]="l.porcentagem >= 100" [class.quase]="l.porcentagem >= 80 && l.porcentagem < 100" />
+                } @else {
+                  <span class="sem-limite">sem limite</span>
+                }
+              </div>
+            }
+          </div>
+          <p class="ajuda">
+            Quando as conversas do mês acabam, cliente novo vai direto para a equipe (o robô não responde) até virar o mês.
+            Quando as respostas com IA acabam, o robô continua com as respostas prontas, mais simples.
+          </p>
+        </section>
+      }
+
       <h2 class="secao">Planos</h2>
       <div class="planos">
         @for (p of a.planos; track p.id) {
@@ -128,11 +156,35 @@ export function rotuloSituacao(a: AssinaturaLoja): { texto: string; classe: 'ok'
     li.nao { color: var(--mat-sys-on-surface-variant); text-decoration: line-through; }
     li.nao mat-icon { color: var(--mat-sys-outline); }
     .rodape { margin-top: 12px; }
+    .usos { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); margin: 4px 0 8px; }
+    .uso .rotulo { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+    .uso strong.cheio { color: var(--sv-alerta); }
+    .sem-limite { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); }
+    mat-progress-bar { border-radius: 4px; }
+    .quase { --mat-progress-bar-active-indicator-color: var(--sv-alerta); }
+    .cheia { --mat-progress-bar-active-indicator-color: var(--mat-sys-error); }
   `,
 })
 export class AssinaturaPage {
   protected readonly auth = inject(Auth);
   protected readonly assinatura = httpResource<AssinaturaLoja>(() => `${API}/assinatura`);
+  protected readonly uso = httpResource<UsoDoPlano>(() => `${API}/assinatura/uso`);
+  protected readonly linhasDeUso = computed(() => {
+    const u = this.uso.value();
+    if (!u) return [];
+    const linha = (rotulo: string, valor: number, limite: number | null) => ({
+      rotulo,
+      valor,
+      limite,
+      porcentagem: limite ? Math.min(100, (valor / limite) * 100) : 0,
+    });
+    return [
+      linha('Conversas no mês', u.conversas, u.limiteConversas),
+      linha('Respostas com IA no mês', u.respostasIa, u.limiteRespostasIa > 0 ? u.limiteRespostasIa : null),
+      linha('Usuários ativos', u.usuarios, u.limiteUsuarios),
+      linha('Produtos', u.produtos, u.limiteProdutos),
+    ];
+  });
   protected readonly situacao = computed(() => {
     const a = this.assinatura.value();
     return a ? rotuloSituacao(a) : null;

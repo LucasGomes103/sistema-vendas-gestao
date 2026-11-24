@@ -9,6 +9,7 @@ using SistemaVendas.Domain.Atendimento;
 using SistemaVendas.Domain.Entregas;
 using SistemaVendas.Domain.Funil;
 using SistemaVendas.Domain.Vendas;
+using SistemaVendas.Infrastructure.Assinaturas;
 using SistemaVendas.Infrastructure.Dados;
 using SistemaVendas.Infrastructure.Entregas;
 
@@ -91,6 +92,20 @@ public class RoboWorker(IServiceScopeFactory scopes, EstadoWorkers estado, ILogg
         conversa.AguardandoRobo = false;
         if (falas.Count == 0)
         {
+            await db.SaveChangesAsync(ct);
+            return;
+        }
+
+        // Limite de conversas do plano: cliente novo além do limite do mês vai para a equipe, sem resposta do robô.
+        if (!conversa.Simulada && !await sp.GetRequiredService<ServicoLimites>().ClienteDentroDoLimiteAsync(conversa.LojaId, conversa.ClienteId, DateTimeOffset.UtcNow, ct))
+        {
+            if (!conversa.ChamouVendedor)
+            {
+                const string motivo = "Limite de conversas do plano atingido: atenda pela equipe";
+                conversa.ChamarVendedor(motivo, DateTimeOffset.UtcNow);
+                sp.GetRequiredService<ServicoFunil>().Registrar(conversa, MotorFunil.AoChamarVendedor(conversa, motivo), OrigemEvento.Ia);
+            }
+            logger.LogInformation("Conversa {Id}: limite de conversas do plano atingido, robô não respondeu", conversa.Id);
             await db.SaveChangesAsync(ct);
             return;
         }

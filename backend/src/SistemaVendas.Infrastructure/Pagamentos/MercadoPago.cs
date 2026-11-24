@@ -79,11 +79,14 @@ public interface IMercadoPago
 }
 
 /// <summary>Checkout Pro pela API de Orders (POST/GET /v1/orders) do Mercado Pago.</summary>
-public class MercadoPagoCliente(HttpClient http, IOptions<MercadoPagoOptions> opcoes, CredenciaisDaLoja credenciais) : IMercadoPago
+public class MercadoPagoCliente(HttpClient http, IOptions<MercadoPagoOptions> opcoes, CredenciaisDaLoja credenciais,
+    Assinaturas.ServicoLimites limites) : IMercadoPago
 {
     private readonly MercadoPagoOptions _op = opcoes.Value;
 
-    public async Task<bool> ConfiguradoAsync(Guid lojaId, CancellationToken ct) => await credenciais.MercadoPagoAsync(lojaId, ct) is not null;
+    /// <summary>Tem token e o plano da loja inclui o cartão (o Essencial não inclui).</summary>
+    public async Task<bool> ConfiguradoAsync(Guid lojaId, CancellationToken ct) =>
+        await credenciais.MercadoPagoAsync(lojaId, ct) is not null && await limites.TemRecursoAsync(lojaId, Assinaturas.RecursoDoPlano.Cartao, ct);
 
     private async Task<string> TokenAsync(Guid lojaId, CancellationToken ct) =>
         (await credenciais.MercadoPagoAsync(lojaId, ct))?.Valor.AccessToken
