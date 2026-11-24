@@ -419,7 +419,6 @@ Para a ida à produção (custos, variáveis, segurança, LGPD), ver [producao/c
 - Lojas de antes da cobrança (sem linha em `assinatura`) e a **loja original (ECS Fish)** são **isentas**: sem
   mensalidade, sem bloqueio e sem limites de plano.
 - Painel: menu da conta → **Assinatura** (só o dono): plano atual, situação, vencimento e os planos.
-<<<<<<< HEAD
 
 ### Limites por plano
 
@@ -434,5 +433,3 @@ Para a ida à produção (custos, variáveis, segurança, LGPD), ver [producao/c
   a agenda de entregas some do menu e não dá para criar entregador. **Domínio próprio** (Completo) ainda não existe
   no sistema: fica só marcado no plano.
 - Painel: Assinatura → **Uso do plano**, com barras de conversas, IA, usuários e produtos.
-=======
->>>>>>> origin/main
