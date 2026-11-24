@@ -79,9 +79,27 @@ export const routes: Routes = [
       },
       {
         path: 'admin',
+        title: 'Painel da plataforma',
+        canActivate: [exigeAdmin],
+        loadComponent: () => import('./features/admin/visao-geral-page').then((m) => m.VisaoGeralPage),
+      },
+      {
+        path: 'admin/lojas',
         title: 'Lojas da plataforma',
         canActivate: [exigeAdmin],
         loadComponent: () => import('./features/admin/admin-page').then((m) => m.AdminPage),
+      },
+      {
+        path: 'admin/lojas/:id',
+        title: 'Loja',
+        canActivate: [exigeAdmin],
+        loadComponent: () => import('./features/admin/loja-detalhe-page').then((m) => m.LojaDetalhePage),
+      },
+      {
+        path: 'admin/auditoria',
+        title: 'Auditoria',
+        canActivate: [exigeAdmin],
+        loadComponent: () => import('./features/admin/auditoria-page').then((m) => m.AuditoriaPage),
       },
       {
         path: 'conversas',

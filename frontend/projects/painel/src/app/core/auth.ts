@@ -18,6 +18,8 @@ export class Auth {
   readonly ehDono = computed(() => this._usuario()?.papel === 'Dono');
   /** Administrador da plataforma (todas as lojas). */
   readonly ehAdmin = computed(() => this._usuario()?.adminPlataforma === true);
+  /** Administrador vendo outra loja como suporte (só leitura). */
+  readonly modoSuporte = computed(() => this._usuario()?.modoSuporte === true);
   /** Entregador só usa a agenda de entregas. */
   readonly ehEntregador = computed(() => this._usuario()?.papel === 'Entregador');
 
@@ -64,6 +66,22 @@ export class Auth {
     } catch {
       /* a sessão é conferida de novo na próxima chamada */
     }
+  }
+
+  /**
+   * Modo suporte: o administrador passa a ver o painel da loja como o dono vê, sem poder mudar nada.
+   * Recarrega a página inteira para nenhum dado da loja anterior ficar na tela.
+   */
+  async verComoLoja(lojaId: string): Promise<void> {
+    await firstValueFrom(this.http.post(`${API}/admin/lojas/${lojaId}/ver-como`, {}));
+    window.location.assign(document.baseURI);
+  }
+
+  /** Volta para a própria loja e abre o detalhe da loja que estava vendo. */
+  async sairDoModoSuporte(): Promise<void> {
+    const vista = this._usuario()?.lojaId;
+    await firstValueFrom(this.http.post(`${API}/admin/suporte/sair`, {}));
+    window.location.assign(new URL(vista ? `admin/lojas/${vista}` : 'admin', document.baseURI).toString());
   }
 
   async sair(): Promise<void> {
