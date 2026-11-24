@@ -65,7 +65,7 @@ public static class AdminEndpoints
         var grupo = app.MapGroup("/admin").WithTags("Administração da plataforma").RequireAuthorization(PoliticaAdmin);
         grupo.MapAdminPainelEndpoints();
 
-        grupo.MapGet("/lojas", async (AppDbContext db, CredenciaisDaLoja credenciais, ServicoLimiteIa limiteIa, CancellationToken ct) =>
+        grupo.MapGet("/lojas", async (AppDbContext db, CredenciaisDaLoja credenciais, ServicoLimiteIa limiteIa, ServicoAssinatura assinaturas, CancellationToken ct) =>
         {
             var desde = DateTimeOffset.UtcNow.AddDays(-30);
             var diaDesde = DateOnly.FromDateTime(desde.UtcDateTime);
@@ -90,6 +90,7 @@ public static class AdminEndpoints
             var credenciaisPorLoja = await db.CredenciaisLoja.IgnoreQueryFilters().GroupBy(c => c.LojaId)
                 .Select(g => new { g.Key, Tipos = g.Select(c => c.Tipo).ToList() }).ToDictionaryAsync(x => x.Key, x => x.Tipos, ct);
             var original = await credenciais.LojaOriginalAsync(ct);
+            var planos = await assinaturas.TodasAsync(ct);
 
             return lojas.Select(l =>
             {
@@ -107,7 +108,7 @@ public static class AdminEndpoints
                     TokensIa30Dias = usoIa.GetValueOrDefault(l.Id)?.Tokens ?? 0,
                     FalhasIa30Dias = usoIa.GetValueOrDefault(l.Id)?.Falhas ?? 0,
                     RespostasIaMes = iaMes.GetValueOrDefault(l.Id),
-                    LimiteIaMes = RegrasLimiteIa.LimiteDaLoja(l.LimiteRespostasIAMes, limiteIa.LimitePadrao),
+                    LimiteIaMes = limiteIa.LimitePara(l.LimiteRespostasIAMes, planos.GetValueOrDefault(l.Id), l.Id == original),
                     LimiteIaProprio = l.LimiteRespostasIAMes,
                 };
             }).ToList();

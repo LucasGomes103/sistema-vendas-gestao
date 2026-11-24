@@ -21,7 +21,7 @@ public class LimitesIAOptions
 public record ResumoUsoIA(int Respostas, int PorRegras, int Limite, bool Esgotado);
 
 /// <summary>Lê o uso do mês (tabela uso_ia, gravada pelo robô a cada resposta) e o limite de cada loja.</summary>
-public class ServicoLimiteIa(AppDbContext db, IOptions<LimitesIAOptions> opcoes)
+public class ServicoLimiteIa(AppDbContext db, IOptions<LimitesIAOptions> opcoes, Assinaturas.ServicoAssinatura assinaturas)
 {
     public int LimitePadrao => Math.Max(0, opcoes.Value.LimiteRespostasMes);
 
@@ -34,11 +34,15 @@ public class ServicoLimiteIa(AppDbContext db, IOptions<LimitesIAOptions> opcoes)
             .GroupBy(_ => 1)
             .Select(g => new { Total = g.Sum(u => u.Respostas), ComIa = g.Sum(u => u.RespostasIa) })
             .FirstOrDefaultAsync(ct);
-        var limite = RegrasLimiteIa.LimiteDaLoja(limiteLoja, LimitePadrao);
+        var limite = RegrasLimiteIa.LimiteDaLoja(limiteLoja, (await assinaturas.EstadoAsync(lojaId, ct)).Plano, LimitePadrao);
         var respostas = uso?.ComIa ?? 0;
         // O resto saiu pelas regras (IA fora do ar ou limite atingido).
         return new(respostas, (uso?.Total ?? 0) - respostas, limite, RegrasLimiteIa.Esgotado(respostas, limite));
     }
+
+    /// <summary>Limite de cada loja (para a tela Lojas): próprio, do plano ou o padrão. Loja original: sem plano.</summary>
+    public int LimitePara(int? limiteLoja, Assinatura? assinatura, bool lojaOriginal) =>
+        RegrasLimiteIa.LimiteDaLoja(limiteLoja, lojaOriginal ? null : RegrasAssinatura.PlanoComLimites(assinatura), LimitePadrao);
 
     /// <summary>Respostas com IA no mês por loja (para a tela Lojas).</summary>
     public async Task<Dictionary<Guid, int>> RespostasDoMesAsync(DateTimeOffset agora, CancellationToken ct)

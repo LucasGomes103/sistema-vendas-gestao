@@ -642,3 +642,15 @@ export interface AssinaturaLoja {
   mpStatus: string | null;
   planos: PlanoPlataforma[];
 }
+
+/** Uso do plano: conversas e IA no mês, usuários e produtos ativos. Limites null = sem limite. */
+export interface UsoDoPlano {
+  conversas: number;
+  limiteConversas: number | null;
+  usuarios: number;
+  limiteUsuarios: number | null;
+  produtos: number;
+  limiteProdutos: number | null;
+  respostasIa: number;
+  limiteRespostasIa: number;
+}

@@ -1,3 +1,5 @@
+using SistemaVendas.Infrastructure.Assinaturas;
+using SistemaVendas.Api.Comum;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using SistemaVendas.Domain.Entregas;
@@ -25,7 +27,8 @@ public static class EntregaEndpoints
 {
     public static void MapEntregaEndpoints(this IEndpointRouteBuilder app)
     {
-        var grupo = app.MapGroup("/entregas").WithTags("Entregas").RequireAuthorization(AuthEndpoints.PoliticaEntregas);
+        var grupo = app.MapGroup("/entregas").WithTags("Entregas").RequireAuthorization(AuthEndpoints.PoliticaEntregas)
+            .ExigeRecurso(RecursoDoPlano.Entregas);
 
         // Em aberto (qualquer data) e as entregues nos últimos 7 dias.
         grupo.MapGet("/", async (AppDbContext db, ServicoEntregas entregas, ClaimsPrincipal user, CancellationToken ct) =>

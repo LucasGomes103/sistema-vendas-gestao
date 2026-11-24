@@ -1,3 +1,4 @@
+using SistemaVendas.Infrastructure.Assinaturas;
 using System.Security.Claims;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
@@ -23,11 +24,13 @@ public static class UsuarioEndpoints
             return usuarios.Select(u => Saida(u, eu));
         });
 
-        grupo.MapPost("/", async (UsuarioNovo entrada, IValidator<UsuarioNovo> validator, AppDbContext db, ClaimsPrincipal user, CancellationToken ct) =>
+        grupo.MapPost("/", async (UsuarioNovo entrada, IValidator<UsuarioNovo> validator, AppDbContext db, ServicoLimites limites, ClaimsPrincipal user, CancellationToken ct) =>
         {
             var validacao = await validator.ValidateAsync(entrada, ct);
             if (!validacao.IsValid)
                 return Results.ValidationProblem(validacao.ToDictionary());
+            if (await ErroDoPlanoAsync(limites, LojaDe(user), entrada.Papel, maisUmAtivo: true, ct) is { } limite)
+                return Results.Problem(limite, statusCode: StatusCodes.Status422UnprocessableEntity);
 
             var email = Normalizar(entrada.Email);
             if (await EmailEmUsoAsync(db, email, null, ct))
@@ -41,7 +44,7 @@ public static class UsuarioEndpoints
             return Results.Created($"/api/v1/usuarios/{usuario.Id}", Saida(usuario, IdDe(user)));
         });
 
-        grupo.MapPut("/{id:guid}", async (Guid id, UsuarioEdicao entrada, IValidator<UsuarioEdicao> validator, AppDbContext db, HttpContext http, CancellationToken ct) =>
+        grupo.MapPut("/{id:guid}", async (Guid id, UsuarioEdicao entrada, IValidator<UsuarioEdicao> validator, AppDbContext db, ServicoLimites limites, HttpContext http, CancellationToken ct) =>
         {
             var validacao = await validator.ValidateAsync(entrada, ct);
             if (!validacao.IsValid)
@@ -54,6 +57,11 @@ public static class UsuarioEndpoints
             var eu = IdDe(http.User);
             if (RegrasUsuario.ValidarAlteracao(usuario, entrada.Papel, entrada.Ativo, eu, await DonosAtivosAsync(db, ct)) is { } erro)
                 return Results.Problem(erro, statusCode: StatusCodes.Status422UnprocessableEntity);
+
+            // Reativar alguém conta como mais um usuário ativo no plano; virar entregador exige o recurso de entregas.
+            if (await ErroDoPlanoAsync(limites, usuario.LojaId, usuario.Papel == entrada.Papel ? null : entrada.Papel,
+                    maisUmAtivo: entrada.Ativo && !usuario.Ativo, ct) is { } limite)
+                return Results.Problem(limite, statusCode: StatusCodes.Status422UnprocessableEntity);
 
             var email = Normalizar(entrada.Email);
             if (email != usuario.Email && await EmailEmUsoAsync(db, email, usuario.Id, ct))
@@ -126,6 +134,16 @@ public static class UsuarioEndpoints
     private static Guid IdDe(ClaimsPrincipal user) => Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     private static string Normalizar(string email) => email.Trim().ToLowerInvariant();
+
+    private static Guid LojaDe(ClaimsPrincipal user) => Guid.Parse(user.FindFirstValue(LojaAtualDaRequisicao.ClaimLoja)!);
+
+    /// <summary>Limites do plano: número de usuários ativos e o papel de entregador (só com entregas no plano).</summary>
+    private static async Task<string?> ErroDoPlanoAsync(ServicoLimites limites, Guid lojaId, Papel? papelNovo, bool maisUmAtivo, CancellationToken ct)
+    {
+        if (papelNovo == Papel.Entregador && !await limites.TemRecursoAsync(lojaId, RecursoDoPlano.Entregas, ct))
+            return "O plano da loja não inclui entregas, então não tem o papel de entregador. Troque de plano em Assinatura.";
+        return maisUmAtivo ? await limites.ErroMaisUmUsuarioAsync(lojaId, ct) : null;
+    }
 
     private static Task<int> DonosAtivosAsync(AppDbContext db, CancellationToken ct) =>
         db.Usuarios.CountAsync(u => u.Papel == Papel.Dono && u.Ativo, ct);

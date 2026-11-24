@@ -419,3 +419,17 @@ Para a ida à produção (custos, variáveis, segurança, LGPD), ver [producao/c
 - Lojas de antes da cobrança (sem linha em `assinatura`) e a **loja original (ECS Fish)** são **isentas**: sem
   mensalidade, sem bloqueio e sem limites de plano.
 - Painel: menu da conta → **Assinatura** (só o dono): plano atual, situação, vencimento e os planos.
+
+### Limites por plano
+
+- **Conversas**: cliente diferente que escreveu no mês (horário de Brasília), sem o simulador. O robô atende os
+  primeiros N clientes do mês; cliente novo além do limite vai para a equipe ("Limite de conversas do plano
+  atingido") e o robô não responde. Quem já estava sendo atendido não é cortado.
+- **Respostas com IA**: o limite da loja agora vem do plano (2.500, 7.500, 20.000). Um limite próprio da loja
+  (Plataforma → Lojas → Editar) ainda vale por cima. Lojas isentas seguem com `IA__LimiteRespostasMes`.
+- **Usuários ativos** (2, 5, 15): criar ou reativar além do limite é recusado. **Produtos** ativos (300, 2.000, sem
+  limite): cadastrar além do limite é recusado.
+- **Cartão e entregas** (Profissional e Completo): no Essencial a cobrança sai só com Pix, a tela de cartão avisa,
+  a agenda de entregas some do menu e não dá para criar entregador. **Domínio próprio** (Completo) ainda não existe
+  no sistema: fica só marcado no plano.
+- Painel: Assinatura → **Uso do plano**, com barras de conversas, IA, usuários e produtos.

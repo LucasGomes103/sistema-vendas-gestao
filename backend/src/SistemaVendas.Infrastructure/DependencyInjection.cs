@@ -36,6 +36,7 @@ public static class DependencyInjection
         // Mensalidade das lojas: plano, teste grátis, carência e bloqueio.
         services.Configure<AssinaturasOptions>(config.GetSection(AssinaturasOptions.Secao));
         services.AddScoped<ServicoAssinatura>();
+        services.AddScoped<ServicoLimites>();
 
         // Cartão pelo Mercado Pago: só liga com MercadoPago__AccessToken. O endereço do webhook vem do Render.
         services.Configure<MercadoPagoOptions>(config.GetSection(MercadoPagoOptions.Secao));

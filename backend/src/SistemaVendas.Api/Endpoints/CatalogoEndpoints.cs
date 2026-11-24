@@ -1,3 +1,4 @@
+using SistemaVendas.Infrastructure.Assinaturas;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using SistemaVendas.Api.Comum;
@@ -59,11 +60,14 @@ public static class CatalogoEndpoints
             return especies.Select(e => Saida(e, disponivel.GetValueOrDefault(e.Id)));
         });
 
-        grupo.MapPost("/", async (EspecieEntrada entrada, IValidator<EspecieEntrada> validator, AppDbContext db, CancellationToken ct) =>
+        grupo.MapPost("/", async (EspecieEntrada entrada, IValidator<EspecieEntrada> validator, AppDbContext db, ServicoLimites limites,
+            ILojaAtual lojaAtual, CancellationToken ct) =>
         {
             var validacao = await validator.ValidateAsync(entrada, ct);
             if (!validacao.IsValid)
                 return Results.ValidationProblem(validacao.ToDictionary());
+            if (await limites.ErroMaisUmProdutoAsync(lojaAtual.LojaId!.Value, ct) is { } limite)
+                return Results.Problem(limite, statusCode: StatusCodes.Status422UnprocessableEntity);
 
             var especie = new Especie { NomePopular = "" };
             Aplicar(especie, entrada);

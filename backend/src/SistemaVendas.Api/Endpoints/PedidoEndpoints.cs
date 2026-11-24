@@ -1,3 +1,5 @@
+using SistemaVendas.Infrastructure.Assinaturas;
+using SistemaVendas.Api.Comum;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using SistemaVendas.Application.Comum;
@@ -176,7 +178,8 @@ public static class PedidoEndpoints
             }
             return Results.NoContent();
         })
-        .RequireAuthorization(AuthEndpoints.PoliticaDono);
+        .RequireAuthorization(AuthEndpoints.PoliticaDono)
+        .ExigeRecurso(RecursoDoPlano.Cartao);
 
         // Botão "Conectar Mercado Pago": devolve o link de autorização (o painel abre na mesma aba).
         cartao.MapPost("/conectar", (ConexaoMercadoPago conexao, ILojaAtual lojaAtual) =>
@@ -185,7 +188,8 @@ public static class PedidoEndpoints
                 return Results.Problem("O botão do Mercado Pago ainda não foi configurado na plataforma.", statusCode: StatusCodes.Status409Conflict);
             return Results.Ok(new { url = conexao.LinkAutorizacao(lojaAtual.LojaId!.Value) });
         })
-        .RequireAuthorization(AuthEndpoints.PoliticaDono);
+        .RequireAuthorization(AuthEndpoints.PoliticaDono)
+        .ExigeRecurso(RecursoDoPlano.Cartao);
 
         // Volta do Mercado Pago depois que o dono autoriza (endereço cadastrado na aplicação da plataforma). Público:
         // a loja vem do "state" assinado, nunca do login.

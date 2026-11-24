@@ -53,6 +53,12 @@ public static class RegrasLimiteIa
     /// <summary>Limite que vale para a loja: o dela, senão o padrão da plataforma. 0 = sem limite.</summary>
     public static int LimiteDaLoja(int? limiteLoja, int padrao) => Math.Max(0, limiteLoja ?? padrao);
 
+    /// <summary>
+    /// Limite que vale para a loja: o próprio (definido pelo administrador), senão o do plano, senão o padrão da
+    /// plataforma (lojas isentas). 0 = sem limite.
+    /// </summary>
+    public static int LimiteDaLoja(int? limiteLoja, Plano? plano, int padrao) => Math.Max(0, limiteLoja ?? plano?.RespostasIa ?? padrao);
+
     public static bool Esgotado(int usadas, int limite) => limite > 0 && usadas >= limite;
 
     /// <summary>Primeiro dia do mês no horário de Brasília (o mesmo dia que o uso_ia grava).</summary>

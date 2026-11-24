@@ -12,6 +12,7 @@ import { firstValueFrom } from 'rxjs';
 import { API, ConfigCartao, mensagemDeErro } from '../../core/api';
 import { Auth } from '../../core/auth';
 import { Confirmar } from '../../core/confirmar';
+import { AssinaturaAtual } from '../../core/assinatura';
 import { ESTILO_BLOCO } from './estilo-bloco';
 
 /**
@@ -69,7 +70,9 @@ import { ESTILO_BLOCO } from './estilo-bloco';
         </ul>
       }
 
-      @if (auth.ehDono()) {
+      @if (!assinatura.temCartao()) {
+        <p class="ajuda"><mat-icon inline>workspace_premium</mat-icon> O plano {{ assinatura.plano()?.nome }} não inclui o link de cartão. Ele vem nos planos Profissional e Completo (menu da conta → Assinatura).</p>
+      } @else if (auth.ehDono()) {
         @if (c && !c.podeSalvar) {
           <p class="ajuda">O servidor ainda não tem a chave mestra (Plataforma__ChaveMestra): por enquanto não dá para salvar o token aqui.</p>
         } @else {
@@ -117,6 +120,7 @@ import { ESTILO_BLOCO } from './estilo-bloco';
   styles: [ESTILO_BLOCO, `details { margin-top: 8px; } summary { cursor: pointer; color: var(--mat-sys-on-surface-variant); margin-bottom: 8px; }`],
 })
 export class ConfigCartaoComponent {
+  protected readonly assinatura = inject(AssinaturaAtual);
   private readonly http = inject(HttpClient);
   private readonly snack = inject(MatSnackBar);
   private readonly confirmar = inject(Confirmar);
