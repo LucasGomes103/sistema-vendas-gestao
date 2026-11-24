@@ -97,6 +97,15 @@ public class RoboWorker(IServiceScopeFactory scopes, EstadoWorkers estado, ILogg
 
         var primeiraResposta = !await db.Mensagens.AnyAsync(m => m.ConversaId == conversaId && m.Direcao == DirecaoMensagem.Saida, ct);
         var resposta = await atendente.ResponderAsync(nomeLoja, falas, ferramentas, ct);
+        try
+        {
+            await RegistroUsoIa.RegistrarAsync(db, conversa.LojaId, resposta.Consumo, DateTimeOffset.UtcNow, ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            // Medição nunca impede o robô de responder.
+            logger.LogWarning("Não consegui registrar o uso de IA da loja {Loja}: {Erro}", conversa.LojaId, e.Message);
+        }
         var linkCatalogo = await ferramentas.LinkCatalogoAsync(ct);
         resposta = resposta with { Texto = LinkCatalogoAtual.Corrigir(resposta.Texto, linkCatalogo) };
         if (primeiraResposta && !resposta.ChamarVendedor)

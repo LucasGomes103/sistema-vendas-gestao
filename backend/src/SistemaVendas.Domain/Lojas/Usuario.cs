@@ -21,6 +21,9 @@ public class Usuario : EntidadeDaLoja
 
     /// <summary>Quando o dono confirmou o e-mail do cadastro. Nulo = ainda não confirmou e não entra.</summary>
     public DateTimeOffset? EmailConfirmadoEm { get; set; }
+
+    /// <summary>Última vez que usou o painel (login ou sessão em uso; gravado no máximo a cada 5 minutos).</summary>
+    public DateTimeOffset? UltimoAcessoEm { get; set; }
 }
 
 /// <summary>Link enviado por e-mail (confirmação de cadastro). Só o hash do código fica no banco.</summary>

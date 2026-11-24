@@ -261,8 +261,22 @@ teste (só muda o selo no painel). O endereço público vem do `RENDER_EXTERNAL_
 
 ## Administrador da plataforma (SaaS fase 1)
 
-- Quem tem o e-mail em `Plataforma__Admins` (no Render, separados por vírgula) vê **Lojas da plataforma** no menu
-  da conta (`/painel/admin`).
+- Quem tem o e-mail em `Plataforma__Admins` (no Render, separados por vírgula) vê **Plataforma** no menu lateral
+  (`/painel/admin`), com três abas: Visão geral, Lojas e Auditoria.
+- **Visão geral** (7, 30 ou 90 dias): lojas ativas, novas, em uso, paradas (ativas sem ninguém entrar há 7+ dias),
+  aguardando e-mail e suspensas; conversas, mensagens recebidas, respostas do robô, pedidos e vendido; tokens e
+  chamadas de IA e falhas (IA que caiu para as regras e mensagens que não foram enviadas); gráfico por dia; lojas que
+  mais usam; saúde (chave do Gemini, SMTP, chave mestra, quantas lojas têm WhatsApp e Mercado Pago próprios).
+- **Uso de IA por loja**: cada resposta do robô soma, na tabela `uso_ia` (loja e dia de Brasília), as chamadas ao
+  Gemini e os tokens de entrada e saída (`usageMetadata`). Base para os limites por plano.
+- **Último acesso**: gravado no login e enquanto a sessão está em uso (no máximo a cada 5 minutos).
+- **Detalhe da loja**: números dos 30 dias, gráfico por dia, configuração (WhatsApp, cartão, Pix, frete, horário),
+  equipe com último acesso de cada um e o que o suporte fez na loja.
+- **Ver como a loja (modo suporte)**: o administrador abre o painel da loja como o dono vê, **só leitura**. Uma faixa
+  no topo avisa e tem o botão para voltar. A API recusa tudo que não for leitura (403 `modo_suporte`) em qualquer
+  rota, e abrir uma conversa não a marca como lida. Entrar e sair ficam na auditoria.
+- **Auditoria** (`auditoria_admin`): editar, suspender, ativar, excluir, entrar e sair do modo suporte, com quem,
+  quando e o detalhe. Não tem `loja_id`, então fica mesmo depois que a loja é excluída.
 - Lista todas as lojas com status, dono, tipo, e números dos últimos 30 dias (conversas, pedidos, vendido), produtos,
   usuários, última mensagem e se WhatsApp e Mercado Pago são próprios. Só números: não abre conversa nem cliente.
 - **Suspender** (com motivo): ninguém da loja entra, quem está dentro sai em até 1 minuto, a vitrine sai do ar e as

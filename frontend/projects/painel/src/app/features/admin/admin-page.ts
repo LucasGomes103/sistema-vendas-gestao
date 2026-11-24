@@ -14,6 +14,9 @@ import { API, LojaAdmin, mensagemDeErro } from '../../core/api';
 import { Confirmar } from '../../core/confirmar';
 import { Auth } from '../../core/auth';
 import { EditarLojaDialog } from './editar-loja-dialog';
+import { RouterLink } from '@angular/router';
+import { DecimalPipe } from '@angular/common';
+import { AdminAbas, parada, tempoDesde } from './admin-comum';
 
 const STATUS: Record<LojaAdmin['status'], { rotulo: string; classe: string; icone: string }> = {
   Ativa: { rotulo: 'Ativa', classe: 'ok', icone: 'check_circle' },
@@ -21,10 +24,10 @@ const STATUS: Record<LojaAdmin['status'], { rotulo: string; classe: string; icon
   Suspensa: { rotulo: 'Suspensa', classe: 'alerta', icone: 'block' },
 };
 
-/** Administração da plataforma: todas as lojas, uso dos últimos 30 dias, suspender e ativar. */
+/** Lojas da plataforma: todas as lojas, uso dos últimos 30 dias, detalhe, ver como a loja, suspender e ativar. */
 @Component({
   selector: 'app-admin-page',
-  imports: [CurrencyPipe, DatePipe, FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule],
+  imports: [CurrencyPipe, DatePipe, DecimalPipe, RouterLink, AdminAbas, FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="sv-cabecalho-pagina">
@@ -38,6 +41,7 @@ const STATUS: Record<LojaAdmin['status'], { rotulo: string; classe: string; icon
         <input matInput [ngModel]="busca()" (ngModelChange)="busca.set($event)" />
       </mat-form-field>
     </header>
+    <app-admin-abas />
 
     @if (lojas.isLoading() && !lojas.hasValue()) {
       <mat-progress-bar mode="indeterminate" />
@@ -49,10 +53,15 @@ const STATUS: Record<LojaAdmin['status'], { rotulo: string; classe: string; icon
         <article class="sv-card loja">
           <div class="topo">
             <div>
-              <h2>{{ l.nome }}</h2>
+              <h2><a [routerLink]="['/admin/lojas', l.id]">{{ l.nome }}</a></h2>
               <p class="sub">/{{ l.slug }} · {{ l.segmento || 'sem tipo' }} · desde {{ l.criadoEm | date: 'dd/MM/yyyy' }}</p>
             </div>
-            <span class="sv-selo {{ s.classe }}"><mat-icon>{{ s.icone }}</mat-icon>{{ s.rotulo }}</span>
+            <span class="selos">
+              @if (estaParada(l)) {
+                <span class="sv-selo alerta"><mat-icon>bedtime</mat-icon>Parada</span>
+              }
+              <span class="sv-selo {{ s.classe }}"><mat-icon>{{ s.icone }}</mat-icon>{{ s.rotulo }}</span>
+            </span>
           </div>
           <p class="dono">
             <mat-icon>person</mat-icon> {{ l.dono ?? '—' }} · {{ l.emailDono ?? '—' }}
@@ -70,6 +79,8 @@ const STATUS: Record<LojaAdmin['status'], { rotulo: string; classe: string; icon
             <div><dt>Produtos</dt><dd>{{ l.produtos }}</dd></div>
             <div><dt>Usuários</dt><dd>{{ l.usuarios }}</dd></div>
             <div><dt>Última mensagem</dt><dd>{{ l.ultimaMensagemEm ? (l.ultimaMensagemEm | date: 'dd/MM HH:mm') : '—' }}</dd></div>
+            <div><dt>Último acesso</dt><dd>{{ tempo(l.ultimoAcessoEm) }}</dd></div>
+            <div><dt>Respostas do robô (30 dias)</dt><dd>{{ l.respostasRobo30Dias | number }}</dd></div>
           </dl>
           <div class="rodape">
             <span class="integracoes">
@@ -77,6 +88,10 @@ const STATUS: Record<LojaAdmin['status'], { rotulo: string; classe: string; icon
               <span class="sv-selo {{ l.mercadoPagoProprio ? 'ok' : 'info' }}"><mat-icon>credit_card</mat-icon>Mercado Pago {{ l.mercadoPagoProprio ? 'próprio' : 'não conectado' }}</span>
             </span>
             <span class="acoes">
+              <a mat-stroked-button [routerLink]="['/admin/lojas', l.id]"><mat-icon>insights</mat-icon> Detalhes</a>
+              @if (l.id !== minhaLoja()) {
+                <button mat-stroked-button (click)="verComo(l)" [disabled]="ocupado()"><mat-icon>visibility</mat-icon> Ver como a loja</button>
+              }
               <button mat-stroked-button (click)="editar(l)" [disabled]="ocupado()"><mat-icon>edit</mat-icon> Editar</button>
               @if (l.status === 'Suspensa') {
                 <button mat-flat-button (click)="ativar(l, 'Reativar')" [disabled]="ocupado()"><mat-icon>play_arrow</mat-icon> Reativar</button>
@@ -125,7 +140,20 @@ const STATUS: Record<LojaAdmin['status'], { rotulo: string; classe: string; icon
         margin: 0;
         font: var(--mat-sys-title-medium);
         font-weight: 600;
+
+        a {
+          color: inherit;
+          text-decoration: none;
+        }
+        a:hover {
+          text-decoration: underline;
+        }
       }
+    }
+    .selos {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
     }
     .sub,
     .dono,
@@ -150,7 +178,7 @@ const STATUS: Record<LojaAdmin['status'], { rotulo: string; classe: string; icon
     }
     .numeros {
       display: grid;
-      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-columns: repeat(8, minmax(0, 1fr));
       gap: 8px;
       margin: 4px 0;
 
@@ -182,6 +210,11 @@ const STATUS: Record<LojaAdmin['status'], { rotulo: string; classe: string; icon
     }
     .vazio {
       color: var(--mat-sys-on-surface-variant);
+    }
+    @media (max-width: 1099px) {
+      .numeros {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
     }
     @media (max-width: 839px) {
       .numeros {
@@ -222,6 +255,27 @@ export class AdminPage {
     const suspensas = todas.filter((l) => l.status === 'Suspensa').length;
     return `${todas.length} loja(s): ${ativas} ativa(s), ${pendentes} aguardando e-mail, ${suspensas} suspensa(s)`;
   });
+
+  protected tempo = tempoDesde;
+
+  protected estaParada(l: LojaAdmin): boolean {
+    return parada(l.status, l.criadoEm, l.ultimoAcessoEm);
+  }
+
+  protected async verComo(l: LojaAdmin): Promise<void> {
+    const ok = await this.confirmar.perguntar(
+      `Você vai ver o painel da ${l.nome} como o dono vê: conversas, pedidos, estoque e configuração. É só leitura, nada pode ser mudado, e a entrada fica registrada na auditoria.\n\nPara voltar, use o botão "Voltar para a minha loja" no topo.`,
+      { titulo: 'Ver como a loja?', botao: 'Ver como a loja' },
+    );
+    if (!ok) return;
+    this.ocupado.set(true);
+    try {
+      await this.auth.verComoLoja(l.id);
+    } catch (e) {
+      this.snack.open(mensagemDeErro(e), 'OK', { duration: 6000 });
+      this.ocupado.set(false);
+    }
+  }
 
   protected async suspender(l: LojaAdmin): Promise<void> {
     const motivo = await this.confirmar.pedirTexto(
