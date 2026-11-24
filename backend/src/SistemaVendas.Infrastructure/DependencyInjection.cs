@@ -41,6 +41,9 @@ public static class DependencyInjection
                 o.UrlPublicaApi = config["RENDER_EXTERNAL_URL"];
         });
         services.AddHttpClient<IMercadoPago, MercadoPagoCliente>(c => c.Timeout = TimeSpan.FromSeconds(15));
+        // Botão "Conectar Mercado Pago" (OAuth com a aplicação da plataforma).
+        services.Configure<MercadoPagoOAuthOptions>(config.GetSection(MercadoPagoOAuthOptions.Secao));
+        services.AddHttpClient<ConexaoMercadoPago>(c => c.Timeout = TimeSpan.FromSeconds(15));
         services.AddScoped<ServicoEntregas>();
         services.AddScoped<ServicoMetricas>();
 

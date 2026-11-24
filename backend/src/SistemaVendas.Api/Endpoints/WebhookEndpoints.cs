@@ -65,6 +65,7 @@ public static class WebhookEndpoints
         // diz "olhe a order X": status, valor e pedido vêm da API do Mercado Pago com o token DA LOJA, então um aviso
         // falso não confirma nada. Com a assinatura secreta da loja, aviso com x-signature inválida é recusado.
         grupo.MapPost("/mercadopago", async (HttpRequest req, IMercadoPago mp, CredenciaisDaLoja credenciais,
+            IOptions<MercadoPagoOAuthOptions> oauth, IOptions<MercadoPagoOptions> opcoesMp,
             ILojaAtual lojaAtual, AppDbContext db, ServicoPedidos pedidos, ILoggerFactory logs, CancellationToken ct) =>
         {
             var log = logs.CreateLogger("MercadoPago");
@@ -80,7 +81,9 @@ public static class WebhookEndpoints
             if (lojaId is not { } loja || await credenciais.MercadoPagoAsync(loja, ct) is not { } credencial)
                 return Results.Ok();
 
-            var segredo = credencial.Valor.WebhookSecret;
+            // Loja conectada pelo botão: o aviso vem assinado com o segredo da aplicação da plataforma.
+            var segredo = credencial.Valor.WebhookSecret
+                ?? (credencial.Valor.ViaOAuth ? oauth.Value.WebhookSecret ?? opcoesMp.Value.WebhookSecret : null);
             var assinatura = req.Headers["x-signature"].ToString();
             if (!string.IsNullOrEmpty(segredo) && assinatura.Length > 0
                 && !AssinaturaMercadoPago.Valida(assinatura, req.Headers["x-request-id"], req.Query["data.id"].FirstOrDefault() ?? id, segredo))
