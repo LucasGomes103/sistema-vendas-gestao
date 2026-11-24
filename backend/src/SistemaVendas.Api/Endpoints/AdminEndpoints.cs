@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using SistemaVendas.Domain.Lojas;
 using SistemaVendas.Domain.Vendas;
 using SistemaVendas.Infrastructure.Dados;
+using SistemaVendas.Infrastructure.IA;
 using SistemaVendas.Infrastructure.Seguranca;
 
 namespace SistemaVendas.Api.Endpoints;
@@ -13,11 +14,26 @@ public record LojaAdminSaida(
     Guid Id, string Nome, string Slug, string? Segmento, string Status, string? MotivoSuspensao, DateTimeOffset CriadoEm,
     string? Dono, string? EmailDono, bool EmailConfirmado, int Usuarios, int Produtos,
     int Conversas30Dias, int Pedidos30Dias, decimal Vendido30Dias, DateTimeOffset? UltimaMensagemEm,
-    bool WhatsAppProprio, bool MercadoPagoProprio, bool LojaOriginal);
+    bool WhatsAppProprio, bool MercadoPagoProprio, bool LojaOriginal)
+{
+    /// <summary>Último acesso ao painel de qualquer usuário da loja.</summary>
+    public DateTimeOffset? UltimoAcessoEm { get; init; }
+    public int RespostasRobo30Dias { get; init; }
+    public long TokensIa30Dias { get; init; }
+    public int FalhasIa30Dias { get; init; }
+
+    /// <summary>Respostas com IA neste mês e o limite que vale para a loja (0 = sem limite).</summary>
+    public int RespostasIaMes { get; init; }
+    public int LimiteIaMes { get; init; }
+
+    /// <summary>Limite próprio da loja; null = padrão da plataforma (IA__LimiteRespostasMes).</summary>
+    public int? LimiteIaProprio { get; init; }
+}
 
 public record SuspenderEntrada(string? Motivo);
 
-public record EditarLojaEntrada(string? Nome, string? Slug, string? Segmento, string? NomeDono, string? EmailDono);
+/// <summary>LimiteRespostasIAMes vazio: padrão da plataforma; 0: sem limite.</summary>
+public record EditarLojaEntrada(string? Nome, string? Slug, string? Segmento, string? NomeDono, string? EmailDono, int? LimiteRespostasIAMes = null);
 
 /// <summary>Para excluir, o administrador digita o endereço (slug) da loja: evita apagar a loja errada.</summary>
 public record ExcluirLojaEntrada(string? Confirmacao);
@@ -46,10 +62,18 @@ public static class AdminEndpoints
     public static void MapAdminEndpoints(this IEndpointRouteBuilder app)
     {
         var grupo = app.MapGroup("/admin").WithTags("Administração da plataforma").RequireAuthorization(PoliticaAdmin);
+        grupo.MapAdminPainelEndpoints();
 
-        grupo.MapGet("/lojas", async (AppDbContext db, CredenciaisDaLoja credenciais, CancellationToken ct) =>
+        grupo.MapGet("/lojas", async (AppDbContext db, CredenciaisDaLoja credenciais, ServicoLimiteIa limiteIa, CancellationToken ct) =>
         {
             var desde = DateTimeOffset.UtcNow.AddDays(-30);
+            var diaDesde = DateOnly.FromDateTime(desde.UtcDateTime);
+            var acessos = await db.Usuarios.IgnoreQueryFilters().Where(u => u.UltimoAcessoEm != null).GroupBy(u => u.LojaId)
+                .Select(g => new { g.Key, Ultimo = g.Max(u => u.UltimoAcessoEm) }).ToDictionaryAsync(x => x.Key, x => x.Ultimo, ct);
+            var usoIa = await db.UsosIa.IgnoreQueryFilters().Where(u => u.Dia >= diaDesde).GroupBy(u => u.LojaId)
+                .Select(g => new { g.Key, Respostas = g.Sum(u => u.Respostas), Tokens = g.Sum(u => u.TokensEntrada + u.TokensSaida), Falhas = g.Sum(u => u.Falhas) })
+                .ToDictionaryAsync(x => x.Key, ct);
+            var iaMes = await limiteIa.RespostasDoMesAsync(DateTimeOffset.UtcNow, ct);
             var lojas = await db.Lojas.AsNoTracking().OrderByDescending(l => l.CriadoEm).ToListAsync(ct);
             var donos = (await db.Usuarios.IgnoreQueryFilters().AsNoTracking().Where(u => u.Papel == Papel.Dono)
                     .OrderBy(u => u.CriadoEm).Select(u => new { u.LojaId, u.Nome, u.Email, u.EmailConfirmadoEm }).ToListAsync(ct))
@@ -75,7 +99,16 @@ public static class AdminEndpoints
                 return new LojaAdminSaida(l.Id, l.Nome, l.Slug, l.Segmento, l.Status.ToString(), l.MotivoSuspensao, l.CriadoEm,
                     dono?.Nome, dono?.Email, dono?.EmailConfirmadoEm is not null, usuarios.GetValueOrDefault(l.Id), produtos.GetValueOrDefault(l.Id),
                     conv?.N ?? 0, ped?.N ?? 0, ped?.Vendido ?? 0, conv?.Ultima,
-                    cred.Contains(TipoCredencial.WhatsApp), cred.Contains(TipoCredencial.MercadoPago), l.Id == original);
+                    cred.Contains(TipoCredencial.WhatsApp), cred.Contains(TipoCredencial.MercadoPago), l.Id == original)
+                {
+                    UltimoAcessoEm = acessos.GetValueOrDefault(l.Id),
+                    RespostasRobo30Dias = usoIa.GetValueOrDefault(l.Id)?.Respostas ?? 0,
+                    TokensIa30Dias = usoIa.GetValueOrDefault(l.Id)?.Tokens ?? 0,
+                    FalhasIa30Dias = usoIa.GetValueOrDefault(l.Id)?.Falhas ?? 0,
+                    RespostasIaMes = iaMes.GetValueOrDefault(l.Id),
+                    LimiteIaMes = RegrasLimiteIa.LimiteDaLoja(l.LimiteRespostasIAMes, limiteIa.LimitePadrao),
+                    LimiteIaProprio = l.LimiteRespostasIAMes,
+                };
             }).ToList();
         });
 
@@ -90,6 +123,7 @@ public static class AdminEndpoints
             loja.Status = StatusLoja.Suspensa;
             loja.MotivoSuspensao = string.IsNullOrWhiteSpace(e.Motivo) ? null : e.Motivo.Trim()[..Math.Min(e.Motivo.Trim().Length, 300)];
             loja.SuspensaEm = DateTimeOffset.UtcNow;
+            Auditar(db, user, AcaoAdmin.Suspender, loja.Id, loja.Slug, loja.MotivoSuspensao);
             await db.SaveChangesAsync(ct);
             logs.CreateLogger("Admin").LogWarning("Loja {Slug} suspensa por {Admin}: {Motivo}", loja.Slug, user.FindFirstValue(ClaimTypes.Email), loja.MotivoSuspensao);
             return Results.NoContent();
@@ -109,6 +143,7 @@ public static class AdminEndpoints
             string? erro = null;
             if (nome.Length is < 2 or > 120) erro = "O nome da loja precisa ter de 2 a 120 letras.";
             else if (segmento is { Length: > 60 }) erro = "O tipo de loja pode ter até 60 letras.";
+            else if (e.LimiteRespostasIAMes is < 0 or > 1_000_000) erro = "O limite da IA vai de 0 (sem limite) a 1.000.000 respostas por mês.";
             else if (slug != loja.Slug) erro = RegrasCadastro.ValidarSlug(slug);
             if (erro is not null)
                 return Results.Problem(erro, statusCode: StatusCodes.Status422UnprocessableEntity);
@@ -130,9 +165,19 @@ public static class AdminEndpoints
             }
 
             var slugAntigo = loja.Slug;
+            var mudancas = new List<string>();
+            if (loja.Nome != nome) mudancas.Add($"nome: {loja.Nome} → {nome}");
+            if (slugAntigo != slug) mudancas.Add($"endereço: {slugAntigo} → {slug}");
+            if (loja.Segmento != segmento) mudancas.Add($"tipo: {loja.Segmento ?? "—"} → {segmento ?? "—"}");
+            if (loja.LimiteRespostasIAMes != e.LimiteRespostasIAMes)
+                mudancas.Add($"limite da IA: {loja.LimiteRespostasIAMes?.ToString() ?? "padrão"} → {e.LimiteRespostasIAMes?.ToString() ?? "padrão"}");
+            if (dono is not null && db.Entry(dono).Property(u => u.Nome).IsModified) mudancas.Add("nome do dono");
+            if (dono is not null && db.Entry(dono).Property(u => u.Email).IsModified) mudancas.Add("e-mail do dono");
             loja.Nome = nome;
             loja.Slug = slug;
             loja.Segmento = segmento;
+            loja.LimiteRespostasIAMes = e.LimiteRespostasIAMes;
+            Auditar(db, user, AcaoAdmin.Editar, loja.Id, slug, mudancas.Count == 0 ? "sem mudanças" : string.Join("; ", mudancas));
             await db.SaveChangesAsync(ct);
             logs.CreateLogger("Admin").LogWarning("Loja {Slug} (antes {SlugAntigo}) editada por {Admin}", slug, slugAntigo, user.FindFirstValue(ClaimTypes.Email));
             return Results.NoContent();
@@ -152,6 +197,8 @@ public static class AdminEndpoints
                 return Results.Problem($"Para confirmar, digite o endereço da loja: {loja.Slug}", statusCode: StatusCodes.Status422UnprocessableEntity);
 
             var linhas = await ExclusaoDeLoja.ExcluirAsync(db, id, ct);
+            Auditar(db, user, AcaoAdmin.Excluir, id, loja.Slug, $"{loja.Nome} ({linhas} linhas apagadas)");
+            await db.SaveChangesAsync(ct);
             logs.CreateLogger("Admin").LogWarning("Loja {Slug} EXCLUÍDA por {Admin} ({Linhas} linhas apagadas)", loja.Slug, user.FindFirstValue(ClaimTypes.Email), linhas);
             return Results.NoContent();
         });
@@ -162,12 +209,25 @@ public static class AdminEndpoints
             var loja = await db.Lojas.FirstOrDefaultAsync(l => l.Id == id, ct);
             if (loja is null)
                 return Results.NotFound();
+            var antes = loja.Status;
             loja.Status = StatusLoja.Ativa;
             loja.MotivoSuspensao = null;
             loja.SuspensaEm = null;
+            Auditar(db, user, AcaoAdmin.Ativar, loja.Id, loja.Slug, antes == StatusLoja.Suspensa ? "reativada" : "ativada à mão");
             await db.SaveChangesAsync(ct);
             logs.CreateLogger("Admin").LogWarning("Loja {Slug} ativada por {Admin}", loja.Slug, user.FindFirstValue(ClaimTypes.Email));
             return Results.NoContent();
         });
     }
+
+    /// <summary>Grava na auditoria o que o administrador fez. Quem chama salva junto com a mudança.</summary>
+    public static void Auditar(AppDbContext db, ClaimsPrincipal user, string acao, Guid? lojaId, string? slug, string? detalhe) =>
+        db.AuditoriaAdmin.Add(new AuditoriaAdmin
+        {
+            AdminEmail = user.FindFirstValue(ClaimTypes.Email) ?? "?",
+            Acao = acao,
+            LojaAlvoId = lojaId,
+            LojaAlvoSlug = slug,
+            Detalhe = detalhe is { Length: > 500 } ? detalhe[..500] : detalhe
+        });
 }

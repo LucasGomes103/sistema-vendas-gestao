@@ -15,6 +15,8 @@ export interface UsuarioLogado {
   adminPlataforma?: boolean;
   /** Palavras do tipo de loja (espécie/tanque ou produto/local). Use o serviço Termos. */
   termos?: Vocabulario;
+  /** Administrador vendo esta loja como suporte: só leitura. */
+  modoSuporte?: boolean;
 }
 
 /** Palavras do tipo de loja, vindas da API (Vocabulario). */
@@ -57,6 +59,104 @@ export interface LojaAdmin {
   whatsAppProprio: boolean;
   mercadoPagoProprio: boolean;
   lojaOriginal: boolean;
+  /** Último acesso ao painel de qualquer usuário da loja. */
+  ultimoAcessoEm: string | null;
+  respostasRobo30Dias: number;
+  tokensIa30Dias: number;
+  falhasIa30Dias: number;
+  /** Respostas com IA neste mês e o limite que vale (0 = sem limite). */
+  respostasIaMes: number;
+  limiteIaMes: number;
+  /** Limite próprio da loja; null = padrão da plataforma. */
+  limiteIaProprio: number | null;
+}
+
+/** Um dia da série do painel da plataforma (horário de Brasília). */
+export interface DiaPlataforma {
+  dia: string;
+  lojasNovas: number;
+  mensagensRecebidas: number;
+  respostasRobo: number;
+  pedidos: number;
+  vendido: number;
+  tokensIa: number;
+}
+
+export interface TotaisPlataforma {
+  conversasNoPeriodo: number;
+  mensagensRecebidas: number;
+  respostasRobo: number;
+  mensagensVendedor: number;
+  pedidos: number;
+  pedidosPagos: number;
+  vendido: number;
+  chamadasIa: number;
+  tokensEntrada: number;
+  tokensSaida: number;
+  falhasIa: number;
+  mensagensComFalha: number;
+}
+
+export interface VisaoGeralPlataforma {
+  dias: number;
+  lojas: {
+    total: number;
+    ativas: number;
+    aguardandoConfirmacao: number;
+    suspensas: number;
+    novasNoPeriodo: number;
+    comMovimentoNoPeriodo: number;
+    paradas: number;
+  };
+  totais: TotaisPlataforma;
+  porDia: DiaPlataforma[];
+  saude: {
+    iaConfigurada: boolean;
+    modeloIa: string;
+    emailConfigurado: boolean;
+    chaveMestraConfigurada: boolean;
+    lojasComWhatsAppProprio: number;
+    lojasComMercadoPagoProprio: number;
+  };
+}
+
+export interface AuditoriaAdmin {
+  id: string;
+  criadoEm: string;
+  adminEmail: string;
+  acao: 'editar' | 'suspender' | 'ativar' | 'excluir' | 'ver_como_loja' | 'sair_da_loja' | string;
+  lojaId: string | null;
+  lojaSlug: string | null;
+  detalhe: string | null;
+}
+
+export interface DetalheLojaAdmin {
+  loja: LojaAdmin;
+  configuracao: {
+    whatsAppConectado: boolean;
+    whatsAppNumero: string | null;
+    atenderTodos: boolean;
+    numerosPermitidos: number;
+    pixConfigurado: boolean;
+    freteConfigurado: boolean;
+    zonasDeEntrega: number;
+    horarioAtendimento: string;
+  };
+  totais: TotaisPlataforma;
+  clientes: number;
+  conversasUltimas24h: number;
+  usuarios: {
+    id: string;
+    nome: string;
+    email: string;
+    papel: Papel;
+    ativo: boolean;
+    emailConfirmado: boolean;
+    criadoEm: string;
+    ultimoAcessoEm: string | null;
+  }[];
+  porDia: DiaPlataforma[];
+  auditoria: AuditoriaAdmin[];
 }
 
 export interface UsuarioEquipe {
@@ -390,9 +490,23 @@ export interface ConfigCartao {
   origem: 'Loja' | 'Servidor' | null;
   resumo: string | null;
   podeSalvar: boolean;
+  /** A plataforma tem a aplicação do Mercado Pago: mostra o botão "Conectar Mercado Pago". */
+  conectarDisponivel: boolean;
+  viaOAuth: boolean;
+  expiraEm: string | null;
 }
 
 /** WhatsApp oficial (Cloud API da Meta) da loja: o token nunca volta, só o resumo. */
+/** Uso da IA da plataforma no mês (limite 0 = sem limite). */
+export interface UsoIA {
+  ativa: boolean;
+  atendente: string;
+  respostas: number;
+  porRegras: number;
+  limite: number;
+  esgotado: boolean;
+}
+
 export interface WhatsAppOficial {
   configurado: boolean;
   origem: 'Loja' | 'Servidor' | null;

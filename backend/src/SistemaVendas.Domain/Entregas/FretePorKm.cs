@@ -37,6 +37,26 @@ public class LocalCep : Entidade
     public string? Endereco { get; set; }
 }
 
+/// <summary>
+/// Rota de carro já calculada entre dois pontos, compartilhada entre todas as lojas (não tem dado de cliente: só
+/// coordenadas arredondadas e a distância). Evita chamar o serviço de rotas de novo para o mesmo trajeto.
+/// </summary>
+public class RotaCache : Entidade
+{
+    public double OrigemLat { get; set; }
+    public double OrigemLon { get; set; }
+    public double DestinoLat { get; set; }
+    public double DestinoLon { get; set; }
+    public double Km { get; set; }
+    public DateTimeOffset CalculadaEm { get; set; } = DateTimeOffset.UtcNow;
+
+    /// <summary>Rotas mudam pouco, mas mudam (obra, mão de rua): depois disso a rota é calculada de novo.</summary>
+    public static readonly TimeSpan Validade = TimeSpan.FromDays(180);
+
+    /// <summary>4 casas decimais ≈ 11 m: o mesmo CEP sempre cai na mesma chave.</summary>
+    public static double Arredondar(double grau) => Math.Round(grau, 4, MidpointRounding.AwayFromZero);
+}
+
 public static class RegrasFreteKm
 {
     /// <summary>Quando não há rota de carro, a distância em linha reta vezes este fator (as ruas não são retas).</summary>

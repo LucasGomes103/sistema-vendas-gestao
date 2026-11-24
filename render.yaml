@@ -33,6 +33,18 @@ services:
         sync: false
       - key: IA__Gemini__ApiKey
         sync: false
+      # Respostas da IA por loja por mês (padrão 1000; 0 = sem limite). Cada loja pode ter o seu na tela Lojas
+      - key: IA__LimiteRespostasMes
+        value: "1000"
+      # Botão "Conectar Mercado Pago" (OAuth): aplicação do Mercado Pago da PLATAFORMA (Client ID e Client Secret).
+      # Na aplicação, cadastre a URL de redirecionamento https://sistema-vendas-gestao.pages.dev/api/v1/mercadopago/oauth/retorno
+      - key: MercadoPago__OAuth__ClientId
+        sync: false
+      - key: MercadoPago__OAuth__ClientSecret
+        sync: false
+      # Assinatura secreta dos Webhooks da aplicação da plataforma (avisos das lojas conectadas pelo botão)
+      - key: MercadoPago__OAuth__WebhookSecret
+        sync: false
       # Botão "Conectar WhatsApp" (Embedded Signup): App ID do app da plataforma na Meta e o Configuration ID do
       # Facebook Login for Business. Usa também WhatsApp__AppSecret (o mesmo que confere os webhooks)
       - key: WhatsApp__EmbeddedSignup__AppId

@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { API, ConfigFunil, mensagemDeErro } from '../../core/api';
 import { ConexaoWhatsAppComponent } from './conexao-whatsapp';
@@ -15,12 +16,13 @@ import { Auth } from '../../core/auth';
 import { ConfigCartaoComponent } from './config-cartao';
 import { ConfigWhatsAppOficialComponent } from './config-whatsapp-oficial';
 import { ConfigPixComponent } from './config-pix';
+import { ConfigIAComponent } from './config-ia';
 import { ConfigWhatsAppComponent } from './config-whatsapp';
 
 /** Prazos do funil e respostas prontas. Mudar um prazo é editar aqui, não fazer deploy. */
 @Component({
   selector: 'app-config-page',
-  imports: [ConexaoWhatsAppComponent, ConfigWhatsAppComponent, ConfigFreteComponent, ConfigPixComponent, ConfigCartaoComponent, ConfigWhatsAppOficialComponent, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule],
+  imports: [ConfigIAComponent, ConexaoWhatsAppComponent, ConfigWhatsAppComponent, ConfigFreteComponent, ConfigPixComponent, ConfigCartaoComponent, ConfigWhatsAppOficialComponent, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './config-page.html',
   styleUrl: './config-page.scss',
@@ -49,6 +51,17 @@ export class ConfigPage {
       const c = this.config.value();
       if (c) this.form.reset(c);
     });
+    // Volta do botão "Conectar Mercado Pago".
+    const q = inject(ActivatedRoute).snapshot.queryParamMap;
+    const mp = q.get('mercadopago');
+    if (mp) {
+      this.snack.open(
+        mp === 'conectado' ? 'Mercado Pago conectado. As próximas cobranças já saem com o link do cartão.' : q.get('motivo') || 'Não deu para conectar o Mercado Pago.',
+        'OK',
+        { duration: 8000 },
+      );
+      inject(Router).navigate([], { queryParams: {}, replaceUrl: true });
+    }
   }
 
   protected async salvar(): Promise<void> {

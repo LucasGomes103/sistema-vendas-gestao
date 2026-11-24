@@ -35,19 +35,22 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
 
     public async Task<RespostaAtendente> ResponderAsync(string nomeLoja, IReadOnlyList<FalaConversa> historico, IFerramentasAtendimento ferramentas, CancellationToken ct)
     {
+        var gasto = new Gasto();
         try
         {
-            return await ConversarAsync(nomeLoja, historico, ferramentas, ct);
+            var resposta = await ConversarAsync(nomeLoja, historico, ferramentas, gasto, ct);
+            return resposta with { Consumo = gasto.Consumo(falhou: false) };
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
             // Limite da camada grátis ou instabilidade: o cliente não fica sem resposta.
             logger.LogWarning("Gemini falhou, usando respostas por regras: {Erro}", e.Message);
-            return await reserva.ResponderAsync(nomeLoja, historico, ferramentas, ct);
+            var resposta = await reserva.ResponderAsync(nomeLoja, historico, ferramentas, ct);
+            return resposta with { Consumo = gasto.Consumo(falhou: true) };
         }
     }
 
-    private async Task<RespostaAtendente> ConversarAsync(string nomeLoja, IReadOnlyList<FalaConversa> historico, IFerramentasAtendimento ferramentas, CancellationToken ct)
+    private async Task<RespostaAtendente> ConversarAsync(string nomeLoja, IReadOnlyList<FalaConversa> historico, IFerramentasAtendimento ferramentas, Gasto gasto, CancellationToken ct)
     {
         var conteudos = new JsonArray();
         foreach (var fala in historico)
@@ -60,7 +63,9 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
 
         for (var rodada = 0; rodada < MaximoRodadas; rodada++)
         {
+            gasto.Chamadas++;
             var resposta = await ChamarAsync(nomeLoja, textos, conteudos, ct);
+            gasto.Somar(resposta["usageMetadata"] as JsonObject);
             var conteudo = resposta["candidates"]?[0]?["content"] as JsonObject
                 ?? throw new InvalidOperationException("Gemini não devolveu conteúdo.");
             var partes = conteudo["parts"]?.AsArray() ?? [];
@@ -207,6 +212,23 @@ public class GeminiAtendente(HttpClient http, IOptions<GeminiOptions> opcoes, At
             throw new HttpRequestException($"Gemini respondeu {(int)resp.StatusCode}: {texto[..Math.Min(300, texto.Length)]}");
 
         return JsonNode.Parse(texto)!.AsObject();
+    }
+
+    /// <summary>Soma das chamadas e tokens (usageMetadata do Gemini) de uma resposta.</summary>
+    private sealed class Gasto
+    {
+        public int Chamadas;
+        private long _entrada, _saida;
+
+        public void Somar(JsonObject? uso)
+        {
+            _entrada += Numero(uso?["promptTokenCount"]);
+            _saida += Numero(uso?["candidatesTokenCount"]) + Numero(uso?["thoughtsTokenCount"]);
+        }
+
+        public ConsumoIa Consumo(bool falhou) => new(Chamadas, _entrada, _saida, falhou);
+
+        private static long Numero(JsonNode? n) => n is JsonValue v && v.TryGetValue<long>(out var x) ? x : 0;
     }
 
     private static string? Texto(JsonObject args, string campo) =>

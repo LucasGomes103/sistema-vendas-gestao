@@ -1,9 +1,11 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using SistemaVendas.Application.Atendimento;
 using SistemaVendas.Application.Comum;
 using SistemaVendas.Domain.Atendimento;
 using SistemaVendas.Domain.Funil;
 using SistemaVendas.Infrastructure.Dados;
+using SistemaVendas.Infrastructure.IA;
 using SistemaVendas.Infrastructure.WhatsApp;
 using SistemaVendas.Domain.Lojas;
 using Microsoft.Extensions.Options;
@@ -55,6 +57,9 @@ public record EmbeddedSignupSaida(string AppId, string ConfigId, string Versao);
 public record ConectarWhatsAppEntrada(string? Code, string? PhoneNumberId, string? WabaId);
 
 public record WhatsAppOficialEntrada(string? PhoneNumberId, string? AccessToken);
+
+/// <summary>Uso da IA no mês: Limite 0 = sem limite.</summary>
+public record UsoIASaida(bool Ativa, string Atendente, int Respostas, int PorRegras, int Limite, bool Esgotado);
 
 public record ConfigWhatsAppDto(bool AtenderTodos, List<string> NumerosPermitidos, string? WhatsAppNumero, string Provedor);
 
@@ -126,10 +131,17 @@ public static class FunilEndpoints
 
         var config = app.MapGroup("/config").WithTags("Configuração").RequireAuthorization(AuthEndpoints.PoliticaDono);
 
+        // Uso da IA da plataforma neste mês (o dono vê quanto falta para o robô passar a responder por regras).
+        config.MapGet("/ia", async (ILojaAtual loja, ServicoLimiteIa limite, IAtendenteIA atendente, CancellationToken ct) =>
+        {
+            var r = await limite.ResumoAsync(loja.LojaId!.Value, DateTimeOffset.UtcNow, ct);
+            return new UsoIASaida(atendente is AtendenteComLimite, atendente.Nome, r.Respostas, r.PorRegras, r.Limite, r.Esgotado);
+        });
+
         config.MapGet("/whatsapp", async (AppDbContext db, ILojaAtual loja, IOptions<WhatsAppOptions> wa, CancellationToken ct) =>
         {
             var l = await db.Lojas.AsNoTracking().FirstAsync(x => x.Id == loja.LojaId, ct);
-            return new ConfigWhatsAppDto(l.AtenderTodos, l.NumerosPermitidos, l.WhatsAppNumero, wa.Value.UsaPonteLocal ? "Local" : "Meta");
+            return new ConfigWhatsAppDto(l.AtenderTodos, l.NumerosPermitidos, l.WhatsAppNumero, wa.Value.ProvedorDa(l.Slug));
         });
 
         config.MapPut("/whatsapp", async (ConfigWhatsAppDto entrada, AppDbContext db, ILojaAtual loja, IOptions<WhatsAppOptions> wa, CancellationToken ct) =>
@@ -142,7 +154,7 @@ public static class FunilEndpoints
             l.WhatsAppNumero = numero.Length == 0 ? null : Loja.NormalizarNumeros([numero]).FirstOrDefault();
 
             await db.SaveChangesAsync(ct);
-            return Results.Ok(new ConfigWhatsAppDto(l.AtenderTodos, l.NumerosPermitidos, l.WhatsAppNumero, wa.Value.UsaPonteLocal ? "Local" : "Meta"));
+            return Results.Ok(new ConfigWhatsAppDto(l.AtenderTodos, l.NumerosPermitidos, l.WhatsAppNumero, wa.Value.ProvedorDa(l.Slug)));
         });
 
         config.MapGet("/whatsapp-oficial", async (AppDbContext db, ILojaAtual loja, CredenciaisDaLoja credenciais, ServicoCredenciais cofre,

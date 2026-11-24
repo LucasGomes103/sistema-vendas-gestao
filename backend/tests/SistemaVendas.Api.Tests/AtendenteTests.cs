@@ -298,4 +298,44 @@ public class AtendenteTests
         var comCep = semCep.Append(new FalaConversa(true, "meu cep é 02464100")).ToList();
         Assert.False(AguardaEntrega.PediuCep("Entregamos no CEP 02464-100 ...", comCep));
     }
+
+    private sealed class GeminiFalso(Func<int, (System.Net.HttpStatusCode, string)> resposta) : HttpMessageHandler
+    {
+        private int _chamadas;
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            var (status, corpo) = resposta(_chamadas++);
+            return Task.FromResult(new HttpResponseMessage(status) { Content = new StringContent(corpo, System.Text.Encoding.UTF8, "application/json") });
+        }
+    }
+
+    private static GeminiAtendente Gemini(Func<int, (System.Net.HttpStatusCode, string)> resposta) => new(
+        new HttpClient(new GeminiFalso(resposta)),
+        Microsoft.Extensions.Options.Options.Create(new GeminiOptions { ApiKey = "teste" }),
+        new AtendentePorRegras(),
+        Microsoft.Extensions.Logging.Abstractions.NullLogger<GeminiAtendente>.Instance);
+
+    [Fact]
+    public async Task Gemini_soma_chamadas_e_tokens_de_todas_as_rodadas()
+    {
+        var atendente = Gemini(i => (System.Net.HttpStatusCode.OK, i == 0
+            ? """{"candidates":[{"content":{"role":"model","parts":[{"functionCall":{"name":"buscar_produto","args":{"texto":"ramirezi"}}}]}}],"usageMetadata":{"promptTokenCount":800,"candidatesTokenCount":10}}"""
+            : """{"candidates":[{"content":{"role":"model","parts":[{"text":"Temos ramirezi por R$ 60,00."}]}}],"usageMetadata":{"promptTokenCount":900,"candidatesTokenCount":25,"thoughtsTokenCount":5}}"""));
+
+        var r = await atendente.ResponderAsync("Loja Demo", [new FalaConversa(true, "tem ramirezi?")], new CatalogoFalso(), default);
+
+        Assert.Equal("Temos ramirezi por R$ 60,00.", r.Texto);
+        Assert.Equal(new ConsumoIa(2, 1700, 40, false), r.Consumo);
+    }
+
+    [Fact]
+    public async Task Gemini_com_erro_responde_pelas_regras_e_marca_a_falha()
+    {
+        var atendente = Gemini(_ => (System.Net.HttpStatusCode.TooManyRequests, """{"error":"quota"}"""));
+
+        var r = await atendente.ResponderAsync("Loja Demo", [new FalaConversa(true, "oi")], new CatalogoFalso(), default);
+
+        Assert.False(string.IsNullOrWhiteSpace(r.Texto));
+        Assert.Equal(new ConsumoIa(1, 0, 0, true), r.Consumo);
+    }
 }

@@ -41,6 +41,9 @@ public static class DependencyInjection
                 o.UrlPublicaApi = config["RENDER_EXTERNAL_URL"];
         });
         services.AddHttpClient<IMercadoPago, MercadoPagoCliente>(c => c.Timeout = TimeSpan.FromSeconds(15));
+        // Botão "Conectar Mercado Pago" (OAuth com a aplicação da plataforma).
+        services.Configure<MercadoPagoOAuthOptions>(config.GetSection(MercadoPagoOAuthOptions.Secao));
+        services.AddHttpClient<ConexaoMercadoPago>(c => c.Timeout = TimeSpan.FromSeconds(15));
         services.AddScoped<ServicoEntregas>();
         services.AddScoped<ServicoMetricas>();
 
@@ -73,10 +76,16 @@ public static class DependencyInjection
         services.AddScoped<IGeolocalizacao, Geolocalizacao>();
         services.AddScoped<ServicoFrete>();
         services.AddScoped<IFerramentasAtendimento, FerramentasAtendimento>();
+        services.Configure<LimitesIAOptions>(config.GetSection(LimitesIAOptions.Secao));
+        services.AddScoped<ServicoLimiteIa>();
         if (string.IsNullOrWhiteSpace(gemini[nameof(GeminiOptions.ApiKey)]))
             services.AddSingleton<IAtendenteIA>(sp => sp.GetRequiredService<AtendentePorRegras>());
         else
-            services.AddHttpClient<IAtendenteIA, GeminiAtendente>(c => c.Timeout = TimeSpan.FromSeconds(30));
+        {
+            // IA paga pela plataforma: respeita o limite de respostas do mês de cada loja.
+            services.AddHttpClient<GeminiAtendente>(c => c.Timeout = TimeSpan.FromSeconds(30));
+            services.AddScoped<IAtendenteIA, AtendenteComLimite>();
+        }
 
         return services;
     }

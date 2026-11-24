@@ -39,7 +39,8 @@ public record ConfigPixEntrada(string? Chave, string? Nome, string? Cidade);
 /// original usando as variáveis do Render; "Loja" = salvo (cifrado) pelo dono no painel.
 /// </summary>
 public record ConfigCartaoSaida(bool Configurado, bool ModoTeste, bool WebhookPronto, bool AssinaturaConferida, string? UrlWebhook,
-    string? Origem = null, string? Resumo = null, bool PodeSalvar = false);
+    string? Origem = null, string? Resumo = null, bool PodeSalvar = false,
+    bool ConectarDisponivel = false, bool ViaOAuth = false, DateTimeOffset? ExpiraEm = null);
 
 /// <summary>Token e assinatura secreta do Mercado Pago da loja. Assinatura vazia ao editar mantém a anterior.</summary>
 public record ConfigCartaoEntrada(string? AccessToken, string? WebhookSecret, bool ModoTeste);
@@ -135,7 +136,8 @@ public static class PedidoEndpoints
 
         var cartao = app.MapGroup("/config/cartao").WithTags("Pedidos");
 
-        cartao.MapGet("/", async (IOptions<MercadoPagoOptions> opcoes, CredenciaisDaLoja credenciais, ServicoCredenciais cofre, ILojaAtual lojaAtual, CancellationToken ct) =>
+        cartao.MapGet("/", async (IOptions<MercadoPagoOptions> opcoes, IOptions<MercadoPagoOAuthOptions> oauth, ConexaoMercadoPago conexao,
+            CredenciaisDaLoja credenciais, ServicoCredenciais cofre, ILojaAtual lojaAtual, CancellationToken ct) =>
         {
             var lojaId = lojaAtual.LojaId!.Value;
             var o = opcoes.Value;
@@ -146,8 +148,10 @@ public static class PedidoEndpoints
             var resumo = emUso?.Origem == OrigemCredencial.Loja
                 ? (await cofre.ResumosAsync(lojaId, ct)).GetValueOrDefault(Domain.Lojas.TipoCredencial.MercadoPago).Resumo
                 : null;
+            var segredo = c?.WebhookSecret ?? (c?.ViaOAuth == true ? oauth.Value.WebhookSecret ?? o.WebhookSecret : null);
             return new ConfigCartaoSaida(c is not null, teste, o.UrlWebhook?.StartsWith("https://") == true,
-                !string.IsNullOrWhiteSpace(c?.WebhookSecret), o.UrlWebhook, emUso?.Origem.ToString(), resumo, cofre.Disponivel);
+                !string.IsNullOrWhiteSpace(segredo), o.UrlWebhook, emUso?.Origem.ToString(), resumo, cofre.Disponivel,
+                conexao.Disponivel, c?.ViaOAuth == true, c?.ExpiraEm);
         })
         .RequireAuthorization(AuthEndpoints.PoliticaEquipe);
 
@@ -173,6 +177,22 @@ public static class PedidoEndpoints
             return Results.NoContent();
         })
         .RequireAuthorization(AuthEndpoints.PoliticaDono);
+
+        // Botão "Conectar Mercado Pago": devolve o link de autorização (o painel abre na mesma aba).
+        cartao.MapPost("/conectar", (ConexaoMercadoPago conexao, ILojaAtual lojaAtual) =>
+        {
+            if (!conexao.Disponivel)
+                return Results.Problem("O botão do Mercado Pago ainda não foi configurado na plataforma.", statusCode: StatusCodes.Status409Conflict);
+            return Results.Ok(new { url = conexao.LinkAutorizacao(lojaAtual.LojaId!.Value) });
+        })
+        .RequireAuthorization(AuthEndpoints.PoliticaDono);
+
+        // Volta do Mercado Pago depois que o dono autoriza (endereço cadastrado na aplicação da plataforma). Público:
+        // a loja vem do "state" assinado, nunca do login.
+        app.MapGet("/mercadopago/oauth/retorno", async (string? code, string? state, string? error, ConexaoMercadoPago conexao, CancellationToken ct) =>
+            Results.Redirect(conexao.VoltaAoPainel(await conexao.ConcluirAsync(code, state, error, ct))))
+            .WithTags("Pedidos")
+            .AllowAnonymous();
 
         cartao.MapDelete("/", async (ServicoCredenciais cofre, ILojaAtual lojaAtual, CancellationToken ct) =>
         {

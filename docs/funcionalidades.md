@@ -261,8 +261,22 @@ teste (só muda o selo no painel). O endereço público vem do `RENDER_EXTERNAL_
 
 ## Administrador da plataforma (SaaS fase 1)
 
-- Quem tem o e-mail em `Plataforma__Admins` (no Render, separados por vírgula) vê **Lojas da plataforma** no menu
-  da conta (`/painel/admin`).
+- Quem tem o e-mail em `Plataforma__Admins` (no Render, separados por vírgula) vê **Plataforma** no menu lateral
+  (`/painel/admin`), com três abas: Visão geral, Lojas e Auditoria.
+- **Visão geral** (7, 30 ou 90 dias): lojas ativas, novas, em uso, paradas (ativas sem ninguém entrar há 7+ dias),
+  aguardando e-mail e suspensas; conversas, mensagens recebidas, respostas do robô, pedidos e vendido; tokens e
+  chamadas de IA e falhas (IA que caiu para as regras e mensagens que não foram enviadas); gráfico por dia; lojas que
+  mais usam; saúde (chave do Gemini, SMTP, chave mestra, quantas lojas têm WhatsApp e Mercado Pago próprios).
+- **Uso de IA por loja**: cada resposta do robô soma, na tabela `uso_ia` (loja e dia de Brasília), as chamadas ao
+  Gemini e os tokens de entrada e saída (`usageMetadata`). Base para os limites por plano.
+- **Último acesso**: gravado no login e enquanto a sessão está em uso (no máximo a cada 5 minutos).
+- **Detalhe da loja**: números dos 30 dias, gráfico por dia, configuração (WhatsApp, cartão, Pix, frete, horário),
+  equipe com último acesso de cada um e o que o suporte fez na loja.
+- **Ver como a loja (modo suporte)**: o administrador abre o painel da loja como o dono vê, **só leitura**. Uma faixa
+  no topo avisa e tem o botão para voltar. A API recusa tudo que não for leitura (403 `modo_suporte`) em qualquer
+  rota, e abrir uma conversa não a marca como lida. Entrar e sair ficam na auditoria.
+- **Auditoria** (`auditoria_admin`): editar, suspender, ativar, excluir, entrar e sair do modo suporte, com quem,
+  quando e o detalhe. Não tem `loja_id`, então fica mesmo depois que a loja é excluída.
 - Lista todas as lojas com status, dono, tipo, e números dos últimos 30 dias (conversas, pedidos, vendido), produtos,
   usuários, última mensagem e se WhatsApp e Mercado Pago são próprios. Só números: não abre conversa nem cliente.
 - **Suspender** (com motivo): ninguém da loja entra, quem está dentro sai em até 1 minuto, a vitrine sai do ar e as
@@ -327,6 +341,53 @@ Para a ida à produção (custos, variáveis, segurança, LGPD), ver [producao/c
   aplicação, código; pet: marca, peso, porte...). Aparecem no catálogo e na vitrine, entram na busca da vitrine e o
   robô recebe os detalhes ao buscar o produto (e acha o produto pelo valor, ex.: "tem em preto?").
 
+
+## Integrações pelo cliente (SaaS fase 2)
+
+### Ponte por QR só para a loja original
+
+- A conexão por QR code (ponte não oficial) **não faz parte do produto**: só a loja configurada em
+  `WhatsApp__Local__LojaSlug` (a ECS Fish) vê o bloco "Conexão do WhatsApp" e usa a ponte. O dono de outra loja não
+  vê o QR, não gera código e não desconecta o número da ECS Fish; para ele o WhatsApp é sempre a Meta oficial (ou o
+  simulador, enquanto não conectar).
+- A trava de "números permitidos" vale só para a loja da ponte.
+- **Para desligar a ponte de vez** (quando a Meta oficial estiver liberada): no Render, troque `WhatsApp__Provedor`
+  de `Local` para `Meta`. Nada mais muda; o simulador continua disponível.
+
+### Limite de IA por loja
+
+- Cada loja tem um **limite de respostas da IA por mês** (padrão `IA__LimiteRespostasMes`, 1000; 0 = sem limite).
+  Conta só as respostas que saíram da IA (coluna `respostas_ia` em `uso_ia`, mês no horário de Brasília).
+- O administrador muda o limite de uma loja em **Plataforma → Lojas → Editar** (vazio = padrão; 0 = sem limite; fica
+  na auditoria) e vê "IA no mês" em cada loja.
+- Acima do limite o robô **continua respondendo** com as respostas por regras, sem chamar o Gemini, até virar o mês.
+  O dono vê o uso em **Configuração → Robô com IA**.
+
+### Mapas com cache compartilhado
+
+- O frete por km continua nos serviços **grátis** (BrasilAPI, OpenStreetMap e OSRM), agora como serviço da
+  plataforma com **cache compartilhado entre todas as lojas**: cada CEP localizado (`local_cep`) e cada rota de carro
+  calculada (`rota_cache`, coordenadas arredondadas em ~11 m) ficam guardados. Uma loja aproveita o que outra já
+  calculou e só a primeira consulta sai para a internet.
+- Rota guardada vale 180 dias; depois é calculada de novo. Quando o serviço de rotas está fora do ar, o frete usa a
+  linha reta corrigida e essa conta não fica no cache.
+
+### Botão "Conectar Mercado Pago"
+
+- Em **Configuração → Cartão**, o dono clica em **Conectar Mercado Pago**, entra na conta dele no Mercado Pago e
+  autoriza. O sistema troca o código pelo token da loja (OAuth da aplicação da plataforma), guarda cifrado e volta para
+  Configuração com o aviso "Mercado Pago conectado". O dinheiro do cartão cai na conta da loja.
+- O token vale 180 dias e **renova sozinho** (verificação a cada 6 horas; renova quando faltam menos de 30 dias). Se a
+  renovação falhar (o dono revogou o acesso), o log avisa e o dono precisa conectar de novo.
+- Os avisos de pagamento das lojas conectadas pelo botão chegam no mesmo webhook (`/api/v1/webhooks/mercadopago`),
+  assinados com o segredo da aplicação da plataforma (`MercadoPago__OAuth__WebhookSecret`).
+- Colar o Access Token à mão continua possível ("Prefere colar o Access Token à mão?"), e é o único jeito enquanto a
+  aplicação da plataforma não estiver configurada.
+- **Configuração (Lucas):** criar no Mercado Pago (Suas integrações) uma aplicação da plataforma do tipo Checkout Pro
+  com OAuth; em "URLs de redirecionamento" pôr
+  `https://sistema-vendas-gestao.pages.dev/api/v1/mercadopago/oauth/retorno`; em Webhooks, a URL
+  `https://sistema-vendas-gestao.pages.dev/api/v1/webhooks/mercadopago` com o evento Order; no Render, as variáveis
+  `MercadoPago__OAuth__ClientId`, `MercadoPago__OAuth__ClientSecret` e `MercadoPago__OAuth__WebhookSecret`.
 
 ### Botão "Conectar WhatsApp" (Embedded Signup)
 

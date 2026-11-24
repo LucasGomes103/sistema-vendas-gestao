@@ -193,6 +193,7 @@ public static class DependencyInjection
         services.AddHostedService<WebhookWorker>();
         services.AddHostedService<MensagemWorker>();
         services.AddHostedService<RoboWorker>();
+        services.AddHostedService<RenovacaoTokensWorker>();
         return services;
     }
 }
